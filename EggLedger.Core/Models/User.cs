@@ -13,7 +13,6 @@ namespace EggLedger.Core.Models
         public string Email { get; set; } = string.Empty;
         public string PasswordHash { get; set; } = string.Empty;
         public string Role { get; set; } = "User";
-
-        public ICollection<EggTransaction> EggTransactions { get; set; } = new List<EggTransaction>();
+        public ICollection<Transaction> EggTransactions { get; set; } = new List<Transaction>();
     }
 }

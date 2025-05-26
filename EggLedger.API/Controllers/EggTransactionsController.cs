@@ -3,8 +3,6 @@ using EggLedger.Core.DTOs;
 using EggLedger.Core.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
-// For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-
 namespace EggLedger.API.Controllers
 {
     [Route("api/[controller]")]
@@ -20,9 +18,16 @@ namespace EggLedger.API.Controllers
         }
 
         [HttpPost("add")]
-        public async Task<IActionResult> AddEggTransaction([FromBody] EggTransactionDto dto)
+        public async Task<IActionResult> StockEggTransaction([FromBody] EggTransactionDto dto)
         {
-            var result = await _service.AddTransactionAsync(dto);
+            var result = await _service.StockEggTransactionAsync(dto);
+            return Ok(result);
+        }
+        
+        [HttpPost("consume")]
+        public async Task<IActionResult> ConsumeEggTransaction([FromBody] EggTransactionDto dto)
+        {
+            var result = await _service.ConsumeEggTransactionAsync(dto);
             return Ok(result);
         }
     }

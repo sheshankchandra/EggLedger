@@ -1,11 +1,13 @@
-﻿namespace EggLedger.Core.DTOs
+﻿using EggLedger.Core.Models;
+
+namespace EggLedger.Core.DTOs
 {
     public class EggTransactionDto
     {
-        public int UserId { get; set; }
+        public Guid UserId { get; set; }
         public int Quantity { get; set; }
         public DateTime Date { get; set; }
-        public string Type { get; set; } = "Consumed";
-        public decimal? PricePerEgg { get; set; }
+        public TransactionType Type { get; set; }
+        public decimal Amount { get; set; }
     }
 }

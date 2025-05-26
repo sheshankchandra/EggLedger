@@ -5,6 +5,7 @@ namespace EggLedger.Core.Interfaces
 {
     public interface IEggTransactionService
     {
-        Task<EggTransaction> AddTransactionAsync(EggTransactionDto dto);
+        Task<Transaction> StockEggTransactionAsync(EggTransactionDto dto);
+        Task<Transaction> ConsumeEggTransactionAsync(EggTransactionDto dto);
     }
 }
