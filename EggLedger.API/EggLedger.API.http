@@ -1,0 +1,6 @@
+@EggLedger.API_HostAddress = http://localhost:5245
+
+GET {{EggLedger.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
