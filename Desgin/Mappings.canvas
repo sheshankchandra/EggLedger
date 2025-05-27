@@ -1,0 +1,23 @@
+{
+	"nodes":[
+		{"id":"67570466349f283f","type":"text","text":"Roles Enum\n\n- Individual\n- Group","x":-755,"y":-600,"width":250,"height":140},
+		{"id":"f144ae687de18d30","type":"text","text":"Order Detail\n\n- Id\n- Order  Id\n- Stock Id\n- Quantity\n- Price per item\n\n1. Transaction (one to one)\n2. Stock (one to one)","x":240,"y":-210,"width":360,"height":460},
+		{"id":"7b3b1a81c82611a3","type":"text","text":"Container\n\n- Id\n- Date time stamp (Bought)\n- User Id (Buyer)\n- Bought Quantity\n- Remaining Quantity\n- Amount\n- Price per item \n- Date time stamp (Completed)\n\n1. User (one to one)\n2. List of Transaction Detail (one to many)","x":740,"y":-210,"width":480,"height":460},
+		{"id":"05197becabc6bdd5","type":"text","text":"User\n\n- Id\n- Name\n- Email\n- Password\n- Role\n\n1. List of Transaction (one to many)","x":-800,"y":-130,"width":340,"height":300},
+		{"id":"6faeca6a58fade5a","type":"text","text":"Transaction status  Enum\n\n- Pending\n- Completed\n- Cancelled","x":-800,"y":580,"width":250,"height":160},
+		{"id":"78686f29cbcb8ac9","type":"text","text":"Order\n\n- Id\n- Date Time stamp\n- Order type\n- Quantity\n- User Id\n- Amount\n- Status\n\n1. User (one to one)\n2. List of Order Detail (one to many)\n3. List of Transaction (one to many)\n\n\nNotes :\n1. For stocking, Get Price from Amount\nFor consuming, Get amount from Price\n2. List of transactions added to order because, if a Group consumes. Multiple transactions will be created for each Consumer","x":-340,"y":-257,"width":460,"height":555},
+		{"id":"948033d82f6dfbea","x":-340,"y":440,"width":460,"height":440,"type":"text","text":"Transaction\n\n- Id\n- Order Id\n- Date Time stamp\n- Payer\n- Receiver\n- Amount\n- Status\n\n1. payer User (one to one)\n2. payee User (one to one)\n3. Order (one to one)\n"},
+		{"id":"be6c02f831ba79f7","type":"text","text":"Transaction Type Enum\n\n- Stock\n- Consume","x":-360,"y":-610,"width":250,"height":150},
+		{"id":"fa65e62c8bdc9ae2","type":"text","text":"Order Status Enum\n\n- Pending\n- Completed\n- Cancelled","x":-10,"y":-610,"width":250,"height":150}
+	],
+	"edges":[
+		{"id":"56dea7ef4125fdd2","fromNode":"05197becabc6bdd5","fromSide":"right","toNode":"78686f29cbcb8ac9","toSide":"left"},
+		{"id":"a146ada003115fe1","fromNode":"67570466349f283f","fromSide":"bottom","toNode":"05197becabc6bdd5","toSide":"top"},
+		{"id":"c0656e1d23fa0fc8","fromNode":"be6c02f831ba79f7","fromSide":"bottom","toNode":"78686f29cbcb8ac9","toSide":"top"},
+		{"id":"65011e739f456650","fromNode":"78686f29cbcb8ac9","fromSide":"right","toNode":"f144ae687de18d30","toSide":"left"},
+		{"id":"783561a30b406b1d","fromNode":"f144ae687de18d30","fromSide":"right","toNode":"7b3b1a81c82611a3","toSide":"left"},
+		{"id":"b95da719657b5456","fromNode":"78686f29cbcb8ac9","fromSide":"bottom","toNode":"948033d82f6dfbea","toSide":"top"},
+		{"id":"c1494f3369fc4002","fromNode":"fa65e62c8bdc9ae2","fromSide":"bottom","toNode":"78686f29cbcb8ac9","toSide":"top"},
+		{"id":"07b68af0c061ecd4","fromNode":"6faeca6a58fade5a","fromSide":"right","toNode":"948033d82f6dfbea","toSide":"left"}
+	]
+}
