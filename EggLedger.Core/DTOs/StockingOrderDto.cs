@@ -1,13 +1,13 @@
-﻿using EggLedger.Core.Models;
+﻿using EggLedger.Core.Constants;
 
 namespace EggLedger.Core.DTOs
 {
-    public class EggTransactionDto
+    public class StockingOrderDto
     {
         public Guid UserId { get; set; }
         public int Quantity { get; set; }
         public DateTime Date { get; set; }
-        public TransactionType Type { get; set; }
+        public OrderType Type { get; set; }
         public decimal Amount { get; set; }
     }
 }

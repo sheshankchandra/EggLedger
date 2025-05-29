@@ -8,11 +8,13 @@ namespace EggLedger.Core.Models
 {
     public class User
     {
-        public int Id { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public string Email { get; set; } = string.Empty;
-        public string PasswordHash { get; set; } = string.Empty;
-        public string Role { get; set; } = "User";
-        public ICollection<Transaction> EggTransactions { get; set; } = new List<Transaction>();
+        public Guid UserId { get; set; }
+        public string Name { get; set; } = null!;
+        public string Email { get; set; } = null!;
+        public string PasswordHash { get; set; } = null!;
+        public int Role { get; set; }
+        public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
+        public virtual ICollection<Transaction> Transactions { get; set; } = new List<Transaction>();
+        public virtual ICollection<Container> Containers { get; set; } = new List<Container>();
     }
 }
