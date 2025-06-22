@@ -23,7 +23,7 @@ namespace EggLedger.API.Controllers
         {
             var result = await _service.StockOrderAsync(dto);
             return Ok(result);
-        }
+        }           
         
         [HttpPost("consume")]
         public async Task<IActionResult> ConsumeOrder([FromBody] ConsumingOrderDto dto)

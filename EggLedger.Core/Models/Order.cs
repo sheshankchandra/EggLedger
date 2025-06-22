@@ -11,6 +11,7 @@ namespace EggLedger.Core.Models
     public class Order()
     {
         public Guid OrderId { get; set; }
+        public required string OrderName { get; set; }
         public DateTime Datestamp { get; set; }
         public OrderType OrderType { get; set; }
         public int Quantity { get; set; }

@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -16,8 +16,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\EggLedger.Core\EggLedger.Core.csproj" />
-    <ProjectReference Include="..\EggLedger.ServiceDefaults\EggLedger.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\EggLedger.AppHost\EggLedger.AppHost.csproj" />
+	<ProjectReference Include="..\EggLedger.Core\EggLedger.Core.csproj" />
+	<ProjectReference Include="..\EggLedger.ServiceDefaults\EggLedger.ServiceDefaults.csproj" />
   </ItemGroup>
 
 </Project>
