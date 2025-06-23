@@ -5,9 +5,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace EggLedger.Core.DTOs
+namespace EggLedger.Core.DTOs.Order
 {
-    public class ConsumingOrderDto
+    public class ConsumeOrderDto
     {
         public Guid UserId { get; set; }
         public int Quantity { get; set; }

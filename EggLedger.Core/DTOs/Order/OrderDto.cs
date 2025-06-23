@@ -1,19 +1,15 @@
 ﻿using EggLedger.Core.Constants;
+using EggLedger.Core.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
-namespace EggLedger.Core.Models
+namespace EggLedger.Core.DTOs.Order
 {
-    public class Order
+    public class OrderDto
     {
-        public Order()
-        {
-        }
-
         public Guid OrderId { get; set; }
         public required string OrderName { get; set; }
         public DateTime Datestamp { get; set; }
@@ -22,16 +18,6 @@ namespace EggLedger.Core.Models
         public Guid UserId { get; set; }
         public decimal Amount { get; set; }
         public OrderStatus OrderStatus { get; set; }
-
-
-        public User User { get; set; } = null!;
-        [JsonIgnore]
-        public virtual ICollection<OrderDetail> OrderDetails { get; set; } = new List<OrderDetail>();
-        public virtual ICollection<Transaction> Transactions { get; set; } = new List<Transaction>();
-
-        public void UpdateAmount()
-        {
-            Amount = OrderDetails.Sum(d => d.Price * d.DetailQuantity);
-        }
+        public ICollection<OrderDetailDto> OrderDetails { get; set; } = new List<OrderDetailDto>();
     }
 }

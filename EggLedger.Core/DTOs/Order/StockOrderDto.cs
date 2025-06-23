@@ -1,8 +1,8 @@
 ﻿using EggLedger.Core.Constants;
 
-namespace EggLedger.Core.DTOs
+namespace EggLedger.Core.DTOs.Order
 {
-    public class StockingOrderDto
+    public class StockOrderDto
     {
         public Guid UserId { get; set; }
         public int Quantity { get; set; }

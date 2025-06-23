@@ -6,8 +6,12 @@ using System.Threading.Tasks;
 
 namespace EggLedger.Core.Models
 {
-    public class Container()
+    public class Container
     {
+        public Container()
+        {
+        }
+
         public Guid ContainerId { get; set; }
         public required string ContainerName { get; set; }
         public DateTime PurchaseDateTime { get; set; }
