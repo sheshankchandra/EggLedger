@@ -6,7 +6,7 @@ namespace EggLedger.Core.Interfaces
 {
     public interface IOrderImportService
     {
-        Task<ActionResult<Order>> StockOrderAsync(StockingOrderDto dto, INamingService namingService);
-        Task<ActionResult<Order>> ConsumeOrderAsync(ConsumingOrderDto dto, INamingService namingService);
+        Task<ActionResult<Order>> StockOrderAsync(StockingOrderDto dto);
+        Task<ActionResult<Order>> ConsumeOrderAsync(ConsumingOrderDto dto);
     }
 }

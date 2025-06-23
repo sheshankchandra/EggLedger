@@ -1,10 +1,11 @@
-﻿using EggLedger.API.Data;
+﻿using System.Diagnostics;
+using EggLedger.API.Data;
 using EggLedger.Core.Constants;
 using EggLedger.Core.DTOs;
 using EggLedger.Core.Interfaces;
 using EggLedger.Core.Models;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using ReturnTypeAndStatusCodes.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace EggLedger.API.Services
@@ -13,20 +14,22 @@ namespace EggLedger.API.Services
     {
         private IOrderImportService _orderImportServiceImplementation;
 
-        public async Task<IResult> StockOrderAsync(StockingOrderDto dto)
+        public async Task<ActionResult<Order>> StockOrderAsync(StockingOrderDto dto)
         {
             var user = context.Users
                 .FirstOrDefault(u => u.UserId == dto.UserId);
 
             if (user == null)
             {
-                return Results.BadRequest("User not found");
+                return StatusCode(500, "User not found");
             }
+
+            ActionResult<string> orderName = await namingService.GenerateOrderName(user);
 
             Order order = new Order
             {
                 OrderId = Guid.NewGuid(),
-                OrderName = namingService.GenerateOrderName(user).Result,
+                OrderName = orderName.Value,
                 Datestamp = dto.Date,
                 OrderType = OrderType.Stocking,
                 Quantity = dto.Quantity,
@@ -57,10 +60,10 @@ namespace EggLedger.API.Services
 
             context.Orders.Add(order);
             await context.SaveChangesAsync();
-            return Results.Accepted(order.OrderName);
+            return order;
         }
 
-        public async Task<IResult> ConsumeOrderAsync(ConsumingOrderDto dto)
+        public async Task<ActionResult<Order>> ConsumeOrderAsync(ConsumingOrderDto dto)
         {
             var user = context.Users
                 .FirstOrDefault(u => u.UserId == dto.UserId);
@@ -70,10 +73,12 @@ namespace EggLedger.API.Services
                 return Results.BadRequest("User not found");
             }
 
+            ActionResult<string> orderName = await namingService.GenerateOrderName(user);
+
             var order = new Order
             {
                 OrderId = Guid.NewGuid(),
-                OrderName = namingService.GenerateOrderName(user).Result,
+                OrderName = orderName.Value,
                 Datestamp = dto.Date,
                 OrderType = OrderType.Consuming,
                 Quantity = dto.Quantity,
@@ -125,7 +130,7 @@ namespace EggLedger.API.Services
             order.UpdateAmount();
             context.Orders.Add(order);
             await context.SaveChangesAsync();
-            return Results.Accepted(order.OrderName);
+            return order;
         }
     }
 }
