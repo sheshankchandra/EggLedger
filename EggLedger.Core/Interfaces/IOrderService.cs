@@ -7,8 +7,8 @@ namespace EggLedger.Core.Interfaces
 {
     public interface IOrderService
     {
-        Task<Result<Order>> StockOrderAsync(StockOrderDto dto);
-        Task<Result<Order>> ConsumeOrderAsync(ConsumeOrderDto dto);
+        Task<Result<Order>> CreateStockOrderAsync(StockOrderDto dto);
+        Task<Result<Order>> CreateConsumeOrderAsync(ConsumeOrderDto dto);
         Task<Result<OrderDto>> GetOrderByIdAsync(Guid orderId);
         Task<Result<List<OrderDto>>> GetOrdersByUserAsync(Guid userId);
         Task<Result<List<OrderDto>>> GetOrdersByContainerAsync(Guid containerId);

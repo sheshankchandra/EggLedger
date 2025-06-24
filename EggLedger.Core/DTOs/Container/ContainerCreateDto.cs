@@ -6,13 +6,12 @@ using System.Threading.Tasks;
 
 namespace EggLedger.Core.DTOs.Container
 {
-    public class ContainerSummaryDto
+    public class ContainerCreateDto
     {
-        public Guid ContainerId { get; set; }
         public string ContainerName { get; set; }
         public DateTime PurchaseDateTime { get; set; }
         public int TotalQuantity { get; set; }
-        public int RemainingQuantity { get; set; }
-        public string OwnerName { get; set; }
+        public decimal Amount { get; set; }
+        public Guid BuyerId { get; set; }
     }
 }

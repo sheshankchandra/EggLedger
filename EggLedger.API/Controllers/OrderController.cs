@@ -21,10 +21,10 @@ namespace EggLedger.API.Controllers
 
         // POST: api/orderimport/stock
         [HttpPost("stock")]
-        public async Task<IActionResult> StockOrder([FromBody] StockOrderDto dto)
+        public async Task<IActionResult> CreateStockOrder([FromBody] StockOrderDto dto)
         {
             _logger.LogInformation("Received request to create Stocking order.");
-            var result = await _orderService.StockOrderAsync(dto);
+            var result = await _orderService.CreateStockOrderAsync(dto);
 
             if (result.IsSuccess && result.Value != null)
             {
@@ -38,10 +38,10 @@ namespace EggLedger.API.Controllers
 
         // POST: api/orderimport/consume
         [HttpPost("consume")]
-        public async Task<IActionResult> ConsumeOrder([FromBody] ConsumeOrderDto dto)
+        public async Task<IActionResult> CreateConsumeOrder([FromBody] ConsumeOrderDto dto)
         {
             _logger.LogInformation("Received request to create Consuming order.");
-            var result = await _orderService.ConsumeOrderAsync(dto);
+            var result = await _orderService.CreateConsumeOrderAsync(dto);
 
             if (result.IsSuccess && result.Value != null)
             {

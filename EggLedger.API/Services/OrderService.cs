@@ -21,7 +21,7 @@ namespace EggLedger.API.Services
             _logger = logger;
         }
 
-        public async Task<Result<Order>> StockOrderAsync(StockOrderDto dto)
+        public async Task<Result<Order>> CreateStockOrderAsync(StockOrderDto dto)
         {
             // Use async for DB calls
             var user = await _context.Users
@@ -81,7 +81,7 @@ namespace EggLedger.API.Services
             return Result.Ok(order);
         }
 
-        public async Task<Result<Order>> ConsumeOrderAsync(ConsumeOrderDto dto)
+        public async Task<Result<Order>> CreateConsumeOrderAsync(ConsumeOrderDto dto)
         {
             var user = await _context.Users
                 .FirstOrDefaultAsync(u => u.UserId == dto.UserId);

@@ -1,4 +1,6 @@
-﻿using EggLedger.Core.DTOs.Order;
+﻿using EggLedger.Core.DTOs.Auth;
+using EggLedger.Core.DTOs.Order;
+using EggLedger.Core.DTOs.User;
 using EggLedger.Core.Models;
 using FluentResults;
 using System;
@@ -11,6 +13,11 @@ namespace EggLedger.Core.Interfaces
 {
     public interface IUserService
     {
-        Task<Result> CreateUser(StockOrderDto dto);
+        Task<Result<List<UserSummaryDto>>> GetAllUsersAsync();
+        Task<Result<UserSummaryDto>> GetUserByIdAsync(Guid id);
+        Task<Result<UserSummaryDto>> CreateUserAsync(UserCreateDto dto);
+        Task<Result<UserSummaryDto>> UpdateUserAsync(Guid id, UserUpdateDto dto);
+        Task<Result> DeleteUserAsync(Guid id);
+        Task<Result<TokenDto>> LoginAsync(LoginDto dto);
     }
 }
