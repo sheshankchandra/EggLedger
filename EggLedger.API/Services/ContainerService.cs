@@ -83,7 +83,7 @@ namespace EggLedger.API.Services
             {
                 ContainerId = Guid.NewGuid(),
                 ContainerName = dto.ContainerName,
-                PurchaseDateTime = dto.PurchaseDateTime,
+                PurchaseDateTime = DateTime.Now,
                 BuyerId = dto.BuyerId,
                 TotalQuantity = dto.TotalQuantity,
                 RemainingQuantity = dto.TotalQuantity,

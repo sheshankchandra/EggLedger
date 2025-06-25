@@ -21,6 +21,12 @@ namespace EggLedger.API.Services
         private readonly PasswordHasher<User> _passwordHasher;
         private readonly IConfiguration _configuration;
 
+        private static class UserRoles
+        {
+            public const int User = 0;
+            public const int Admin = 1;
+        }
+
         public UserService(ApplicationDbContext context, IConfiguration configuration)
         {
             _context = context;
@@ -76,7 +82,8 @@ namespace EggLedger.API.Services
                 LastName = dto.LastName,
                 Email = dto.Email,
                 PasswordHash = _passwordHasher.HashPassword(null, dto.Password),
-                Role = dto.Role
+                Role = dto.Role,
+                Provider = null
             };
 
             _context.Users.Add(user);
@@ -134,17 +141,55 @@ namespace EggLedger.API.Services
         public async Task<Result<TokenDto>> LoginAsync(LoginDto dto)
         {
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
-            if (user == null)
-                return Result.Fail("User not found");
+
+            // Fail if user doesn't exist OR if they signed up with Google (no password)
+            if (user == null || user.PasswordHash == null)
+                return Result.Fail("Invalid email or password.");
 
             var result = _passwordHasher.VerifyHashedPassword(null, user.PasswordHash, dto.Password);
             if (result != PasswordVerificationResult.Success)
-                return Result.Fail("Invalid credentials");
+                return Result.Fail("Invalid email or password.");
 
+            var tokenDto = GenerateJwtToken(user);
+            return Result.Ok(tokenDto);
+        }
+
+        public async Task<Result<TokenDto>> LoginWithProviderAsync(string email, string name, string provider)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
+
+            if (user == null)
+            {
+                var nameParts = name?.Split(new[] { ' ' }, 2, StringSplitOptions.RemoveEmptyEntries) ?? new string[0];
+                var firstName = nameParts.Length > 0 ? nameParts[0] : "User";
+                var lastName = nameParts.Length > 1 ? nameParts[1] : null;
+
+                user = new User
+                {
+                    UserId = Guid.NewGuid(),
+                    Email = email,
+                    FirstName = firstName,
+                    LastName = lastName,
+                    PasswordHash = null, // No password for social logins
+                    Role = UserRoles.User, // Assign a default role
+                    Provider = provider // Mark this user as created via "Google"
+                };
+                _context.Users.Add(user);
+                await _context.SaveChangesAsync();
+            }
+
+            // At this point, we have a user. Generate a JWT for them.
+            var tokenDto = GenerateJwtToken(user);
+            return Result.Ok(tokenDto);
+        }
+
+        private TokenDto GenerateJwtToken(User user)
+        {
             var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),
                 new Claim(ClaimTypes.Email, user.Email),
+                new Claim(ClaimTypes.Name, user.Name), // Add the user's full name as a claim
                 new Claim(ClaimTypes.Role, user.Role.ToString())
             };
 
@@ -160,13 +205,11 @@ namespace EggLedger.API.Services
                 signingCredentials: creds
             );
 
-            var tokenDto = new TokenDto
+            return new TokenDto
             {
                 Token = new JwtSecurityTokenHandler().WriteToken(token),
                 Expires = expiry
             };
-
-            return Result.Ok(tokenDto);
         }
     }
 }

@@ -19,5 +19,6 @@ namespace EggLedger.Core.Interfaces
         Task<Result<UserSummaryDto>> UpdateUserAsync(Guid id, UserUpdateDto dto);
         Task<Result> DeleteUserAsync(Guid id);
         Task<Result<TokenDto>> LoginAsync(LoginDto dto);
+        Task<Result<TokenDto>> LoginWithProviderAsync(string email, string name, string provider);
     }
 }
