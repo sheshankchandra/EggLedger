@@ -3,13 +3,13 @@ using EggLedger.Core.Interfaces;
 using EggLedger.Core.Models;
 using FluentResults;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
 
 namespace EggLedger.Core.Helpers
 {
@@ -60,6 +60,18 @@ namespace EggLedger.Core.Helpers
             string containerName = $"{containerPrefix}-{userName}-{serialNumber}";
 
             return Result.Ok(containerName);
+        }
+
+        public int GenerateNewRoomCode()
+        {
+            int roomCode = new Random().Next(100000, 1000000);
+
+            while (_context.Rooms.Any(c => c.Code == roomCode))
+            {
+                roomCode = new Random().Next(100000, 1000000);
+            }
+
+            return roomCode;
         }
     }
 }

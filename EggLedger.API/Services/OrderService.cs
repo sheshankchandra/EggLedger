@@ -23,7 +23,6 @@ namespace EggLedger.API.Services
 
         public async Task<Result<Order>> CreateStockOrderAsync(StockOrderDto dto)
         {
-            // Use async for DB calls
             var user = await _context.Users
                 .FirstOrDefaultAsync(u => u.UserId == dto.UserId);
 
@@ -48,7 +47,7 @@ namespace EggLedger.API.Services
                 Datestamp = dto.Date,
                 OrderType = OrderType.Stocking,
                 Quantity = dto.Quantity,
-                UserId = dto.UserId,
+                UserId = user.UserId,
                 Amount = dto.Amount,
                 OrderStatus = OrderStatus.Entered
             };
@@ -67,7 +66,8 @@ namespace EggLedger.API.Services
                     BuyerId = dto.UserId,
                     TotalQuantity = dto.Quantity,
                     RemainingQuantity = dto.Quantity,
-                    Amount = dto.Amount
+                    Amount = dto.Amount,
+                    RoomId = user.RoomId
                 }
             };
 

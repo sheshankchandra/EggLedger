@@ -6,9 +6,9 @@ using System.Threading.Tasks;
 
 namespace EggLedger.Core.DTOs.Auth
 {
-    public class TokenDto
+    public class TokenResponseDto
     {
-        public string Token { get; set; }
-        public DateTime Expires { get; set; }
+        public required string AccessToken { get; set; }
+        public required string RefreshToken { get; set; }
     }
 }

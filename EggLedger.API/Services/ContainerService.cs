@@ -87,7 +87,8 @@ namespace EggLedger.API.Services
                 BuyerId = dto.BuyerId,
                 TotalQuantity = dto.TotalQuantity,
                 RemainingQuantity = dto.TotalQuantity,
-                Amount = dto.Amount
+                Amount = dto.Amount,
+                RoomId = buyer.RoomId
             };
 
             _context.Containers.Add(container);

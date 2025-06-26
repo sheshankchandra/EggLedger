@@ -8,4 +8,5 @@ public interface INamingService
 {
     Task<Result<string>> GenerateOrderName(User user, int i);
     Task<Result<string>> GenerateContainerName(User user);
+    int GenerateNewRoomCode();
 }

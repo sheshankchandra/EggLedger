@@ -5,22 +5,22 @@ using EggLedger.Core.Helpers;
 using EggLedger.Core.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.OpenApi;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
 
 // Add services to the container.
-
 builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddOpenApi("v2");
 
 // PostgreSQL Connection
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
+builder.Services.AddDbContext<ApplicationDbContext>(options => 
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
@@ -65,9 +65,11 @@ builder.Services.AddAuthentication(options =>
     });
 
 // DI Registrations
-builder.Services.AddScoped<IOrderService, OrderService>();
+
+builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IContainerService, ContainerService>();
 builder.Services.AddScoped<INamingService, NamingService>();
+builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IUserService, UserService>();
 
 var app = builder.Build();
@@ -77,8 +79,8 @@ app.MapDefaultEndpoints();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    app.MapOpenApi();
+    app.MapScalarApiReference();
 }
 
 app.UseHttpsRedirection();

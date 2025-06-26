@@ -11,6 +11,8 @@ namespace EggLedger.API.Data
         public DbSet<OrderDetail> OrderDetails => Set<OrderDetail>();
         public DbSet<Container> Containers => Set<Container>();
         public DbSet<Transaction> Transactions => Set<Transaction>();
+        public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+        public DbSet<Room> Rooms => Set<Room>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

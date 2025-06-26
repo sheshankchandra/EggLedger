@@ -1,5 +1,7 @@
-﻿using EggLedger.Core.DTOs.Auth;
+﻿using EggLedger.API.Services;
+using EggLedger.Core.DTOs.Auth;
 using EggLedger.Core.Interfaces;
+using FluentResults;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authorization;
@@ -11,18 +13,18 @@ using System.Security.Claims;
 [ApiController]
 public class AuthController : ControllerBase
 {
-    private readonly IUserService _userService;
+    private readonly IAuthService _authService;
 
-    public AuthController(IUserService userService)
+    public AuthController(IAuthService authService)
     {
-        _userService = userService;
+        _authService = authService;
     }
 
     [HttpPost("login")]
     [AllowAnonymous]
     public async Task<IActionResult> Login([FromBody] LoginDto dto)
     {
-        var result = await _userService.LoginAsync(dto);
+        var result = await _authService.LoginAsync(dto);
         if (result.IsSuccess)
             return Ok(result.Value);
         return Unauthorized(result.Errors.Select(e => e.Message));
@@ -55,7 +57,7 @@ public class AuthController : ControllerBase
 
         // Use your user service to find or create the user and generate a JWT
         // This is the same logic you'd use after a successful password login.
-        var loginResult = await _userService.LoginWithProviderAsync(email, name, "Google");
+        var loginResult = await _authService.LoginWithProviderAsync(email, name, "Google");
 
         if (!loginResult.IsSuccess)
         {
@@ -65,11 +67,21 @@ public class AuthController : ControllerBase
         }
 
         // The user is successfully logged in, and we have a token.
-        var token = loginResult.Value.Token;
+        var token = loginResult.Value.AccessToken;
 
         // Redirect to your Vue app's callback component, passing the token
         var frontendCallbackUrl = $"http://localhost:5173/auth/callback?token={token}";
 
         return Redirect(frontendCallbackUrl);
+    }
+
+    [HttpPost("refresh-token")]
+    public async Task<ActionResult<TokenResponseDto>> RefreshToken(RefreshTokenRequestDto request)
+    {
+        var tokenResponse = await _authService.RefreshTokensAsync(request);
+        if (tokenResponse.IsFailed || string.IsNullOrEmpty(tokenResponse.Value.AccessToken) || string.IsNullOrEmpty(tokenResponse.Value.RefreshToken))
+            return Unauthorized("Invalid refresh token.");
+
+        return Ok(tokenResponse);
     }
 }
