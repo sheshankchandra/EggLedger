@@ -16,8 +16,6 @@ public interface IContainerService
     /// Retrieves a single container by its ID with summary information.
     /// </summary>
     Task<Result<ContainerSummaryDto>> GetContainerAsync(Guid containerId);
-
-    Task<Result<ContainerSummaryDto>> CreateContainerAsync(ContainerCreateDto dto);
     Task<Result<ContainerSummaryDto>> UpdateContainerAsync(Guid containerId, ContainerUpdateDto dto);
     Task<Result> DeleteContainerAsync(Guid containerId);
     Task<Result<List<ContainerSummaryDto>>> SearchContainersByOwnerNameAsync(string ownerName);

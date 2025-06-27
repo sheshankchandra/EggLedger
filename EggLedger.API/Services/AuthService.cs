@@ -1,5 +1,7 @@
 ﻿using EggLedger.API.Data;
+using EggLedger.Core.Constants;
 using EggLedger.Core.DTOs.Auth;
+using EggLedger.Core.Helpers;
 using EggLedger.Core.Interfaces;
 using EggLedger.Core.Models;
 using FluentResults;
@@ -10,7 +12,6 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
-using EggLedger.Core.Constants;
 
 namespace EggLedger.API.Services
 {
@@ -20,13 +21,15 @@ namespace EggLedger.API.Services
         private readonly ILogger<OrderService> _logger;
         private readonly PasswordHasher<User> _passwordHasher;
         private readonly IConfiguration _configuration;
+        private readonly IHelperService _helperService;
 
-        public AuthService(ApplicationDbContext context, ILogger<OrderService> logger, IConfiguration configuration)
+        public AuthService(ApplicationDbContext context, ILogger<OrderService> logger, IConfiguration configuration, IHelperService helperService)
         {
             _context = context;
             _logger = logger;
             _passwordHasher = new PasswordHasher<User>();
             _configuration = configuration;
+            _helperService = helperService;
         }
 
         public async Task<Result<TokenResponseDto>> LoginAsync(LoginDto dto)
@@ -125,9 +128,16 @@ namespace EggLedger.API.Services
                 new Claim(ClaimTypes.Role, user.Role.ToString())
             };
 
+            // Add RoomId's to the claims
+            var roomIds = _context.UserRooms
+                .Where(ur => ur.UserId == user.UserId)
+                .Select(ur => ur.RoomId)
+                .ToList();
+            claims.AddRange(roomIds.Select(roomId => new Claim("Room", roomId.ToString())));
+
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:SecretKey"]));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-            var expiry = DateTime.UtcNow.AddMinutes(int.Parse(_configuration["Jwt:ExpiryInMinutes"]));
+            var expiry = _helperService.GetIndianTime().AddMinutes(int.Parse(_configuration["Jwt:ExpiryInMinutes"]));
 
             var token = new JwtSecurityToken(
                 issuer: _configuration["Jwt:Issuer"],
@@ -153,9 +163,10 @@ namespace EggLedger.API.Services
             var refreshToken = new RefreshToken
             {
                 Token = GenerateRefreshToken(),
-                Expires = DateTime.UtcNow.AddDays(7),
+                Expires = _helperService.GetIndianTime().AddDays(7),
                 CreatedByIp = "TODO:CaptureIPAddress",
-                UserId = user.UserId
+                UserId = user.UserId,
+                Created = _helperService.GetIndianTime()
             };
 
             _context.RefreshTokens.Add(refreshToken);
@@ -173,7 +184,7 @@ namespace EggLedger.API.Services
             if (user is null) return null;
 
             var token = user.RefreshTokens
-                .FirstOrDefault(t => t.Token == refreshToken && t.IsActive);
+                .FirstOrDefault(t => t.Token == refreshToken && !t.IsRevoked && !(t.Expires <= _helperService.GetIndianTime()));
 
             return token != null ? user : null;
         }

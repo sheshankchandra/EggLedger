@@ -8,16 +8,14 @@ namespace EggLedger.Core.Models
 
         public string Token { get; set; } = null!;
         public DateTime Expires { get; set; }
-        public DateTime Created { get; set; } = DateTime.UtcNow;
+        public DateTime Created { get; set; }
         public string? CreatedByIp { get; set; }
 
         public DateTime? Revoked { get; set; }
         public string? RevokedByIp { get; set; }
         public string? ReplacedByToken { get; set; }
 
-        public bool IsExpired => DateTime.UtcNow >= Expires;
         public bool IsRevoked => Revoked != null;
-        public bool IsActive => !IsExpired && !IsRevoked;
 
         // Foreign key
         public Guid UserId { get; set; }

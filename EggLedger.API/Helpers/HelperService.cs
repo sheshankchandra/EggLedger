@@ -13,11 +13,11 @@ using System.Threading.Tasks;
 
 namespace EggLedger.Core.Helpers
 {
-    public class NamingService : INamingService
+    public class HelperService : IHelperService
     {
         private readonly ApplicationDbContext _context;
 
-        public NamingService(ApplicationDbContext context)
+        public HelperService(ApplicationDbContext context)
         {
             _context = context;
         }
@@ -66,12 +66,18 @@ namespace EggLedger.Core.Helpers
         {
             int roomCode = new Random().Next(100000, 1000000);
 
-            while (_context.Rooms.Any(c => c.Code == roomCode))
+            while (_context.Rooms.Any(c => c.RoomCode == roomCode))
             {
                 roomCode = new Random().Next(100000, 1000000);
             }
 
             return roomCode;
+        }
+
+        public DateTime GetIndianTime()
+        {
+            var indianZone = TimeZoneInfo.FindSystemTimeZoneById("India Standard Time");
+            return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, indianZone);
         }
     }
 }

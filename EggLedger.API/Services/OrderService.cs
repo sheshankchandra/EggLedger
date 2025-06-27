@@ -12,31 +12,25 @@ namespace EggLedger.API.Services
     {
         private readonly ILogger<OrderService> _logger;
         private readonly ApplicationDbContext _context;
-        private readonly INamingService _namingService;
+        private readonly IHelperService _helperService;
 
-        public OrderService(ApplicationDbContext context, INamingService namingService, ILogger<OrderService> logger)
+        public OrderService(ApplicationDbContext context, IHelperService helperService, ILogger<OrderService> logger)
         {
             _context = context;
-            _namingService = namingService;
+            _helperService = helperService;
             _logger = logger;
         }
 
-        public async Task<Result<Order>> CreateStockOrderAsync(StockOrderDto dto)
+        public async Task<Result<string>> CreateStockOrderAsync(Guid userId, int roomCode, StockOrderDto dto)
         {
-            var user = await _context.Users
-                .FirstOrDefaultAsync(u => u.UserId == dto.UserId);
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.UserId == userId);
+            var userRoom = await _context.UserRooms
+                .FirstOrDefaultAsync(u => u.UserId == userId && u.Room.RoomCode == roomCode);
 
-            if (user == null)
-            {
-                _logger.LogWarning("Unable to find the user: {UserId}", dto.UserId);
-                return Result.Fail("User not found");
-            }
-
-            var orderNameResult = await _namingService.GenerateOrderName(user, 1);
-
+            var orderNameResult = await _helperService.GenerateOrderName(user, 1);
             if (orderNameResult.IsFailed)
             {
-                _logger.LogWarning("Unable to generate the order name for user: {UserId}", dto.UserId);
+                _logger.LogWarning("Unable to generate the order name for user: {UserId}", userId);
                 return Result.Fail("Failed generating an order name");
             }
 
@@ -44,7 +38,7 @@ namespace EggLedger.API.Services
             {
                 OrderId = Guid.NewGuid(),
                 OrderName = orderNameResult.Value,
-                Datestamp = dto.Date,
+                Datestamp = _helperService.GetIndianTime(),
                 OrderType = OrderType.Stocking,
                 Quantity = dto.Quantity,
                 UserId = user.UserId,
@@ -61,13 +55,13 @@ namespace EggLedger.API.Services
                 Container = new Container
                 {
                     ContainerId = Guid.NewGuid(),
-                    ContainerName = $"{user.FirstName} {DateTime.UtcNow:yyyyMMddHHmmss}",
-                    PurchaseDateTime = dto.Date,
-                    BuyerId = dto.UserId,
+                    ContainerName = string.IsNullOrEmpty(dto.ContainerName) ? $"{user.FirstName} {_helperService.GetIndianTime():yyyyMMddHHmmss}" : dto.ContainerName,
+                    PurchaseDateTime = _helperService.GetIndianTime(),
+                    BuyerId = userId,
                     TotalQuantity = dto.Quantity,
                     RemainingQuantity = dto.Quantity,
                     Amount = dto.Amount,
-                    RoomId = user.RoomId
+                    RoomId = (Guid)userRoom.RoomId
                 }
             };
 
@@ -78,25 +72,20 @@ namespace EggLedger.API.Services
 
             _logger.LogInformation("Stock order created: {OrderId}", order.OrderId);
 
-            return Result.Ok(order);
+            return Result.Ok(order.OrderName);
         }
 
-        public async Task<Result<Order>> CreateConsumeOrderAsync(ConsumeOrderDto dto)
+        public async Task<Result<string>> CreateConsumeOrderAsync(Guid userId, int roomCode, ConsumeOrderDto dto)
         {
             var user = await _context.Users
-                .FirstOrDefaultAsync(u => u.UserId == dto.UserId);
+                .FirstOrDefaultAsync(u => u.UserId == userId);
+            var userRoom = await _context.UserRooms
+                .FirstOrDefaultAsync(ur => ur.UserId == userId && ur.Room.RoomCode == roomCode);
 
-            if (user == null)
-            {
-                _logger.LogWarning("Unable to find the user: {UserId}", dto.UserId);
-                return Result.Fail("User not found");
-            }
-
-            var orderNameResult = await _namingService.GenerateOrderName(user, 2);
-
+            var orderNameResult = await _helperService.GenerateOrderName(user, 2);
             if (orderNameResult.IsFailed)
             {
-                _logger.LogWarning("Unable to generate the order name for user: {UserId}", dto.UserId);
+                _logger.LogWarning("Unable to generate the order name for user: {UserId}", userId);
                 return Result.Fail("Failed generating an order name");
             }
 
@@ -104,10 +93,11 @@ namespace EggLedger.API.Services
             {
                 OrderId = Guid.NewGuid(),
                 OrderName = orderNameResult.Value,
-                Datestamp = dto.Date,
+                Datestamp = _helperService.GetIndianTime(),
                 OrderType = OrderType.Consuming,
                 Quantity = dto.Quantity,
-                UserId = dto.UserId,
+                UserId = userId,
+                Amount = 0,
                 OrderStatus = OrderStatus.Entered
             };
 
@@ -116,6 +106,7 @@ namespace EggLedger.API.Services
             // Only select containers with available stock, ordered by purchase date
             var availableContainers = await _context.Containers
                 .Where(c => c.RemainingQuantity > 0)
+                .Where(c => c.RoomId == userRoom.RoomId)
                 .OrderBy(c => c.PurchaseDateTime)
                 .ToListAsync();
 
@@ -133,6 +124,7 @@ namespace EggLedger.API.Services
                     ContainerId = container.ContainerId,
                     DetailQuantity = taken,
                     Price = container.Price,
+                    Amount = container.Price * taken,
                     OrderDetailStatus = OrderDetailStatus.Entered
                 });
 
@@ -143,17 +135,22 @@ namespace EggLedger.API.Services
             if (remainingPick > 0)
             {
                 _logger.LogWarning("Not enough eggs in stock to fulfill this consumption. Needed: {Needed}, Remaining: {Remaining}", dto.Quantity, remainingPick);
-                return Result.Fail("Not enough eggs in stock to fulfill this consumption.");
+            }
+            
+            if (remainingPick < 0)
+            {
+                _logger.LogError("More than required eggs are consumed. Needed : {Needed}, Consumed: {Consumed}", dto.Quantity, dto.Quantity - remainingPick);
+                return Result.Fail("More than required eggs are consumed.");
             }
 
-            order.UpdateAmount();
+            order.Amount = order.OrderDetails.Sum(d => d.Price * d.DetailQuantity);
 
             _context.Orders.Add(order);
             await _context.SaveChangesAsync();
 
             _logger.LogInformation("Consume order created: {OrderId}", order.OrderId);
 
-            return Result.Ok(order);
+            return Result.Ok(order.OrderName);
         }
 
         public async Task<Result<OrderDto>> GetOrderByIdAsync(Guid orderId)
@@ -172,13 +169,21 @@ namespace EggLedger.API.Services
 
         public async Task<Result<List<OrderDto>>> GetOrdersByUserAsync(Guid userId)
         {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.UserId == userId);
+
+            if (user == null)
+            {
+                return Result.Fail("User not found");
+            }
+
             var orders = await _context.Orders
                 .Where(o => o.UserId == userId)
                 .Include(o => o.OrderDetails)
                 .ThenInclude(od => od.Container)
                 .ToListAsync();
 
-            var dtos = orders.Select(MapToOrderDto).ToList();
+            var dtos = new List<OrderDto>();
+            dtos = orders.Select(MapToOrderDto).ToList();
             return Result.Ok(dtos);
         }
 
@@ -192,12 +197,6 @@ namespace EggLedger.API.Services
 
             var dtos = orders.Select(MapToOrderDto).ToList();
             return Result.Ok(dtos);
-        }
-
-        public async Task<Result<List<OrderDto>>> GetOrderHistoryAsync(Guid userId)
-        {
-            // This could be the same as GetOrdersByUserAsync, or you could add filters for completed/paid orders, etc.
-            return await GetOrdersByUserAsync(userId);
         }
 
         // Helper method to map Order to OrderDto

@@ -68,7 +68,7 @@ namespace EggLedger.API.Controllers
         {
             var result = await _userService.DeleteUserAsync(id);
             if (result.IsSuccess)
-                return NoContent();
+                return Ok("User deleted successfully");
             if (result.Errors.Any(e => e.Message == "User not found"))
                 return NotFound();
             return BadRequest(result.Errors.Select(e => e.Message));

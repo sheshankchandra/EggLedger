@@ -1,6 +1,7 @@
 ﻿using EggLedger.Core.DTOs.Container;
 using EggLedger.Core.Interfaces;
 using FluentResults;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace EggLedger.API.Controllers
@@ -17,7 +18,8 @@ namespace EggLedger.API.Controllers
         }
 
         // GET: api/container
-        [HttpGet]
+        [Authorize(Policy = "RoomMember")]
+        [HttpGet("all")]
         public async Task<ActionResult<List<ContainerSummaryDto>>> GetAllContainers()
         {
             var result = await _containerService.GetAllContainersAsync();
@@ -28,6 +30,7 @@ namespace EggLedger.API.Controllers
         }
 
         // GET: api/container/{id}
+        [Authorize(Policy = "RoomMember")]
         [HttpGet("{id}")]
         public async Task<ActionResult<ContainerSummaryDto>> GetContainer(Guid id)
         {
@@ -41,19 +44,9 @@ namespace EggLedger.API.Controllers
             return StatusCode(500, result.Errors);
         }
 
-        // POST: api/container
-        [HttpPost]
-        public async Task<IActionResult> CreateContainer([FromBody] ContainerCreateDto dto)
-        {
-            var result = await _containerService.CreateContainerAsync(dto);
-            if (result.IsSuccess)
-                return CreatedAtAction(nameof(GetContainer), new { id = result.Value.ContainerId }, result.Value);
-
-            return BadRequest(result.Errors.Select(e => e.Message));
-        }
-
         // PUT: api/container/{id}
-        [HttpPut("{id}")]
+        [Authorize(Policy = "RoomMember")]
+        [HttpPut("update/{id}")]
         public async Task<IActionResult> UpdateContainer(Guid id, [FromBody] ContainerUpdateDto dto)
         {
             var result = await _containerService.UpdateContainerAsync(id, dto);
@@ -67,7 +60,8 @@ namespace EggLedger.API.Controllers
         }
 
         // DELETE: api/container/{id}
-        [HttpDelete("{id}")]
+        [Authorize(Policy = "RoomMember")]
+        [HttpDelete("delete/{id}")]
         public async Task<IActionResult> DeleteContainer(Guid id)
         {
             var result = await _containerService.DeleteContainerAsync(id);
@@ -81,7 +75,8 @@ namespace EggLedger.API.Controllers
         }
 
         // GET: api/container/search?ownerName=John
-        [HttpGet("search")]
+        [Authorize(Policy = "RoomMember")]
+        [HttpGet("user/{name}")]
         public async Task<ActionResult<List<ContainerSummaryDto>>> SearchContainers([FromQuery] string ownerName)
         {
             var result = await _containerService.SearchContainersByOwnerNameAsync(ownerName);
@@ -92,6 +87,7 @@ namespace EggLedger.API.Controllers
         }
 
         // GET: api/container/paged?page=1&pageSize=20
+        [Authorize(Policy = "RoomMember")]
         [HttpGet("paged")]
         public async Task<ActionResult<List<ContainerSummaryDto>>> GetPagedContainers([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
         {

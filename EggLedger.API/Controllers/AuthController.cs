@@ -82,6 +82,6 @@ public class AuthController : ControllerBase
         if (tokenResponse.IsFailed || string.IsNullOrEmpty(tokenResponse.Value.AccessToken) || string.IsNullOrEmpty(tokenResponse.Value.RefreshToken))
             return Unauthorized("Invalid refresh token.");
 
-        return Ok(tokenResponse);
+        return Ok(tokenResponse.Value);
     }
 }

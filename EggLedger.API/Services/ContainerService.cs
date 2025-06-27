@@ -4,6 +4,9 @@ using EggLedger.Core.Interfaces;
 using EggLedger.Core.Models;
 using FluentResults;
 using Microsoft.EntityFrameworkCore;
+using System.ComponentModel;
+using System.Diagnostics;
+using Container = EggLedger.Core.Models.Container;
 
 namespace EggLedger.API.Services
 {
@@ -30,9 +33,14 @@ namespace EggLedger.API.Services
                 {
                     ContainerId = c.ContainerId,
                     ContainerName = c.ContainerName,
-                    RemainingQuantity = c.RemainingQuantity,
+                    PurchaseDateTime = c.PurchaseDateTime,
+                    BuyerName = c.Buyer.Name,
                     TotalQuantity = c.TotalQuantity,
-                    OwnerName = c.Buyer.Name
+                    RemainingQuantity = c.RemainingQuantity,
+                    Amount = c.Amount,
+                    RoomName = c.Room.RoomName,
+                    Price = c.Price,
+                    CompletedDateTime = c.CompletedDateTime
                 })
                 .ToListAsync();
 
@@ -46,17 +54,9 @@ namespace EggLedger.API.Services
         public async Task<Result<ContainerSummaryDto>> GetContainerAsync(Guid containerId)
         {
             var container = await _context.Containers
-                .AsNoTracking()
-                .Where(c => c.ContainerId == containerId)
-                .Select(c => new ContainerSummaryDto
-                {
-                    ContainerId = c.ContainerId,
-                    ContainerName = c.ContainerName,
-                    RemainingQuantity = c.RemainingQuantity,
-                    TotalQuantity = c.TotalQuantity,
-                    OwnerName = c.Buyer.Name
-                })
-                .FirstOrDefaultAsync();
+                .Include(container => container.Buyer)
+                .Include(container => container.Room)
+                .FirstOrDefaultAsync(c => c.ContainerId == containerId);
 
             if (container == null)
             {
@@ -64,52 +64,29 @@ namespace EggLedger.API.Services
                 return Result.Fail("Container not found");
             }
 
-            _logger.LogInformation("Container {ContainerId} retrieved successfully.", containerId);
-            return Result.Ok(container);
-        }
-
-        public async Task<Result<ContainerSummaryDto>> CreateContainerAsync(ContainerCreateDto dto)
-        {
-            var buyer = await _context.Users
-                .FirstOrDefaultAsync(u => u.UserId == dto.BuyerId);
-
-            if (buyer == null)
-            {
-                _logger.LogWarning("Buyer with ID {BuyerId} not found.", dto.BuyerId);
-                return Result.Fail("Buyer not found");
-            }
-
-            var container = new Container
-            {
-                ContainerId = Guid.NewGuid(),
-                ContainerName = dto.ContainerName,
-                PurchaseDateTime = DateTime.Now,
-                BuyerId = dto.BuyerId,
-                TotalQuantity = dto.TotalQuantity,
-                RemainingQuantity = dto.TotalQuantity,
-                Amount = dto.Amount,
-                RoomId = buyer.RoomId
-            };
-
-            _context.Containers.Add(container);
-            await _context.SaveChangesAsync();
-
-            var containerDto = new ContainerSummaryDto
+            ContainerSummaryDto summaryDto = new ContainerSummaryDto
             {
                 ContainerId = container.ContainerId,
                 ContainerName = container.ContainerName,
-                RemainingQuantity = container.RemainingQuantity,
+                PurchaseDateTime = container.PurchaseDateTime,
+                BuyerName = container.Buyer.Name,
                 TotalQuantity = container.TotalQuantity,
-                OwnerName = $"{buyer.Name}".Trim()
+                RemainingQuantity = container.RemainingQuantity,
+                Amount = container.Amount,
+                RoomName = container.Room.RoomName,
+                Price = container.Price,
+                CompletedDateTime = container.CompletedDateTime
             };
 
-            _logger.LogInformation("Container {ContainerId} created successfully.", container.ContainerId);
-            return Result.Ok(containerDto);
+            _logger.LogInformation("Container {ContainerName} retrieved successfully.", summaryDto.ContainerName);
+            return Result.Ok(summaryDto);
         }
 
         public async Task<Result<ContainerSummaryDto>> UpdateContainerAsync(Guid containerId, ContainerUpdateDto dto)
         {
             var container = await _context.Containers
+                .Include(container => container.Room)
+                .Include(container => container.Buyer)
                 .FirstOrDefaultAsync(c => c.ContainerId == containerId);
 
             if (container == null)
@@ -134,9 +111,14 @@ namespace EggLedger.API.Services
             {
                 ContainerId = container.ContainerId,
                 ContainerName = container.ContainerName,
-                RemainingQuantity = container.RemainingQuantity,
+                PurchaseDateTime = container.PurchaseDateTime,
+                BuyerName = container.Buyer.Name,
                 TotalQuantity = container.TotalQuantity,
-                OwnerName = $"{buyer?.Name}".Trim()
+                RemainingQuantity = container.RemainingQuantity,
+                Amount = container.Amount,
+                RoomName = container.Room.RoomName,
+                Price = container.Price,
+                CompletedDateTime = container.CompletedDateTime
             };
 
             _logger.LogInformation("Container {ContainerId} updated successfully.", container.ContainerId);
@@ -172,13 +154,18 @@ namespace EggLedger.API.Services
                 .AsNoTracking()
                 .Where(c => (c.Buyer.FirstName + " " + c.Buyer.LastName).Contains(ownerName))
                 .OrderBy(c => c.PurchaseDateTime)
-                .Select(c => new ContainerSummaryDto
+                .Select(container => new ContainerSummaryDto
                 {
-                    ContainerId = c.ContainerId,
-                    ContainerName = c.ContainerName,
-                    RemainingQuantity = c.RemainingQuantity,
-                    TotalQuantity = c.TotalQuantity,
-                    OwnerName = c.Buyer.Name
+                    ContainerId = container.ContainerId,
+                    ContainerName = container.ContainerName,
+                    PurchaseDateTime = container.PurchaseDateTime,
+                    BuyerName = container.Buyer.Name,
+                    TotalQuantity = container.TotalQuantity,
+                    RemainingQuantity = container.RemainingQuantity,
+                    Amount = container.Amount,
+                    RoomName = container.Room.RoomName,
+                    Price = container.Price,
+                    CompletedDateTime = container.CompletedDateTime
                 })
                 .ToListAsync();
 
@@ -196,13 +183,18 @@ namespace EggLedger.API.Services
                 .OrderBy(c => c.PurchaseDateTime)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
-                .Select(c => new ContainerSummaryDto
+                .Select(container => new ContainerSummaryDto
                 {
-                    ContainerId = c.ContainerId,
-                    ContainerName = c.ContainerName,
-                    RemainingQuantity = c.RemainingQuantity,
-                    TotalQuantity = c.TotalQuantity,
-                    OwnerName = c.Buyer.Name
+                    ContainerId = container.ContainerId,
+                    ContainerName = container.ContainerName,
+                    PurchaseDateTime = container.PurchaseDateTime,
+                    BuyerName = container.Buyer.Name,
+                    TotalQuantity = container.TotalQuantity,
+                    RemainingQuantity = container.RemainingQuantity,
+                    Amount = container.Amount,
+                    RoomName = container.Room.RoomName,
+                    Price = container.Price,
+                    CompletedDateTime = container.CompletedDateTime
                 })
                 .ToListAsync();
 

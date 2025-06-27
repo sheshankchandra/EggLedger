@@ -28,10 +28,5 @@ namespace EggLedger.Core.Models
         [JsonIgnore]
         public virtual ICollection<OrderDetail> OrderDetails { get; set; } = new List<OrderDetail>();
         public virtual ICollection<Transaction> Transactions { get; set; } = new List<Transaction>();
-
-        public void UpdateAmount()
-        {
-            Amount = OrderDetails.Sum(d => d.Price * d.DetailQuantity);
-        }
     }
 }

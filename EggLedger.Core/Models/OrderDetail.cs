@@ -15,6 +15,7 @@ namespace EggLedger.Core.Models
         public Guid ContainerId { get; set; }
         public int DetailQuantity { get; set; }
         public decimal Price { get; set; }
+        public decimal Amount { get; set; }
         public OrderDetailStatus OrderDetailStatus { get; set; }
 
         [JsonIgnore]

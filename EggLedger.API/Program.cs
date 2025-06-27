@@ -1,14 +1,20 @@
-using System.Text;
 using EggLedger.API.Data;
+using EggLedger.API.Helpers;
+using EggLedger.API.Helpers.Auth;
 using EggLedger.API.Services;
 using EggLedger.Core.Helpers;
 using EggLedger.Core.Interfaces;
+using EggLedger.Core.Models;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.OpenApi;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.AspNetCore.OpenApi;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Authentication.Cookies;
 using Scalar.AspNetCore;
+using System.Text;
+using EggLedger.API.Helpers.Auth.Handlers;
+using EggLedger.API.Helpers.Auth.Requirements;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -64,13 +70,24 @@ builder.Services.AddAuthentication(options =>
         options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
     });
 
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("RoomAdmin", policy => policy.Requirements.Add(new RoomAdminRequirement()));
+    options.AddPolicy("RoomMember", policy => policy.Requirements.Add(new RoomMemberRequirement()));
+});
+
+builder.Services.AddHttpContextAccessor();
+
 // DI Registrations
 
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IContainerService, ContainerService>();
-builder.Services.AddScoped<INamingService, NamingService>();
+builder.Services.AddScoped<IHelperService, HelperService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IRoomService, RoomService>();
+builder.Services.AddScoped<IAuthorizationHandler, RoomAdminHandler>();
+builder.Services.AddSingleton<IAuthorizationHandler, RoomMemberHandler>();
 
 var app = builder.Build();
 
