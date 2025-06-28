@@ -77,6 +77,9 @@ namespace EggLedger.API.Services
 
             if (user == null)
             {
+                _logger.LogWarning("Login failed for email '{Email}': User not found.", email);
+                _logger.LogInformation("Creating new user with credentials email : {email}, name : '{name}'", email, name);
+
                 var nameParts = name?.Split(new[] { ' ' }, 2, StringSplitOptions.RemoveEmptyEntries) ?? new string[0];
                 var firstName = nameParts.Length > 0 ? nameParts[0] : "User";
                 var lastName = nameParts.Length > 1 ? nameParts[1] : null;
@@ -93,8 +96,11 @@ namespace EggLedger.API.Services
                 };
                 _context.Users.Add(user);
                 await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Successfully created new user with credentials email : {email}, name : '{name}'", email, name);
             }
 
+            _logger.LogInformation("Sending token response");
             return await CreateTokenResponse(user);
         }
 

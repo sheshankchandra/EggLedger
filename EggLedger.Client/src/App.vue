@@ -22,24 +22,58 @@
 </template>
 
 <script setup>
-// No changes needed in the script part of App.vue
-import { computed } from 'vue';
-import { RouterLink, RouterView } from 'vue-router';
-import { useAuthStore } from '@/stores/auth.store';
+import { computed } from 'vue'
+import { RouterLink, RouterView } from 'vue-router'
+import { useAuthStore } from '@/stores/auth.store'
 
-const authStore = useAuthStore();
-const isAuthenticated = computed(() => authStore.isAuthenticated);
+const authStore = useAuthStore()
+const isAuthenticated = computed(() => authStore.isAuthenticated)
 
 const handleLogout = () => {
-  authStore.logout();
-};
+  authStore.logout()
+}
 </script>
 
 <style scoped>
-/* Your existing styles are fine */
-header { line-height: 1.5; border-bottom: 1px solid #eee; }
-nav { display: flex; justify-content: center; align-items: center; padding: 1rem; gap: 1rem; }
-nav a { font-weight: bold; color: #2c3e50; text-decoration: none; }
-nav a.router-link-exact-active { color: #42b983; }
-main { padding: 2rem; }
+#app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+header {
+  width: 100%;
+  border-bottom: 10px solid #eee;
+  background: #fafafa;
+}
+nav {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem;
+  gap: 1rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+nav a {
+  font-weight: bold;
+  color: #2c3e50;
+  text-decoration: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  transition:
+    background 0.2s,
+    color 0.2s;
+}
+nav a.router-link-exact-active {
+  color: #fff;
+  background: #2c3e50;
+}
+main {
+  flex: 1 1 auto;
+  padding: 2rem;
+  width: 100%;
+  box-sizing: border-box;
+  display: block;
+}
 </style>

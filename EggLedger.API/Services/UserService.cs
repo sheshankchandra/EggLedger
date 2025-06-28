@@ -28,8 +28,31 @@ namespace EggLedger.API.Services
 
         public async Task<Result<List<UserSummaryDto>>> GetAllUsersAsync()
         {
-            var users = await _context.Users
-                .AsNoTracking()
+            var users = await _context.Users.AsNoTracking()
+                .Select(u => new UserSummaryDto
+                {
+                    UserId = u.UserId,
+                    Name = u.Name,
+                    Email = u.Email,
+                    Role = u.Role
+                })
+                .ToListAsync();
+
+            return Result.Ok(users);
+        }
+
+        public async Task<Result<List<UserSummaryDto>>> GetAllRoomUsersAsync(int roomCode)
+        {
+            var room = await _context.Rooms.Where(r => r.RoomCode == roomCode).FirstOrDefaultAsync();
+
+            if (room == null)
+            {
+                return Result.Fail("Room not found");
+            }
+
+            var users = await _context.Users.AsNoTracking()
+                .Include(u => u.UserRooms)
+                .Where(u => u.UserRooms.Any(ur => ur.RoomId == room.RoomId))
                 .Select(u => new UserSummaryDto
                 {
                     UserId = u.UserId,
@@ -44,8 +67,7 @@ namespace EggLedger.API.Services
 
         public async Task<Result<UserSummaryDto>> GetUserByIdAsync(Guid id)
         {
-            var user = await _context.Users
-                .AsNoTracking()
+            var user = await _context.Users.AsNoTracking()
                 .Where(u => u.UserId == id)
                 .Select(u => new UserSummaryDto
                 {

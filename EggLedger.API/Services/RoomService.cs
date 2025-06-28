@@ -22,17 +22,8 @@ namespace EggLedger.API.Services
             _helperService = helperService;
         }
 
-        public async Task<Result<Room>> CreateRoomAsync(CreateRoomDto dto)
+        public async Task<Result<string>> CreateRoomAsync(Guid userId, CreateRoomDto dto)
         {
-            var user = await _context.Users
-                .FirstOrDefaultAsync(u => u.UserId == dto.CreatorUserId);
-
-            if (user == null)
-            {
-                _logger.LogWarning("User not found, email '{Email}'", dto.CreatorUserId);
-                return Result.Fail("User not found");
-            }
-
             var room = new Room()
             {
                 RoomId = Guid.NewGuid(),
@@ -45,7 +36,7 @@ namespace EggLedger.API.Services
             var userRoom = new UserRoom
             {
                 RoomId = room.RoomId,
-                UserId = dto.CreatorUserId,
+                UserId = userId,
                 IsAdmin = true,
                 JoinedAt = DateTime.UtcNow
             };
@@ -56,7 +47,7 @@ namespace EggLedger.API.Services
 
             _logger.LogInformation("New Room {Room.RoomName} Created: {Room.RoomId}", room.RoomName, room.RoomId);
 
-            return room;
+            return dto.RoomName;
         }
 
         public async Task<Result<Room>> JoinRoomAsync(JoinRoomDto dto)

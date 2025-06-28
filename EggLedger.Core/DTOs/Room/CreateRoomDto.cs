@@ -8,7 +8,6 @@ namespace EggLedger.Core.DTOs.Room
 {
     public class CreateRoomDto
     {
-        public Guid CreatorUserId { get; set; }
         public required string RoomName { get; set; }
         public bool IsOpen { get; set; }
     }

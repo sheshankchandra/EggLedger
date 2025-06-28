@@ -18,11 +18,21 @@ namespace EggLedger.API.Controllers
             _userService = userService;
         }
 
-        // GET: api/user
-        [HttpGet]
+        // GET: api/user/all
+        [HttpGet("all")]
         public async Task<ActionResult<List<UserSummaryDto>>> GetAllUsers()
         {
             var result = await _userService.GetAllUsersAsync();
+            if (result.IsSuccess)
+                return Ok(result.Value);
+            return StatusCode(500, result.Errors);
+        }
+
+        // GET: api/user/{roomCode}/all
+        [HttpGet("{roomCode:int}/all")]
+        public async Task<ActionResult<List<UserSummaryDto>>> GetAllRoomUsers([FromRoute] int roomCode)
+        {
+            var result = await _userService.GetAllRoomUsersAsync(roomCode);
             if (result.IsSuccess)
                 return Ok(result.Value);
             return StatusCode(500, result.Errors);

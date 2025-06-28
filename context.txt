@@ -1,0 +1,11 @@
+I want to create a EggLedger app, where me and my roommates will use it primarily. We all go to gym, and eat lot of eggs. This app is to keep track of the eggs, so that buyer doesn't forget to collect money from them. This is .net api backend project, I've already these models : container(egg tray), user, order(stocking or consuming), orderdetail (specific order details), refreshtoken. I added user, auth, order, container services. But didn't implement the core business logic into the code yet. I just added models. 
+
+This the logic
+
+- Person will join a room (Room code)
+- He will join other users to add orders.
+- If a person adds a contianer (eggs) others can see it
+- Others can eat those eggs(consuming order), and it will be added to order table
+- Every person can see how many eggs left, and who ate those eggs when he clicks on one particular egg details.
+- First in house First consume
+- Maintain amount to be sent to the buyer kind of logic.

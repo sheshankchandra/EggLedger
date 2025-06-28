@@ -11,7 +11,7 @@ namespace EggLedger.Core.Interfaces
 {
     public interface IRoomService
     {
-        Task<Result<Room>> CreateRoomAsync(CreateRoomDto dto);
+        Task<Result<string>> CreateRoomAsync(Guid userId, CreateRoomDto dto);
         Task<Result<Room>> JoinRoomAsync(JoinRoomDto dto);
         Task<Result<string>> UpdateRoomPublicStatusAsync(UpdateRoomPublicStatusDto dto);
     }

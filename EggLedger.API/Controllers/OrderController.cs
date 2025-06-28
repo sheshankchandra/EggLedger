@@ -103,7 +103,7 @@ namespace EggLedger.API.Controllers
 
         // GET: api/{roomCode}/orders/container/{containerId}
         [HttpGet("container/{containerId:guid}")]
-        public async Task<IActionResult> GetOrdersByContainer(Guid containerId, string roomCode)
+        public async Task<IActionResult> GetOrdersByContainer([FromRoute] int roomCode, [FromRoute] Guid containerId)
         {
             _logger.LogInformation("Received request to retrieve a Containers '{containerId}' Order information.", containerId);
 

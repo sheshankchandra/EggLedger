@@ -48,7 +48,7 @@ builder.Services.AddAuthentication(options =>
         options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
         options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
     })
-    .AddCookie()
+    .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddJwtBearer(options => 
     {
         options.TokenValidationParameters = new TokenValidationParameters
