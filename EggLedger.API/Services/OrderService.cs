@@ -38,7 +38,7 @@ namespace EggLedger.API.Services
             {
                 OrderId = Guid.NewGuid(),
                 OrderName = orderNameResult.Value,
-                Datestamp = _helperService.GetIndianTime(),
+                Datestamp = DateTime.UtcNow,
                 OrderType = OrderType.Stocking,
                 Quantity = dto.Quantity,
                 UserId = user.UserId,
@@ -55,8 +55,8 @@ namespace EggLedger.API.Services
                 Container = new Container
                 {
                     ContainerId = Guid.NewGuid(),
-                    ContainerName = string.IsNullOrEmpty(dto.ContainerName) ? $"{user.FirstName} {_helperService.GetIndianTime():yyyyMMddHHmmss}" : dto.ContainerName,
-                    PurchaseDateTime = _helperService.GetIndianTime(),
+                    ContainerName = string.IsNullOrEmpty(dto.ContainerName) ? $"{user.FirstName} {DateTime.UtcNow:yyyyMMddHHmmss}" : dto.ContainerName,
+                    PurchaseDateTime = DateTime.UtcNow,
                     BuyerId = userId,
                     TotalQuantity = dto.Quantity,
                     RemainingQuantity = dto.Quantity,
@@ -93,7 +93,7 @@ namespace EggLedger.API.Services
             {
                 OrderId = Guid.NewGuid(),
                 OrderName = orderNameResult.Value,
-                Datestamp = _helperService.GetIndianTime(),
+                Datestamp = DateTime.UtcNow,
                 OrderType = OrderType.Consuming,
                 Quantity = dto.Quantity,
                 UserId = userId,

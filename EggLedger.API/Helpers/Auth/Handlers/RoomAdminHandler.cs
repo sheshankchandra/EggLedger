@@ -10,26 +10,44 @@ namespace EggLedger.API.Helpers.Auth.Handlers
     {
         private readonly ApplicationDbContext _context;
         private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly ILogger<RoomAdminHandler> _logger;
 
-        public RoomAdminHandler(ApplicationDbContext context, IHttpContextAccessor httpContextAccessor)
+        public RoomAdminHandler(ApplicationDbContext context, IHttpContextAccessor httpContextAccessor, ILogger<RoomAdminHandler> logger)
         {
             _context = context;
             _httpContextAccessor = httpContextAccessor;
+            _logger = logger;
         }
 
         protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, RoomAdminRequirement requirement)
         {
-            Guid userId = Guid.Parse(context.User.FindFirstValue(ClaimTypes.NameIdentifier));
-            RouteData? routeData = _httpContextAccessor.HttpContext?.GetRouteData();
-            string? roomCodeStr = routeData?.Values["roomCode"]?.ToString();
-
-            if (int.TryParse(roomCodeStr, out var roomCode))
+            var userIdClaim = context.User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdClaim, out var userId))
             {
-                var isAdmin = await _context.UserRooms
-                    .AnyAsync(ur => ur.UserId == userId && ur.Room.RoomCode == roomCode && ur.IsAdmin);
+                _logger.LogWarning("RoomMemberHandler: Invalid or missing user ID claim.");
+                return;
+            }
 
-                if (isAdmin)
-                    context.Succeed(requirement);
+            var routeData = _httpContextAccessor.HttpContext?.GetRouteData();
+            var roomCodeStr = routeData?.Values["roomCode"]?.ToString();
+
+            if (!int.TryParse(roomCodeStr, out var roomCode))
+            {
+                _logger.LogWarning("RoomMemberHandler: Invalid or missing roomCode in route.");
+                return;
+            }
+
+            var isMember = await _context.UserRooms
+                .AnyAsync(ur => ur.UserId == userId && ur.Room.RoomCode == roomCode && ur.IsAdmin);
+
+            if (isMember)
+            {
+                _logger.LogInformation("User '{UserId}' is a admin of room '{RoomCode}'.", userId, roomCode);
+                context.Succeed(requirement);
+            }
+            else
+            {
+                _logger.LogWarning("Authorization failed: User '{UserId}' is not a admin of room '{RoomCode}'.", userId, roomCode);
             }
         }
     }

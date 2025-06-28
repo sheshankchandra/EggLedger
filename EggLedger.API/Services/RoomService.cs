@@ -39,7 +39,7 @@ namespace EggLedger.API.Services
                 RoomName = dto.RoomName,
                 RoomCode = _helperService.GenerateNewRoomCode(),
                 IsPublic = dto.IsOpen,
-                CreatedAt = _helperService.GetIndianTime()
+                CreatedAt = DateTime.UtcNow
             };
 
             var userRoom = new UserRoom
@@ -47,7 +47,7 @@ namespace EggLedger.API.Services
                 RoomId = room.RoomId,
                 UserId = dto.CreatorUserId,
                 IsAdmin = true,
-                JoinedAt = _helperService.GetIndianTime()
+                JoinedAt = DateTime.UtcNow
             };
 
             _context.Rooms.Add(room);
@@ -96,7 +96,7 @@ namespace EggLedger.API.Services
                 RoomId = room.RoomId,
                 UserId = dto.UserId,
                 IsAdmin = false,
-                JoinedAt = _helperService.GetIndianTime()
+                JoinedAt = DateTime.UtcNow
             };
 
             _context.UserRooms.Add(userRoom);

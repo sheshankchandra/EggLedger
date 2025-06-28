@@ -73,11 +73,5 @@ namespace EggLedger.Core.Helpers
 
             return roomCode;
         }
-
-        public DateTime GetIndianTime()
-        {
-            var indianZone = TimeZoneInfo.FindSystemTimeZoneById("India Standard Time");
-            return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, indianZone);
-        }
     }
 }

@@ -87,7 +87,7 @@ builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IRoomService, RoomService>();
 builder.Services.AddScoped<IAuthorizationHandler, RoomAdminHandler>();
-builder.Services.AddSingleton<IAuthorizationHandler, RoomMemberHandler>();
+builder.Services.AddScoped<IAuthorizationHandler, RoomMemberHandler>();
 
 var app = builder.Build();
 

@@ -75,7 +75,6 @@ namespace EggLedger.API.Controllers
         }
 
         // DELETE: api/user/profile
-        [Authorize]
         [HttpGet("profile")]
         public async Task<IActionResult> GetProfile()
         {

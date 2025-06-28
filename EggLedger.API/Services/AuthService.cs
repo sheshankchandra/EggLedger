@@ -137,7 +137,7 @@ namespace EggLedger.API.Services
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:SecretKey"]));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-            var expiry = _helperService.GetIndianTime().AddMinutes(int.Parse(_configuration["Jwt:ExpiryInMinutes"]));
+            var expiry = DateTime.UtcNow.AddMinutes(int.Parse(_configuration["Jwt:ExpiryInMinutes"]));
 
             var token = new JwtSecurityToken(
                 issuer: _configuration["Jwt:Issuer"],
@@ -163,10 +163,10 @@ namespace EggLedger.API.Services
             var refreshToken = new RefreshToken
             {
                 Token = GenerateRefreshToken(),
-                Expires = _helperService.GetIndianTime().AddDays(7),
+                Expires = DateTime.UtcNow.AddDays(7),
                 CreatedByIp = "TODO:CaptureIPAddress",
                 UserId = user.UserId,
-                Created = _helperService.GetIndianTime()
+                Created = DateTime.UtcNow
             };
 
             _context.RefreshTokens.Add(refreshToken);
@@ -184,7 +184,7 @@ namespace EggLedger.API.Services
             if (user is null) return null;
 
             var token = user.RefreshTokens
-                .FirstOrDefault(t => t.Token == refreshToken && !t.IsRevoked && !(t.Expires <= _helperService.GetIndianTime()));
+                .FirstOrDefault(t => t.Token == refreshToken && !t.IsRevoked && !(t.Expires <= DateTime.UtcNow));
 
             return token != null ? user : null;
         }

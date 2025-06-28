@@ -8,7 +8,7 @@ using System.Security.Claims;
 
 namespace EggLedger.API.Controllers
 {
-    [Authorize(Policy = "ContainerRoomMember")]
+    [Authorize(Policy = "RoomMember")]
     [Route("egg-ledger-api/{roomCode:int}/orders")]
     [ApiController]
     public class OrderController : ControllerBase
@@ -105,8 +105,17 @@ namespace EggLedger.API.Controllers
         [HttpGet("container/{containerId:guid}")]
         public async Task<IActionResult> GetOrdersByContainer(Guid containerId, string roomCode)
         {
+            _logger.LogInformation("Received request to retrieve a Containers '{containerId}' Order information.", containerId);
+
             var result = await _orderService.GetOrdersByContainerAsync(containerId);
-            return Ok(result.Value); // Return empty list if none found
+
+            if (result is { IsSuccess: true, Value: not null })
+            {
+                _logger.LogInformation("Successfully retrieve a Containers '{containerId}' Order information.", containerId);
+                return Ok(result.Value);
+            }
+
+            return NotFound(result.Value);
         }
     }
 }
