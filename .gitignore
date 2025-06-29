@@ -421,4 +421,7 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
+# .NET Aspire
+.aspire/
+
 /SQL Helper

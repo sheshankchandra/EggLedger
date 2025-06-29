@@ -21,17 +21,50 @@ A full-stack roommate resource and expense management application built with ASP
 **Backend:** ASP.NET Core 9.0, Entity Framework Core, PostgreSQL  
 **Frontend:** Vue.js 3, Vite, Pinia  
 **Authentication:** JWT, Google OAuth 2.0  
+**Orchestration:** .NET Aspire 9.3 (development), Docker (production)  
+**Monitoring:** Built-in health checks, OpenTelemetry  
 **Documentation:** OpenAPI/Swagger
 
 ## Quick Start
 
 ### Prerequisites
 
-- .NET 9.0 SDK
-- Node.js 18+
-- PostgreSQL 13+
+- [.NET 9.0 SDK](https://dotnet.microsoft.com/download)
+- [Node.js 18+](https://nodejs.org/)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (for PostgreSQL)
 
-### Database Setup
+### Option 1: Using .NET Aspire (Recommended)
+
+.NET Aspire provides orchestration for the entire application stack including PostgreSQL, API, and frontend.
+
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/eggledger.git
+cd eggledger
+
+# Restore all packages
+dotnet restore
+
+# Install frontend dependencies
+cd EggLedger.Client
+npm install
+cd ..
+
+# Run the entire application with Aspire
+dotnet run --project EggLedger.AppHost
+```
+
+This will:
+- Start PostgreSQL in a Docker container
+- Run the API server with proper database connection
+- Start the Vue.js development server
+- Provide a unified dashboard at `https://localhost:17071`
+
+### Option 2: Manual Setup
+
+If you prefer to run components separately:
+
+#### Database Setup
 
 ```bash
 # Using Docker
@@ -42,7 +75,7 @@ docker run --name eggledger-postgres \
   -p 5432:5432 -d postgres:13
 ```
 
-### Backend Setup
+#### Backend Setup
 
 ```bash
 cd EggLedger.API
@@ -53,7 +86,7 @@ dotnet run
 
 API available at `https://localhost:7224`
 
-### Frontend Setup
+#### Frontend Setup
 
 ```bash
 cd EggLedger.Client
@@ -103,6 +136,32 @@ VITE_API_BASE_URL=https://localhost:7224
 
 ## Development
 
+### Aspire Dashboard
+
+When running with .NET Aspire, you get access to a comprehensive dashboard at `https://localhost:17071` that provides:
+
+- **Resource Overview**: Monitor all services (API, Frontend, Database)
+- **Logs**: Centralized logging from all components
+- **Metrics**: Performance metrics and telemetry
+- **Traces**: Distributed tracing across services
+- **Environment Variables**: Configuration management
+
+### Development vs Production
+
+The application is designed to work optimally in both development and production:
+
+**Development (with Aspire):**
+- Automatic PostgreSQL container management
+- Service discovery and orchestration
+- Unified dashboard and monitoring
+- Hot reload for both frontend and backend
+
+**Production (traditional deployment):**
+- Direct database connections with retry policies
+- Health check endpoints for load balancers and orchestrators
+- Environment-based configuration
+- Container-ready with proper Dockerfile configurations
+
 ### Building for Production
 
 ```bash
@@ -125,11 +184,19 @@ dotnet test
 
 ```
 EggLedger/
-├── EggLedger.API/          # Web API
-├── EggLedger.Core/         # Business Logic
+├── EggLedger.API/          # ASP.NET Core Web API
+├── EggLedger.Core/         # Shared Business Logic
 ├── EggLedger.Client/       # Vue.js Frontend
-└── EggLedger.AppHost/      # Orchestration
+├── EggLedger.AppHost/      # .NET Aspire Orchestration
+├── EggLedger.ServiceDefaults/ # Aspire Service Defaults
+└── EggLedger.sln          # Visual Studio Solution
 ```
+
+The solution is organized as a .NET solution with integrated frontend orchestration:
+- **Visual Studio 2022**: Open `EggLedger.sln` for backend development
+- **Visual Studio Code**: Open `EggLedger.code-workspace` for full-stack development
+- **JetBrains Rider**: Native support for .NET solutions
+- **.NET Aspire**: Handles frontend orchestration automatically
 
 ## Documentation
 

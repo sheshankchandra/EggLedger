@@ -27,8 +27,14 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddOpenApi("v2");
 
 // PostgreSQL Connection with retry policy
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+if (string.IsNullOrEmpty(connectionString))
+{
+    throw new InvalidOperationException("Database connection string 'DefaultConnection' is not configured. Please check your appsettings.json or environment variables.");
+}
+
 builder.Services.AddDbContext<ApplicationDbContext>(options => 
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"), npgsqlOptions =>
+    options.UseNpgsql(connectionString, npgsqlOptions =>
     {
         npgsqlOptions.EnableRetryOnFailure(
             maxRetryCount: 3,
@@ -38,7 +44,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 // Add health checks for database
 builder.Services.AddHealthChecks()
-    .AddNpgSql(builder.Configuration.GetConnectionString("DefaultConnection")!, name: "postgresql");
+    .AddNpgSql(connectionString, name: "postgresql");
 
 var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
 
@@ -92,6 +98,7 @@ builder.Services.AddHttpContextAccessor();
 // DI Registrations
 builder.Services.AddScoped<IDatabaseService, DatabaseService>();
 builder.Services.AddHostedService<EggLedger.API.Middleware.DatabaseStartupValidationService>();
+builder.Services.AddHostedService<RefreshTokenCleanupService>(); // Add token cleanup service
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IContainerService, ContainerService>();
 builder.Services.AddScoped<IHelperService, HelperService>();
@@ -115,8 +122,11 @@ if (app.Environment.IsDevelopment())
     app.MapScalarApiReference();
 }
 
-// Add health check endpoints
+// Health Check Endpoints
+// GET /health - Basic health check for all registered health checks (database, etc.)
 app.MapHealthChecks("/health");
+
+// GET /health/ready - Readiness probe for checks tagged with "ready"
 app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
 {
     Predicate = check => check.Tags.Contains("ready")

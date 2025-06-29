@@ -19,6 +19,7 @@ public class AuthController : ControllerBase
         _authService = authService;
     }
 
+    // POST /egg-ledger-api/auth/login
     [HttpPost("login")]
     [AllowAnonymous]
     public async Task<IActionResult> Login([FromBody] LoginDto dto)
@@ -29,6 +30,7 @@ public class AuthController : ControllerBase
         return Unauthorized(result.Errors.Select(e => e.Message));
     }
 
+    // GET /egg-ledger-api/auth/google-login
     [HttpGet("google-login")]
     [AllowAnonymous]
     public IActionResult GoogleLogin()
@@ -37,6 +39,7 @@ public class AuthController : ControllerBase
         return Challenge(properties, GoogleDefaults.AuthenticationScheme);
     }
 
+    // GET /egg-ledger-api/auth/google-callback
     [HttpGet("google-callback")]
     [AllowAnonymous]
     public async Task<IActionResult> GoogleCallback()
@@ -74,6 +77,7 @@ public class AuthController : ControllerBase
         return Redirect(frontendCallbackUrl);
     }
 
+    // POST /egg-ledger-api/auth/refresh-token
     [HttpPost("refresh-token")]
     public async Task<ActionResult<TokenResponseDto>> RefreshToken(RefreshTokenRequestDto request)
     {
@@ -82,5 +86,17 @@ public class AuthController : ControllerBase
             return Unauthorized("Invalid refresh token.");
 
         return Ok(tokenResponse.Value);
+    }
+
+    // POST /egg-ledger-api/auth/logout
+    [HttpPost("logout")]
+    [Authorize]
+    public async Task<IActionResult> Logout([FromBody] RefreshTokenRequestDto request)
+    {
+        var result = await _authService.LogoutAsync(request.UserId, request.RefreshToken);
+        if (result.IsSuccess)
+            return Ok(new { message = "Logged out successfully" });
+        
+        return BadRequest(result.Errors.Select(e => e.Message));
     }
 }

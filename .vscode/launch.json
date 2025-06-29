@@ -1,0 +1,33 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run EggLedger with Aspire",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build-apphost",
+      "program": "${workspaceFolder}/EggLedger.AppHost/bin/Debug/net9.0/EggLedger.AppHost.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/EggLedger.AppHost",
+      "console": "internalConsole",
+      "stopAtEntry": false,
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    },
+    {
+      "name": "Run API Only",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build-api",
+      "program": "${workspaceFolder}/EggLedger.API/bin/Debug/net9.0/EggLedger.API.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/EggLedger.API",
+      "console": "internalConsole",
+      "stopAtEntry": false,
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    }
+  ]
+}

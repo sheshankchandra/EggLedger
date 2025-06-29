@@ -5,10 +5,9 @@ import ProfileView from '../views/ProfileView.vue'
 import DashboardView from '../views/DashboardView.vue'
 import ContainerDetailView from '../views/ContainerDetailView.vue'
 import GoogleCallbackView from '../views/GoogleCallbackView.vue'
-import RoomLobby from '../views/RoomLobby.vue'
-import RoomPage from '../views/RoomPage.vue'
-// import RoomSelectionView from '../views/RoomSelectionView.vue'
-import RoomSelectionView from '../views/RoomSelectionView.modern.vue'
+import Lobby from '../views/Lobby.vue'
+import Room from '../views/Room.vue'
+import RoomSelection from '../views/RoomSelection.vue'
 import { useAuthStore } from '@/stores/auth.store'
 
 const router = createRouter({
@@ -26,14 +25,20 @@ const router = createRouter({
     },
     {
       path: '/lobby',
-      name: 'RoomLobby',
-      component: RoomLobby,
+      name: 'Lobby',
+      component: Lobby,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/room-selection',
+      name: 'RoomSelection',
+      component: RoomSelection,
       meta: { requiresAuth: true },
     },
     {
       path: '/room',
       name: 'Room',
-      component: RoomPage,
+      component: Room,
       meta: { requiresAuth: true },
     },
     {
@@ -62,7 +67,7 @@ const router = createRouter({
     {
       path: '/room-selection',
       name: 'room-selection',
-      component: RoomSelectionView,
+      component: RoomSelection,
       meta: { requiresAuth: true },
     },
     // Redirect root to room selection if logged in and has rooms, lobby if no rooms, otherwise to login

@@ -110,6 +110,10 @@ namespace EggLedger.API.Services
             if (user is null)
                 return Result.Fail("Invalid or Expired Refresh Token");
 
+            // Revoke the old refresh token
+            await RevokeRefreshTokenAsync(request.UserId, request.RefreshToken);
+
+            // Create new token pair
             return await CreateTokenResponse(user);
         }
 
@@ -193,6 +197,66 @@ namespace EggLedger.API.Services
                 .FirstOrDefault(t => t.Token == refreshToken && !t.IsRevoked && !(t.Expires <= DateTime.UtcNow));
 
             return token != null ? user : null;
+        }
+
+        public async Task RevokeRefreshTokenAsync(Guid userId, string refreshToken)
+        {
+            var token = await _context.RefreshTokens
+                .FirstOrDefaultAsync(t => t.UserId == userId && t.Token == refreshToken);
+
+            if (token != null && !token.IsRevoked)
+            {
+                token.Revoked = DateTime.UtcNow;
+                token.RevokedByIp = "TODO:CaptureIPAddress"; // You should capture the actual IP
+                await _context.SaveChangesAsync();
+            }
+        }
+
+        public async Task RevokeAllUserRefreshTokensAsync(Guid userId)
+        {
+            var tokens = await _context.RefreshTokens
+                .Where(t => t.UserId == userId && !t.IsRevoked)
+                .ToListAsync();
+
+            foreach (var token in tokens)
+            {
+                token.Revoked = DateTime.UtcNow;
+                token.RevokedByIp = "TODO:CaptureIPAddress";
+            }
+
+            if (tokens.Any())
+            {
+                await _context.SaveChangesAsync();
+            }
+        }
+
+        public async Task CleanupExpiredRefreshTokensAsync()
+        {
+            var expiredTokens = await _context.RefreshTokens
+                .Where(t => t.Expires <= DateTime.UtcNow)
+                .ToListAsync();
+
+            if (expiredTokens.Any())
+            {
+                _context.RefreshTokens.RemoveRange(expiredTokens);
+                await _context.SaveChangesAsync();
+                _logger.LogInformation("Cleaned up {Count} expired refresh tokens", expiredTokens.Count);
+            }
+        }
+
+        public async Task<Result> LogoutAsync(Guid userId, string refreshToken)
+        {
+            try
+            {
+                await RevokeRefreshTokenAsync(userId, refreshToken);
+                _logger.LogInformation("User {UserId} successfully logged out", userId);
+                return Result.Ok();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while logging out user {UserId}", userId);
+                return Result.Fail("Logout failed");
+            }
         }
     }
 }

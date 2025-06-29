@@ -7,6 +7,12 @@ export const roomService = {
     return response.data
   },
 
+  // Get room details by code
+  async getRoomByCode(roomCode) {
+    const response = await apiClient.get(`/egg-ledger-api/room/${roomCode}`)
+    return response.data
+  },
+
   // Create a new room
   async createRoom(roomData) {
     const response = await apiClient.post('/egg-ledger-api/room/create/', roomData)
@@ -29,7 +35,7 @@ export const roomService = {
   async updateRoomPublicStatus(updateData) {
     const response = await apiClient.post('/egg-ledger-api/room/update/IsPublic', updateData)
     return response.data
-  }
+  },
 }
 
 export default roomService

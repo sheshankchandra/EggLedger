@@ -19,5 +19,9 @@ namespace EggLedger.Core.Interfaces
         string GenerateRefreshToken();
         Task<string> GenerateAndSaveRefreshTokenAsync(User user);
         Task<User?> ValidateRefreshTokenAsync(Guid userId, string refreshToken);
+        Task RevokeRefreshTokenAsync(Guid userId, string refreshToken);
+        Task RevokeAllUserRefreshTokensAsync(Guid userId);
+        Task CleanupExpiredRefreshTokensAsync();
+        Task<Result> LogoutAsync(Guid userId, string refreshToken);
     }
 }
