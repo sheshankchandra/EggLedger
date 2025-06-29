@@ -15,6 +15,7 @@ using Scalar.AspNetCore;
 using System.Text;
 using EggLedger.API.Helpers.Auth.Handlers;
 using EggLedger.API.Helpers.Auth.Requirements;
+using EggLedger.API.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -25,9 +26,19 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddOpenApi("v2");
 
-// PostgreSQL Connection
+// PostgreSQL Connection with retry policy
 builder.Services.AddDbContext<ApplicationDbContext>(options => 
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"), npgsqlOptions =>
+    {
+        npgsqlOptions.EnableRetryOnFailure(
+            maxRetryCount: 3,
+            maxRetryDelay: TimeSpan.FromSeconds(5),
+            errorCodesToAdd: null);
+    }));
+
+// Add health checks for database
+builder.Services.AddHealthChecks()
+    .AddNpgSql(builder.Configuration.GetConnectionString("DefaultConnection")!, name: "postgresql");
 
 var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
 
@@ -79,7 +90,8 @@ builder.Services.AddAuthorization(options =>
 builder.Services.AddHttpContextAccessor();
 
 // DI Registrations
-
+builder.Services.AddScoped<IDatabaseService, DatabaseService>();
+builder.Services.AddHostedService<EggLedger.API.Middleware.DatabaseStartupValidationService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IContainerService, ContainerService>();
 builder.Services.AddScoped<IHelperService, HelperService>();
@@ -93,12 +105,22 @@ var app = builder.Build();
 
 app.MapDefaultEndpoints();
 
+// Add global exception handling middleware first
+app.UseMiddleware<GlobalExceptionHandlingMiddleware>();
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
     app.MapScalarApiReference();
 }
+
+// Add health check endpoints
+app.MapHealthChecks("/health");
+app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("ready")
+});
 
 app.UseHttpsRedirection();
 app.UseCors(MyAllowSpecificOrigins);

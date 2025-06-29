@@ -1,5 +1,6 @@
 ﻿using EggLedger.API.Data;
 using EggLedger.Core.DTOs.Room;
+using EggLedger.Core.DTOs.User;
 using EggLedger.Core.Interfaces;
 using EggLedger.Core.Models;
 using FluentResults;
@@ -98,6 +99,30 @@ namespace EggLedger.API.Services
             return Result.Ok(room);
         }
 
+        public async Task<Result<List<UserSummaryDto>>> GetAllRoomUsersAsync(int roomCode)
+        {
+            var room = await _context.Rooms.Where(r => r.RoomCode == roomCode).FirstOrDefaultAsync();
+
+            if (room == null)
+            {
+                return Result.Fail("Room not found");
+            }
+
+            var users = await _context.Users.AsNoTracking()
+                .Include(u => u.UserRooms)
+                .Where(u => u.UserRooms.Any(ur => ur.RoomId == room.RoomId))
+                .Select(u => new UserSummaryDto
+                {
+                    UserId = u.UserId,
+                    Name = u.Name,
+                    Email = u.Email,
+                    Role = u.Role
+                })
+                .ToListAsync();
+
+            return Result.Ok(users);
+        }
+
         public async Task<Result<string>> UpdateRoomPublicStatusAsync(UpdateRoomPublicStatusDto dto)
         {
             try
@@ -137,6 +162,34 @@ namespace EggLedger.API.Services
             {
                 _logger.LogError(ex, "Error occurred while updating room visibility for RoomId {RoomId}", dto.RoomId);
                 return Result.Fail("Unexpected error occurred while updating the room's public status");
+            }
+        }
+
+        public async Task<Result<List<RoomDto>>> GetAllUserRoomsAsync(Guid userId)
+        {
+            try
+            {
+                var userRooms = await _context.UserRooms
+                    .AsNoTracking()
+                    .Include(ur => ur.Room)
+                    .Where(ur => ur.UserId == userId)
+                    .Select(ur => new RoomDto
+                    {
+                        RoomId = ur.Room.RoomId,
+                        RoomName = ur.Room.RoomName,
+                        RoomCode = ur.Room.RoomCode,
+                        IsOpen = ur.Room.IsPublic,
+                        AdminUserId = ur.IsAdmin ? userId : null
+                    })
+                    .ToListAsync();
+
+                _logger.LogInformation("Retrieved {Count} rooms for user {UserId}", userRooms.Count, userId);
+                return Result.Ok(userRooms);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while getting rooms for user {UserId}", userId);
+                return Result.Fail("Failed to retrieve user rooms");
             }
         }
     }

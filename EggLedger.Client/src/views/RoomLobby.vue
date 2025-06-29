@@ -81,6 +81,7 @@ import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.store'
 import apiClient from '@/services/api'
+import roomService from '@/services/room.service'
 
 // Initialize stores and router
 const authStore = useAuthStore()
@@ -126,6 +127,9 @@ const handleCreateRoom = async () => {
       throw new Error('API did not return a room code after creation.')
     }
 
+    // Refresh user's rooms in the auth store
+    await authStore.fetchUserRooms()
+
     // Store the new room code and navigate to the main room page
     sessionStorage.setItem('eggLedgerRoomCode', newRoomCode)
     router.push('/room')
@@ -139,17 +143,30 @@ const handleCreateRoom = async () => {
   }
 }
 
-const handleJoinRoom = () => {
+const handleJoinRoom = async () => {
   // Simple validation before proceeding
   if (!/^\d{6}$/.test(joinForm.roomCode)) {
     showNotification('Please enter a valid 6-digit room code.', 'error')
     return
   }
 
-  // We don't need to call an API here. We just save the code and
-  // let the RoomPage component handle fetching/validation.
-  sessionStorage.setItem('eggLedgerRoomCode', joinForm.roomCode)
-  router.push('/room')
+  try {
+    // Validate the room code by trying to join
+    await roomService.joinRoom(joinForm.roomCode)
+
+    // Refresh user's rooms in the auth store
+    await authStore.fetchUserRooms()
+
+    // Store the room code and navigate to the room page
+    sessionStorage.setItem('eggLedgerRoomCode', joinForm.roomCode)
+    router.push('/room')
+  } catch (error) {
+    console.error('Failed to join room:', error)
+    const errorMessage =
+      error.response?.data?.message ||
+      'Could not join the room. Please check the code and try again.'
+    showNotification(errorMessage, 'error')
+  }
 }
 </script>
 

@@ -1,18 +1,31 @@
 import apiClient from './api';
 
-// Maps to your /api/Order controller
+// Maps to your /egg-ledger-api/{roomCode}/orders controller
 export const orderService = {
-  // GET /api/Order/container/{containerId}
-  getOrdersForContainer(containerId) {
-    return apiClient.get(`/api/Order/container/${containerId}`);
+  // POST /egg-ledger-api/{roomCode}/orders/stock
+  stockOrder(roomCode, orderData) {
+    return apiClient.post(`/egg-ledger-api/${roomCode}/orders/stock`, orderData);
   },
-  // POST /api/Order/consume (Body is ConsumeOrderDto)
-  consumeOrder(orderData) {
-    return apiClient.post('/api/Order/consume', orderData);
+
+  // POST /egg-ledger-api/{roomCode}/orders/consume
+  consumeOrder(roomCode, orderData) {
+    return apiClient.post(`/egg-ledger-api/${roomCode}/orders/consume`, orderData);
   },
-  // POST /api/Order/stock (Body is StockOrderDto)
-  stockOrder(orderData) {
-    return apiClient.post('/api/Order/stock', orderData);
+
+  // GET /egg-ledger-api/{roomCode}/orders/{orderId}
+  getOrderById(roomCode, orderId) {
+    return apiClient.get(`/egg-ledger-api/${roomCode}/orders/${orderId}`);
+  },
+
+  // GET /egg-ledger-api/{roomCode}/orders/user/{userId}
+  getOrdersByUser(roomCode, userId) {
+    return apiClient.get(`/egg-ledger-api/${roomCode}/orders/user/${userId}`);
+  },
+
+  // GET /egg-ledger-api/{roomCode}/orders/container/{containerId}
+  getOrdersByContainer(roomCode, containerId) {
+    return apiClient.get(`/egg-ledger-api/${roomCode}/orders/container/${containerId}`);
   }
-  // We will add the /settle logic later when the endpoint exists.
 };
+
+export default orderService;

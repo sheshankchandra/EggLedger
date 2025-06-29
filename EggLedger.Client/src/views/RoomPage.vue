@@ -38,7 +38,11 @@
           <p>Bought new eggs? Log them here.</p>
           <form @submit.prevent="handleStockOrder">
             <div class="form-group">
-              <label for="stock-quantity">Quantity (eggs)</label>
+              <label for="stock-name">Stock Name</label>
+              <input id="stock-quantity" v-model.trim="stockForm.name" type="text" />
+            </div>
+            <div class="form-group">
+              <label for="stock-quantity">Quantity</label>
               <input
                 id="stock-quantity"
                 v-model.number="stockForm.quantity"
@@ -48,7 +52,7 @@
               />
             </div>
             <div class="form-group">
-              <label for="stock-price">Total Price ($)</label>
+              <label for="stock-price">Total Price</label>
               <input
                 id="stock-price"
                 v-model.number="stockForm.price"
@@ -99,8 +103,9 @@ const enteredRoomCode = ref('')
 const isLoading = ref(false)
 
 const stockForm = reactive({
-  quantity: 12, // Default to a dozen
-  price: 5.0,
+  name: '', // Optional, can be used for stock name
+  quantity: 0,
+  price: 0,
 })
 
 const consumeForm = reactive({
@@ -142,9 +147,8 @@ const handleStockOrder = async () => {
   if (isLoading.value) return
   isLoading.value = true
 
-  // This structure matches your 'StockOrderDto' based on common practice.
-  // Adjust if your DTO has different property names.
   const payload = {
+    name: stockForm.name,
     quantity: stockForm.quantity,
     price: stockForm.price,
   }
@@ -153,8 +157,9 @@ const handleStockOrder = async () => {
     const response = await apiClient.post(`/egg-ledger-api/${roomCode.value}/orders/stock`, payload)
     showNotification(`Successfully stocked ${response.data.quantity} eggs!`, 'success')
     // Reset form
-    stockForm.quantity = 12
-    stockForm.price = 5.0
+    stockForm.name = ''
+    stockForm.quantity = 0
+    stockForm.price = 0
   } catch (error) {
     console.error('Failed to create stock order:', error)
     const errorMessage =

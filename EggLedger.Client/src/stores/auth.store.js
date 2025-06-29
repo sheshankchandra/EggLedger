@@ -1,33 +1,51 @@
 import { defineStore } from 'pinia'
-import apiClient from '@/services/api'
+import authService from '@/services/auth.service'
+import userService from '@/services/user.service'
+import roomService from '@/services/room.service'
 import router from '@/router'
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
     token: localStorage.getItem('token') || null,
     user: JSON.parse(localStorage.getItem('user')) || null,
+    userRooms: JSON.parse(localStorage.getItem('userRooms')) || [],
   }),
   getters: {
     isAuthenticated: (state) => !!state.token,
     getUser: (state) => state.user,
+    getUserRooms: (state) => state.userRooms,
+    hasRooms: (state) => state.userRooms && state.userRooms.length > 0,
   },
   actions: {
     async login(credentials) {
       try {
-        const response = await apiClient.post('/api/auth/login', credentials)
+        const response = await authService.login(credentials)
         const token = response.data.accessToken
         this.setToken(token)
         await this.fetchProfile() // Fetch profile right after login
+        await this.fetchUserRooms() // Fetch user's rooms
+
         // Route based on room membership
-        const user = this.user
-        if (user && user.roomId) {
-          router.push('/room')
+        if (this.hasRooms) {
+          // If user has rooms, let them choose which room to enter
+          router.push('/room-selection')
         } else {
+          // If user has no rooms, send to lobby to create/join a room
           router.push('/lobby')
         }
       } catch (error) {
         console.error('Login failed:', error)
-        // You should handle login errors, e.g., show a message to the user
+        throw error
+      }
+    },
+
+    async register(userData) {
+      try {
+        const response = await authService.register(userData)
+        // Registration successful, now log the user in
+        return response.data
+      } catch (error) {
+        console.error('Registration failed:', error)
         throw error
       }
     },
@@ -36,7 +54,7 @@ export const useAuthStore = defineStore('auth', {
       if (!this.token) return
 
       try {
-        const response = await apiClient.get('/api/user/profile')
+        const response = await userService.getProfile()
         const user = response.data
         this.setUser(user)
       } catch (error) {
@@ -46,12 +64,25 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
+    async fetchUserRooms() {
+      if (!this.token) return
+
+      try {
+        const userRooms = await roomService.getUserRooms()
+        this.setUserRooms(userRooms)
+      } catch (error) {
+        console.error('Failed to fetch user rooms:', error)
+        // If fetching fails, set empty array
+        this.setUserRooms([])
+      }
+    },
+
     handleGoogleLoginCallback(token) {
       this.setToken(token)
-      this.fetchProfile().then(() => {
-        const user = this.user
-        if (user && user.roomId) {
-          router.push('/room')
+      this.fetchProfile().then(async () => {
+        await this.fetchUserRooms()
+        if (this.hasRooms) {
+          router.push('/room-selection')
         } else {
           router.push('/lobby')
         }
@@ -68,11 +99,28 @@ export const useAuthStore = defineStore('auth', {
       localStorage.setItem('user', JSON.stringify(user))
     },
 
-    logout() {
+    setUserRooms(userRooms) {
+      this.userRooms = userRooms
+      localStorage.setItem('userRooms', JSON.stringify(userRooms))
+    },
+
+    async logout() {
+      try {
+        // Call the backend logout endpoint
+        await authService.logout()
+      } catch (error) {
+        console.error('Logout API call failed:', error)
+        // Continue with local logout even if API call fails
+      }
+
+      // Clear local state
       this.token = null
       this.user = null
+      this.userRooms = []
       localStorage.removeItem('token')
       localStorage.removeItem('user')
+      localStorage.removeItem('userRooms')
+      authService.removeAuthToken()
       router.push('/login')
     },
   },

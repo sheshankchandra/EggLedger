@@ -1,13 +1,36 @@
 import apiClient from './api';
 
-// Maps to your /api/User controller
+// Maps to your /egg-ledger-api/user controller
 export const userService = {
-    // GET /api/User/profile
+    // GET /egg-ledger-api/user/profile
     getProfile() {
-        return apiClient.get('/api/User/profile');
+        return apiClient.get('/egg-ledger-api/user/profile');
     },
-    // POST /api/User (for registration, body is UserCreateDto)
+
+    // POST /egg-ledger-api/user (for registration, body is UserCreateDto)
     register(userData) {
-        return apiClient.post('/api/User', userData);
+        return apiClient.post('/egg-ledger-api/user', userData);
+    },
+
+    // GET /egg-ledger-api/user/{id}
+    getUserById(userId) {
+        return apiClient.get(`/egg-ledger-api/user/${userId}`);
+    },
+
+    // PUT /egg-ledger-api/user/{id}
+    updateUser(userId, userData) {
+        return apiClient.put(`/egg-ledger-api/user/${userId}`, userData);
+    },
+
+    // DELETE /egg-ledger-api/user/{id}
+    deleteUser(userId) {
+        return apiClient.delete(`/egg-ledger-api/user/${userId}`);
+    },
+
+    // GET /egg-ledger-api/user/all
+    getAllUsers() {
+        return apiClient.get('/egg-ledger-api/user/all');
     }
 }
+
+export default userService;

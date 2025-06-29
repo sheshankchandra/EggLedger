@@ -1,4 +1,5 @@
-﻿using EggLedger.Core.DTOs.Room;
+﻿using EggLedger.API.Services;
+using EggLedger.Core.DTOs.Room;
 using EggLedger.Core.DTOs.User;
 using EggLedger.Core.Interfaces;
 using FluentResults;
@@ -10,7 +11,7 @@ using System.Security.Claims;
 namespace EggLedger.API.Controllers
 {
     [ApiController]
-    [Route("egg-ledger-api/[controller]")]
+    [Route("egg-ledger-api/room")]
     public class RoomController : ControllerBase
     {
         private readonly IRoomService _roomService;
@@ -32,11 +33,16 @@ namespace EggLedger.API.Controllers
 
         // POST: api/room/create
         [HttpPost("create/")]
+        [Authorize]
         public async Task<IActionResult> CreateRoom([FromBody] CreateRoomDto dto)
         {
             _logger.LogInformation("Received request to create a Room.");
 
-            var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+            {
+                return Unauthorized("Invalid user identity");
+            }
 
             var result = await _roomService.CreateRoomAsync(userId, dto);
 
@@ -48,6 +54,33 @@ namespace EggLedger.API.Controllers
 
             _logger.LogWarning("Failed to create room. Errors: {Errors}", string.Join(", ", result.Errors.Select(e => e.Message)));
             return BadRequest(result.Errors.Select(e => e.Message));
+        }
+
+        // GET: api/room/{roomCode}/all
+        [HttpGet("{roomCode:int}/all")]
+        public async Task<ActionResult<List<UserSummaryDto>>> GetAllRoomUsers([FromRoute] int roomCode)
+        {
+            var result = await _roomService.GetAllRoomUsersAsync(roomCode);
+            if (result.IsSuccess)
+                return Ok(result.Value);
+            return StatusCode(500, result.Errors);
+        }
+
+        // GET: api/room/user/all
+        [HttpGet("user/all")]
+        [Authorize]
+        public async Task<ActionResult<List<RoomDto>>> GetAllUserRooms()
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+            {
+                return Unauthorized("Invalid user identity");
+            }
+
+            var result = await _roomService.GetAllUserRoomsAsync(userId);
+            if (result.IsSuccess)
+                return Ok(result.Value);
+            return StatusCode(500, result.Errors);
         }
 
         // POST: api/update/

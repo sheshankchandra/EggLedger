@@ -1,22 +1,41 @@
 import apiClient from './api';
 
-// Maps to your /api/Container controller
+// Maps to your /egg-ledger-api/room/{roomCode}/container controller
 export const containerService = {
-  // GET /api/Container
-  getContainers() {
-    return apiClient.get('/api/Container');
+  // GET /egg-ledger-api/room/{roomCode}/container/all
+  getContainers(roomCode) {
+    return apiClient.get(`/egg-ledger-api/room/${roomCode}/container/all`);
   },
-  // GET /api/Container/{id}
-  getContainerById(id) {
-    return apiClient.get(`/api/Container/${id}`);
+
+  // GET /egg-ledger-api/room/{roomCode}/container/{id}
+  getContainerById(roomCode, id) {
+    return apiClient.get(`/egg-ledger-api/room/${roomCode}/container/${id}`);
   },
-  // POST /api/Container (Body is ContainerCreateDto)
-  createContainer(containerData) {
-    return apiClient.post('/api/Container', containerData);
+
+  // POST /egg-ledger-api/room/{roomCode}/container/create
+  createContainer(roomCode, containerData) {
+    return apiClient.post(`/egg-ledger-api/room/${roomCode}/container/create`, containerData);
   },
-  // DELETE /api/Container/{id}
-  deleteContainer(id) {
-    return apiClient.delete(`/api/Container/${id}`);
+
+  // PUT /egg-ledger-api/room/{roomCode}/container/update/{id}
+  updateContainer(roomCode, id, containerData) {
+    return apiClient.put(`/egg-ledger-api/room/${roomCode}/container/update/${id}`, containerData);
+  },
+
+  // DELETE /egg-ledger-api/room/{roomCode}/container/delete/{id}
+  deleteContainer(roomCode, id) {
+    return apiClient.delete(`/egg-ledger-api/room/${roomCode}/container/delete/${id}`);
+  },
+
+  // GET /egg-ledger-api/room/{roomCode}/container/user/{name}
+  searchContainersByOwner(roomCode, ownerName) {
+    return apiClient.get(`/egg-ledger-api/room/${roomCode}/container/user/${ownerName}`);
+  },
+
+  // GET /egg-ledger-api/room/{roomCode}/container/paged?page={page}&pageSize={pageSize}
+  getPagedContainers(roomCode, page = 1, pageSize = 20) {
+    return apiClient.get(`/egg-ledger-api/room/${roomCode}/container/paged?page=${page}&pageSize=${pageSize}`);
   }
-  // We'll ignore the PUT, search, and paged endpoints for now to keep it simple
 };
+
+export default containerService;

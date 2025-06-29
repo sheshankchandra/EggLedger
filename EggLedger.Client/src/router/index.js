@@ -7,6 +7,8 @@ import ContainerDetailView from '../views/ContainerDetailView.vue'
 import GoogleCallbackView from '../views/GoogleCallbackView.vue'
 import RoomLobby from '../views/RoomLobby.vue'
 import RoomPage from '../views/RoomPage.vue'
+// import RoomSelectionView from '../views/RoomSelectionView.vue'
+import RoomSelectionView from '../views/RoomSelectionView.modern.vue'
 import { useAuthStore } from '@/stores/auth.store'
 
 const router = createRouter({
@@ -57,12 +59,21 @@ const router = createRouter({
       component: ContainerDetailView,
       meta: { requiresAuth: true },
     },
-    // Redirect root to profile if logged in, otherwise to login
+    {
+      path: '/room-selection',
+      name: 'room-selection',
+      component: RoomSelectionView,
+      meta: { requiresAuth: true },
+    },
+    // Redirect root to room selection if logged in and has rooms, lobby if no rooms, otherwise to login
     {
       path: '/',
       redirect: () => {
         const authStore = useAuthStore()
-        return authStore.isAuthenticated ? '/profile' : '/login'
+        if (authStore.isAuthenticated) {
+          return authStore.hasRooms ? '/room-selection' : '/lobby'
+        }
+        return '/login'
       },
     },
   ],
@@ -76,8 +87,8 @@ router.beforeEach((to, from, next) => {
     // If route requires auth and user is not authenticated, redirect to login
     next('/login')
   } else if (to.name === 'login' && authStore.isAuthenticated) {
-    // If user is authenticated and tries to go to login page, redirect to profile
-    next('/profile')
+    // If user is authenticated and tries to go to login page, redirect based on rooms
+    next(authStore.hasRooms ? '/room-selection' : '/lobby')
   } else {
     // Otherwise, allow navigation
     next()

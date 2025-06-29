@@ -22,12 +22,19 @@ namespace EggLedger.API.Services
         }
 
         /// <summary>
-        /// Retrieves all containers with summary information.
+        /// Retrieves all containers with summary information for a specific room.
         /// </summary>
-        public async Task<Result<List<ContainerSummaryDto>>> GetAllContainersAsync()
+        public async Task<Result<List<ContainerSummaryDto>>> GetAllContainersAsync(int roomCode)
         {
+            var room = await _context.Rooms.FirstOrDefaultAsync(r => r.RoomCode == roomCode);
+            if (room == null)
+            {
+                return Result.Fail("Room not found");
+            }
+
             var containersList = await _context.Containers
                 .AsNoTracking()
+                .Where(c => c.RoomId == room.RoomId)
                 .OrderBy(c => c.PurchaseDateTime)
                 .Select(c => new ContainerSummaryDto
                 {
@@ -44,7 +51,7 @@ namespace EggLedger.API.Services
                 })
                 .ToListAsync();
 
-            _logger.LogInformation("Found {Count} containers.", containersList.Count);
+            _logger.LogInformation("Found {Count} containers in room {RoomName}.", containersList.Count, room.RoomName);
             return Result.Ok(containersList);
         }
 
@@ -143,16 +150,22 @@ namespace EggLedger.API.Services
             return Result.Ok();
         }
 
-        public async Task<Result<List<ContainerSummaryDto>>> SearchContainersByOwnerNameAsync(string ownerName)
+        public async Task<Result<List<ContainerSummaryDto>>> SearchContainersByOwnerNameAsync(int roomCode, string ownerName)
         {
             if (string.IsNullOrWhiteSpace(ownerName))
             {
-                return await GetAllContainersAsync();
+                return await GetAllContainersAsync(roomCode);
+            }
+
+            var room = await _context.Rooms.FirstOrDefaultAsync(r => r.RoomCode == roomCode);
+            if (room == null)
+            {
+                return Result.Fail("Room not found");
             }
 
             var containers = await _context.Containers
                 .AsNoTracking()
-                .Where(c => (c.Buyer.FirstName + " " + c.Buyer.LastName).Contains(ownerName))
+                .Where(c => c.RoomId == room.RoomId && (c.Buyer.FirstName + " " + c.Buyer.LastName).Contains(ownerName))
                 .OrderBy(c => c.PurchaseDateTime)
                 .Select(container => new ContainerSummaryDto
                 {
@@ -172,14 +185,21 @@ namespace EggLedger.API.Services
             return Result.Ok(containers);
         }
 
-        public async Task<Result<List<ContainerSummaryDto>>> GetPagedContainersAsync(int page, int pageSize)
+        public async Task<Result<List<ContainerSummaryDto>>> GetPagedContainersAsync(int roomCode, int page, int pageSize)
         {
             // Validate pagination parameters
             page = Math.Max(1, page);
             pageSize = Math.Clamp(pageSize, 1, 100); // Limit page size to 100
 
+            var room = await _context.Rooms.FirstOrDefaultAsync(r => r.RoomCode == roomCode);
+            if (room == null)
+            {
+                return Result.Fail("Room not found");
+            }
+
             var containers = await _context.Containers
                 .AsNoTracking()
+                .Where(c => c.RoomId == room.RoomId)
                 .OrderBy(c => c.PurchaseDateTime)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
@@ -199,6 +219,63 @@ namespace EggLedger.API.Services
                 .ToListAsync();
 
             return Result.Ok(containers);
+        }
+
+        public async Task<Result<ContainerSummaryDto>> CreateContainerAsync(int roomCode, ContainerCreateDto dto)
+        {
+            try
+            {
+                // Find room by room code
+                var room = await _context.Rooms.FirstOrDefaultAsync(r => r.RoomCode == roomCode);
+                if (room == null)
+                {
+                    return Result.Fail("Room not found");
+                }
+
+                // Validate buyer exists
+                var buyer = await _context.Users.FindAsync(dto.BuyerId);
+                if (buyer == null)
+                {
+                    return Result.Fail("Buyer not found");
+                }
+
+                var container = new Container
+                {
+                    ContainerId = Guid.NewGuid(),
+                    ContainerName = dto.ContainerName,
+                    TotalQuantity = dto.TotalQuantity,
+                    RemainingQuantity = dto.TotalQuantity,
+                    Amount = dto.Amount,
+                    BuyerId = dto.BuyerId,
+                    RoomId = room.RoomId,
+                    PurchaseDateTime = DateTime.UtcNow,
+                };
+
+                _context.Containers.Add(container);
+                await _context.SaveChangesAsync();
+
+                var result = new ContainerSummaryDto
+                {
+                    ContainerId = container.ContainerId,
+                    ContainerName = container.ContainerName,
+                    PurchaseDateTime = container.PurchaseDateTime,
+                    BuyerName = buyer.Name,
+                    TotalQuantity = container.TotalQuantity,
+                    RemainingQuantity = container.RemainingQuantity,
+                    Amount = container.Amount,
+                    Price = container.Price,
+                    RoomName = room.RoomName,
+                    CompletedDateTime = container.CompletedDateTime
+                };
+
+                _logger.LogInformation("Created container {ContainerName} with ID {ContainerId} in room {RoomName}", container.ContainerName, container.ContainerId, room.RoomName);
+                return Result.Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating container");
+                return Result.Fail("Failed to create container");
+            }
         }
     }
 }

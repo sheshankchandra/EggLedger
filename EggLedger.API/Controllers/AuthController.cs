@@ -1,15 +1,14 @@
-﻿using EggLedger.API.Services;
+﻿using System.Security.Claims;
 using EggLedger.Core.DTOs.Auth;
 using EggLedger.Core.Interfaces;
-using FluentResults;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
 
+namespace EggLedger.API.Controllers;
 
-[Route("api/[controller]")]
+[Route("egg-ledger-api/auth")]
 [ApiController]
 public class AuthController : ControllerBase
 {
@@ -34,7 +33,7 @@ public class AuthController : ControllerBase
     [AllowAnonymous]
     public IActionResult GoogleLogin()
     {
-        var properties = new AuthenticationProperties { RedirectUri = "/api/auth/google-callback" };
+        var properties = new AuthenticationProperties { RedirectUri = "/egg-ledger-api/auth/google-callback" };
         return Challenge(properties, GoogleDefaults.AuthenticationScheme);
     }
 

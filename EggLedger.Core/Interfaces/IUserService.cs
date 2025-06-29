@@ -14,7 +14,6 @@ namespace EggLedger.Core.Interfaces
     public interface IUserService
     {
         Task<Result<List<UserSummaryDto>>> GetAllUsersAsync();
-        Task<Result<List<UserSummaryDto>>> GetAllRoomUsersAsync(int roomCode);
         Task<Result<UserSummaryDto>> GetUserByIdAsync(Guid id);
         Task<Result<UserSummaryDto>> CreateUserAsync(UserCreateDto dto);
         Task<Result<UserSummaryDto>> UpdateUserAsync(Guid id, UserUpdateDto dto);
