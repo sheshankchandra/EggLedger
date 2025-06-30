@@ -18,12 +18,12 @@ namespace EggLedger.API.Services
     public class AuthService : IAuthService
     {
         private readonly ApplicationDbContext _context;
-        private readonly ILogger<OrderService> _logger;
+        private readonly ILogger<AuthService> _logger;
         private readonly PasswordHasher<User> _passwordHasher;
         private readonly IConfiguration _configuration;
         private readonly IHelperService _helperService;
 
-        public AuthService(ApplicationDbContext context, ILogger<OrderService> logger, IConfiguration configuration, IHelperService helperService)
+        public AuthService(ApplicationDbContext context, ILogger<AuthService> logger, IConfiguration configuration, IHelperService helperService)
         {
             _context = context;
             _logger = logger;
@@ -77,8 +77,8 @@ namespace EggLedger.API.Services
 
             if (user == null)
             {
-                _logger.LogWarning("Login failed for email '{Email}': User not found.", email);
-                _logger.LogInformation("Creating new user with credentials email : {email}, name : '{name}'", email, name);
+                _logger.LogWarning("OAuth login failed for email '{Email}': User not found, creating new user.", email);
+                _logger.LogInformation("Creating new user via OAuth with email: {Email}, name: '{Name}', provider: {Provider}", email, name, provider);
 
                 var nameParts = name?.Split(new[] { ' ' }, 2, StringSplitOptions.RemoveEmptyEntries) ?? new string[0];
                 var firstName = nameParts.Length > 0 ? nameParts[0] : "User";
@@ -97,21 +97,28 @@ namespace EggLedger.API.Services
                 _context.Users.Add(user);
                 await _context.SaveChangesAsync();
 
-                _logger.LogInformation("Successfully created new user with credentials email : {email}, name : '{name}'", email, name);
+                _logger.LogInformation("Successfully created new OAuth user: {UserId}, Email: {Email}, Provider: {Provider}", user.UserId, email, provider);
             }
 
-            _logger.LogInformation("Sending token response");
+            _logger.LogInformation("User '{Email}' successfully logged in via {Provider}.", email, provider);
             return await CreateTokenResponse(user);
         }
 
         public async Task<Result<TokenResponseDto>> RefreshTokensAsync(RefreshTokenRequestDto request)
         {
+            _logger.LogInformation("Processing refresh token request for user {UserId}", request.UserId);
+            
             var user = await ValidateRefreshTokenAsync(request.UserId, request.RefreshToken);
             if (user is null)
+            {
+                _logger.LogWarning("Invalid or expired refresh token for user {UserId}", request.UserId);
                 return Result.Fail("Invalid or Expired Refresh Token");
+            }
 
             // Revoke the old refresh token
             await RevokeRefreshTokenAsync(request.UserId, request.RefreshToken);
+
+            _logger.LogInformation("Refresh token successfully processed for user {UserId}", request.UserId);
 
             // Create new token pair
             return await CreateTokenResponse(user);
@@ -182,6 +189,8 @@ namespace EggLedger.API.Services
             _context.RefreshTokens.Add(refreshToken);
             await _context.SaveChangesAsync();
 
+            _logger.LogDebug("Refresh token generated for user {UserId}", user.UserId);
+
             return refreshToken.Token;
         }
 
@@ -209,6 +218,15 @@ namespace EggLedger.API.Services
                 token.Revoked = DateTime.UtcNow;
                 token.RevokedByIp = "TODO:CaptureIPAddress"; // You should capture the actual IP
                 await _context.SaveChangesAsync();
+                _logger.LogInformation("Refresh token revoked for user {UserId}", userId);
+            }
+            else if (token != null && token.IsRevoked)
+            {
+                _logger.LogWarning("Attempted to revoke already revoked token for user {UserId}", userId);
+            }
+            else
+            {
+                _logger.LogWarning("Attempted to revoke non-existent token for user {UserId}", userId);
             }
         }
 
@@ -227,6 +245,11 @@ namespace EggLedger.API.Services
             if (tokens.Any())
             {
                 await _context.SaveChangesAsync();
+                _logger.LogInformation("Revoked {Count} refresh tokens for user {UserId}", tokens.Count, userId);
+            }
+            else
+            {
+                _logger.LogInformation("No active refresh tokens found to revoke for user {UserId}", userId);
             }
         }
 

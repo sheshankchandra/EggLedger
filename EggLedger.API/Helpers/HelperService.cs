@@ -16,10 +16,12 @@ namespace EggLedger.Core.Helpers
     public class HelperService : IHelperService
     {
         private readonly ApplicationDbContext _context;
+        private readonly ILogger<HelperService> _logger;
 
-        public HelperService(ApplicationDbContext context)
+        public HelperService(ApplicationDbContext context, ILogger<HelperService> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         public async Task<Result<string>> GenerateOrderName(User user, int i)

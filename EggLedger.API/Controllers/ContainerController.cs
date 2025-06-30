@@ -11,10 +11,12 @@ namespace EggLedger.API.Controllers
     public class ContainerController : ControllerBase
     {
         private readonly IContainerService _containerService;
+        private readonly ILogger<ContainerController> _logger;
 
-        public ContainerController(IContainerService containerService)
+        public ContainerController(IContainerService containerService, ILogger<ContainerController> logger)
         {
             _containerService = containerService;
+            _logger = logger;
         }
 
         // GET: api/room/{roomCode}/container/all

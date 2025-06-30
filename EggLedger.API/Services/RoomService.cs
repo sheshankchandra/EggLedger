@@ -13,10 +13,10 @@ namespace EggLedger.API.Services
     public class RoomService : IRoomService
     {
         private readonly ApplicationDbContext _context;
-        private readonly ILogger<OrderService> _logger;
+        private readonly ILogger<RoomService> _logger;
         private readonly IHelperService _helperService;
 
-        public RoomService(ApplicationDbContext context, ILogger<OrderService> logger, IHelperService helperService)
+        public RoomService(ApplicationDbContext context, ILogger<RoomService> logger, IHelperService helperService)
         {
             _context = context;
             _logger = logger;

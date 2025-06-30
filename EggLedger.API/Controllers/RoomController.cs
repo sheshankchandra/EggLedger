@@ -15,9 +15,9 @@ namespace EggLedger.API.Controllers
     public class RoomController : ControllerBase
     {
         private readonly IRoomService _roomService;
-        private readonly ILogger<OrderController> _logger;
+        private readonly ILogger<RoomController> _logger;
 
-        public RoomController(IRoomService roomService, ILogger<OrderController> logger)
+        public RoomController(IRoomService roomService, ILogger<RoomController> logger)
         {
             _roomService = roomService;
             _logger = logger;
@@ -27,8 +27,17 @@ namespace EggLedger.API.Controllers
         [HttpPost("join/")]
         public async Task<IActionResult> JoinRoom([FromBody] JoinRoomDto dto)
         {
+            _logger.LogInformation("User attempting to join room with code: {RoomCode}", dto.RoomCode);
+            
             var result = await _roomService.JoinRoomAsync(dto);
-            return result.IsSuccess ? Ok(result.Value) : BadRequest(result);
+            if (result.IsSuccess)
+            {
+                _logger.LogInformation("User successfully joined room with code: {RoomCode}", dto.RoomCode);
+                return Ok(result.Value);
+            }
+            
+            _logger.LogWarning("Failed attempt to join room with code: {RoomCode}", dto.RoomCode);
+            return BadRequest(result);
         }
 
         // POST: api/room/create

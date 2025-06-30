@@ -16,17 +16,33 @@ using System.Text;
 using EggLedger.API.Helpers.Auth.Handlers;
 using EggLedger.API.Helpers.Auth.Requirements;
 using EggLedger.API.Middleware;
+using log4net;
+using log4net.Config;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.AddServiceDefaults();
+#region Logging Configuration
+// Configure log4net for file-based logging
+var logRepository = LogManager.GetRepository(System.Reflection.Assembly.GetEntryAssembly() ?? System.Reflection.Assembly.GetExecutingAssembly());
+XmlConfigurator.Configure(logRepository, new FileInfo("log4net.config"));
 
-// Add services to the container.
+// Clear default providers and use log4net
+builder.Logging.ClearProviders();
+builder.Logging.AddLog4Net();
+#endregion
+
+#region Aspire Service Defaults
+builder.AddServiceDefaults();
+#endregion
+
+#region Basic Web API Services
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddOpenApi("v2");
+#endregion
 
-// PostgreSQL Connection with retry policy
+#region Database Configuration
+// PostgreSQL connection with retry policy and health checks
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 if (string.IsNullOrEmpty(connectionString))
 {
@@ -42,10 +58,11 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
             errorCodesToAdd: null);
     }));
 
-// Add health checks for database
 builder.Services.AddHealthChecks()
     .AddNpgSql(connectionString, name: "postgresql");
+#endregion
 
+#region CORS Configuration
 var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
 
 builder.Services.AddCors(options =>
@@ -58,7 +75,9 @@ builder.Services.AddCors(options =>
                 .AllowAnyMethod();
         });
 });
+#endregion
 
+#region Authentication & Authorization
 builder.Services.AddAuthentication(options => 
     {
         options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -92,50 +111,60 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("RoomAdmin", policy => policy.Requirements.Add(new RoomAdminRequirement()));
     options.AddPolicy("RoomMember", policy => policy.Requirements.Add(new RoomMemberRequirement()));
 });
+#endregion
 
+#region Dependency Injection
 builder.Services.AddHttpContextAccessor();
 
-// DI Registrations
+// Core Services
 builder.Services.AddScoped<IDatabaseService, DatabaseService>();
-builder.Services.AddHostedService<EggLedger.API.Middleware.DatabaseStartupValidationService>();
-builder.Services.AddHostedService<RefreshTokenCleanupService>(); // Add token cleanup service
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IContainerService, ContainerService>();
 builder.Services.AddScoped<IHelperService, HelperService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IRoomService, RoomService>();
+
+// Background Services
+builder.Services.AddHostedService<EggLedger.API.Middleware.DatabaseStartupValidationService>();
+builder.Services.AddHostedService<RefreshTokenCleanupService>();
+
+// Authorization Handlers
 builder.Services.AddScoped<IAuthorizationHandler, RoomAdminHandler>();
 builder.Services.AddScoped<IAuthorizationHandler, RoomMemberHandler>();
+#endregion
 
 var app = builder.Build();
 
+#region Aspire Endpoints
 app.MapDefaultEndpoints();
+#endregion
 
-// Add global exception handling middleware first
+#region Middleware Pipeline
+// Global exception handling (must be first)
 app.UseMiddleware<GlobalExceptionHandlingMiddleware>();
 
-// Configure the HTTP request pipeline.
+// Development tools
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
     app.MapScalarApiReference();
 }
 
-// Health Check Endpoints
-// GET /health - Basic health check for all registered health checks (database, etc.)
+// Health check endpoints
 app.MapHealthChecks("/health");
-
-// GET /health/ready - Readiness probe for checks tagged with "ready"
 app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
 {
     Predicate = check => check.Tags.Contains("ready")
 });
 
+// Standard middleware pipeline
 app.UseHttpsRedirection();
 app.UseCors(MyAllowSpecificOrigins);
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+#endregion
+
 app.Run();

@@ -113,6 +113,30 @@ Jwt__Audience=EggLedger
 VITE_API_BASE_URL=https://localhost:7224
 ```
 
+### Logging
+
+EggLedger uses log4net for comprehensive logging. Logs are stored outside the repository in system-appropriate locations.
+
+**Default Log Locations:**
+- **Windows**: `%TEMP%\EggLedger\` (e.g., `C:\Users\[Username]\AppData\Local\Temp\EggLedger\`)
+- **Linux/macOS**: `/tmp/EggLedger/`
+
+**Custom Log Path:**
+Set the `EGGLEDGER_LOG_PATH` environment variable to specify a custom location:
+```bash
+# Windows
+set EGGLEDGER_LOG_PATH=C:\Logs\EggLedger
+
+# Linux/macOS
+export EGGLEDGER_LOG_PATH=/var/log/eggledger
+```
+
+**Log Files:**
+- `eggledger-api.log` - All application logs (INFO and above)
+- `eggledger-api-errors.log` - Error logs only (ERROR and FATAL)
+
+For detailed logging configuration, see [README-LOGGING.md](README-LOGGING.md).
+
 ## API Endpoints
 
 ### Authentication

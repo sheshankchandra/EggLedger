@@ -18,11 +18,13 @@ namespace EggLedger.API.Services
     public class UserService : IUserService
     {
         private readonly ApplicationDbContext _context;
+        private readonly ILogger<UserService> _logger;
         private readonly PasswordHasher<User> _passwordHasher;
 
-        public UserService(ApplicationDbContext context)
+        public UserService(ApplicationDbContext context, ILogger<UserService> logger)
         {
             _context = context;
+            _logger = logger;
             _passwordHasher = new PasswordHasher<User>();
         }
 
@@ -43,6 +45,8 @@ namespace EggLedger.API.Services
 
         public async Task<Result<UserSummaryDto>> GetUserByIdAsync(Guid id)
         {
+            _logger.LogDebug("Retrieving user with ID: {UserId}", id);
+            
             var user = await _context.Users.AsNoTracking()
                 .Where(u => u.UserId == id)
                 .Select(u => new UserSummaryDto
@@ -55,7 +59,10 @@ namespace EggLedger.API.Services
                 .FirstOrDefaultAsync();
 
             if (user == null)
+            {
+                _logger.LogWarning("User not found with ID: {UserId}", id);
                 return Result.Fail("User not found");
+            }
             return Result.Ok(user);
         }
 
@@ -79,6 +86,8 @@ namespace EggLedger.API.Services
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
 
+            _logger.LogInformation("User created successfully: {UserId}, Email: {Email}", user.UserId, user.Email);
+
             return Result.Ok(new UserSummaryDto
             {
                 UserId = user.UserId,
@@ -92,20 +101,33 @@ namespace EggLedger.API.Services
         {
             var user = await _context.Users.FindAsync(id);
             if (user == null)
+            {
+                _logger.LogWarning("Attempted to update non-existent user: {UserId}", id);
                 return Result.Fail("User not found");
+            }
+
+            var originalEmail = user.Email;
+            bool emailChanged = false;
 
             if (dto.FirstName != null) user.FirstName = dto.FirstName;
             if (dto.LastName != null) user.LastName = dto.LastName;
             if (dto.Email != null && dto.Email != user.Email)
             {
                 if (await _context.Users.AnyAsync(u => u.Email == dto.Email && u.UserId != id))
+                {
+                    _logger.LogWarning("Attempted to update user {UserId} with existing email: {Email}", id, dto.Email);
                     return Result.Fail("Email already exists");
+                }
                 user.Email = dto.Email;
+                emailChanged = true;
             }
             if (dto.Password != null) user.PasswordHash = _passwordHasher.HashPassword(null, dto.Password);
             if (dto.Role.HasValue) user.Role = dto.Role.Value;
 
             await _context.SaveChangesAsync();
+
+            _logger.LogInformation("User updated successfully: {UserId}" + (emailChanged ? ", Email changed from {OldEmail} to {NewEmail}" : ""), 
+                user.UserId, emailChanged ? originalEmail : null, emailChanged ? user.Email : null);
 
             return Result.Ok(new UserSummaryDto
             {
@@ -120,10 +142,16 @@ namespace EggLedger.API.Services
         {
             var user = await _context.Users.FindAsync(id);
             if (user == null)
+            {
+                _logger.LogWarning("Attempted to delete non-existent user: {UserId}", id);
                 return Result.Fail("User not found");
+            }
 
+            var userEmail = user.Email;
             _context.Users.Remove(user);
             await _context.SaveChangesAsync();
+
+            _logger.LogInformation("User deleted successfully: {UserId}, Email: {Email}", id, userEmail);
 
             return Result.Ok();
         }
