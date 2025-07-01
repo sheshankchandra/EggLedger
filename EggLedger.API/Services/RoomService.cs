@@ -4,9 +4,7 @@ using EggLedger.Core.DTOs.User;
 using EggLedger.Core.Interfaces;
 using EggLedger.Core.Models;
 using FluentResults;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 
 namespace EggLedger.API.Services
 {
@@ -23,7 +21,7 @@ namespace EggLedger.API.Services
             _helperService = helperService;
         }
 
-        public async Task<Result<string>> CreateRoomAsync(Guid userId, CreateRoomDto dto)
+        public async Task<Result<int>> CreateRoomAsync(Guid userId, CreateRoomDto dto)
         {
             var room = new Room()
             {
@@ -48,45 +46,36 @@ namespace EggLedger.API.Services
 
             _logger.LogInformation("New Room {Room.RoomName} Created: {Room.RoomId}", room.RoomName, room.RoomId);
 
-            return dto.RoomName;
+            return Result.Ok(room.RoomCode);
         }
 
-        public async Task<Result<Room>> JoinRoomAsync(JoinRoomDto dto)
+        public async Task<Result<int>> JoinRoomAsync(Guid userId, int roomCode)
         {
-            var user = await _context.Users
-                .FirstOrDefaultAsync(u => u.UserId == dto.UserId);
-
-            if (user == null)
-            {
-                _logger.LogWarning("User not found, email '{Email}'", dto.UserId);
-                return Result.Fail("User not found");
-            }
-
             var room = await _context.Rooms.Include(room => room.UserRooms)
-                                           .FirstOrDefaultAsync(r => r.RoomCode == dto.RoomCode);
+                                           .FirstOrDefaultAsync(r => r.RoomCode == roomCode);
 
             if (room == null)
             {
-                _logger.LogWarning("Room not found, code '{Room.RoomCode}'", dto.RoomCode);
+                _logger.LogWarning("Room not found, code '{Room.RoomCode}'", roomCode);
                 return Result.Fail("Room not found");
             }
 
-            if (room.UserRooms.Any(ur => ur.UserId == user.UserId))
+            if (room.UserRooms.Any(ur => ur.UserId == userId))
             {
-                _logger.LogError("User : {user.FirstName} already in room : {room.RoomName}", user.FirstName, room.RoomName);
+                _logger.LogError("User : {userId} already in room : {room.RoomName}", userId, room.RoomName);
                 return Result.Fail("User already in room");
             }
 
             if (!room.IsPublic)
             {
-                _logger.LogWarning("Room is not Public, code '{Room.RoomCode}'", dto.RoomCode);
+                _logger.LogWarning("Room is not Public, code '{Room.RoomCode}'", roomCode);
                 return Result.Fail("Room is not Public");
             }
 
             var userRoom = new UserRoom
             {
                 RoomId = room.RoomId,
-                UserId = dto.UserId,
+                UserId = userId,
                 IsAdmin = false,
                 JoinedAt = DateTime.UtcNow
             };
@@ -94,9 +83,9 @@ namespace EggLedger.API.Services
             _context.UserRooms.Add(userRoom);
             await _context.SaveChangesAsync();
 
-            _logger.LogInformation("User {user.Name} successfully joined Room {room.RoomName}", user.Name, room.RoomName);
+            _logger.LogInformation("User {userId} successfully joined Room {room.RoomName}", userId, room.RoomName);
 
-            return Result.Ok(room);
+            return Result.Ok(roomCode);
         }
 
         public async Task<Result<List<UserSummaryDto>>> GetAllRoomUsersAsync(int roomCode)

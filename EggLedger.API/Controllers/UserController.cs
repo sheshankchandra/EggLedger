@@ -1,7 +1,5 @@
 ﻿using EggLedger.Core.DTOs.User;
 using EggLedger.Core.Interfaces;
-using FluentResults;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
@@ -40,16 +38,6 @@ namespace EggLedger.API.Controllers
             if (result.Errors.Any(e => e.Message == "User not found"))
                 return NotFound();
             return StatusCode(500, result.Errors);
-        }
-
-        // POST: api/user
-        [HttpPost]
-        public async Task<IActionResult> CreateUser([FromBody] UserCreateDto dto)
-        {
-            var result = await _userService.CreateUserAsync(dto);
-            if (result.IsSuccess)
-                return CreatedAtAction(nameof(GetUser), new { id = result.Value.UserId }, result.Value);
-            return BadRequest(result.Errors.Select(e => e.Message));
         }
 
         // PUT: api/user/{id}

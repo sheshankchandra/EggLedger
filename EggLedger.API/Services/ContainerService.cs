@@ -1,11 +1,8 @@
 ﻿using EggLedger.API.Data;
 using EggLedger.Core.DTOs.Container;
 using EggLedger.Core.Interfaces;
-using EggLedger.Core.Models;
 using FluentResults;
 using Microsoft.EntityFrameworkCore;
-using System.ComponentModel;
-using System.Diagnostics;
 using Container = EggLedger.Core.Models.Container;
 
 namespace EggLedger.API.Services

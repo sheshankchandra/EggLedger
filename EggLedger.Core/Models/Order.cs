@@ -1,10 +1,5 @@
 ﻿using EggLedger.Core.Constants;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Text.Json.Serialization;
-using System.Threading.Tasks;
 
 namespace EggLedger.Core.Models
 {

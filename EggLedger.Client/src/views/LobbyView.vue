@@ -1,7 +1,7 @@
 <template>
   <div class="lobby-container">
     <div class="lobby-header">
-      <h2>Welcome, {{ authStore.getUser?.userName || 'User' }}!</h2>
+      <h2>Welcome, {{ authStore.getUser?.name || 'User' }}!</h2>
       <p>Create a new room for your friends or join one with a code.</p>
     </div>
 
@@ -116,27 +116,30 @@ const handleCreateRoom = async () => {
   isLoading.value = true
 
   try {
-    const response = await apiClient.post('/egg-ledger-api/room/create', {
+    const response = await roomService.createRoom({
       roomName: createForm.roomName,
       isOpen: createForm.isPublic,
     })
 
-    // The backend should return the new room's details, including the code
-    const newRoomCode = response.data
-    if (!newRoomCode) {
-      throw new Error('API did not return a room code after creation.')
+    if (response.isSuccess) {
+      showNotification('Room created successfully!', 'success')
+      const newRoomCode = response.value
+      await authStore.fetchUserRooms()
+      sessionStorage.setItem('eggLedgerRoomCode', newRoomCode)
+      router.push('/room')
+    } else {
+      throw new Error(response.value || 'Failed to create room.')
     }
-
-    // Refresh user's rooms in the auth store
-    await authStore.fetchUserRooms()
-
-    // Store the new room code and navigate to the main room page
-    sessionStorage.setItem('eggLedgerRoomCode', newRoomCode)
-    router.push('/room')
   } catch (error) {
-    console.error('Failed to create room:', error)
-    const errorMessage =
-      error.response?.data?.message || 'Could not create the room. Please try again.'
+    let errorMessage = 'Could not create the room. Please try again.'
+    if (Array.isArray(error.response?.data)) {
+      errorMessage = error.response.data.join(', ')
+    } else if (typeof error.response?.data === 'string') {
+      errorMessage = error.response.data
+    } else if (error.response?.data?.message) {
+      errorMessage = error.response.data.message
+    }
+    console.error('Failed to create room:', errorMessage)
     showNotification(errorMessage, 'error')
   } finally {
     isLoading.value = false
@@ -151,21 +154,30 @@ const handleJoinRoom = async () => {
   }
 
   try {
-    // Validate the room code by trying to join
-    await roomService.joinRoom(joinForm.roomCode)
+    const response = await roomService.joinRoom(joinForm.roomCode)
 
-    // Refresh user's rooms in the auth store
-    await authStore.fetchUserRooms()
-
-    // Store the room code and navigate to the room page
-    sessionStorage.setItem('eggLedgerRoomCode', joinForm.roomCode)
-    router.push('/room')
+    if (response.isSuccess) {
+      showNotification('Joined created successfully!', 'success')
+      const newRoomCode = response.value
+      await authStore.fetchUserRooms()
+      sessionStorage.setItem('eggLedgerRoomCode', newRoomCode)
+      router.push('/room')
+    } else {
+      throw new Error(response.value || 'Failed to create room.')
+    }
   } catch (error) {
-    console.error('Failed to join room:', error)
-    const errorMessage =
-      error.response?.data?.message ||
-      'Could not join the room. Please check the code and try again.'
+    let errorMessage = 'Could not join the room. Please check the code and try again.'
+    if (Array.isArray(error.response?.data)) {
+      errorMessage = error.response.data.join(', ')
+    } else if (typeof error.response?.data === 'string') {
+      errorMessage = error.response.data
+    } else if (error.response?.data?.message) {
+      errorMessage = error.response.data.message
+    }
+    console.error('Failed to join room:', errorMessage)
     showNotification(errorMessage, 'error')
+  } finally {
+    isLoading.value = false
   }
 }
 </script>

@@ -2,14 +2,7 @@
 using EggLedger.Core.Interfaces;
 using EggLedger.Core.Models;
 using FluentResults;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace EggLedger.Core.Helpers
 {

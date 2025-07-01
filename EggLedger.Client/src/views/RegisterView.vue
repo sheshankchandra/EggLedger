@@ -22,9 +22,7 @@
         {{ loading ? 'Registering...' : 'Register' }}
       </button>
       <div v-if="error" class="error-message">{{ error }}</div>
-      <div v-if="success" class="success-message">
-        Registration successful! You can now log in.
-      </div>
+      <div v-if="success" class="success-message">Registration successful! You can now log in.</div>
     </form>
     <div class="login-link">
       <p>Already have an account? <router-link to="/login">Log In</router-link></p>
@@ -33,53 +31,87 @@
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue';
-import { useRouter } from 'vue-router';
-import { userService } from '@/services/user.service'; 
+import { reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth.store'
 
-const router = useRouter();
+const authStore = useAuthStore()
+const router = useRouter()
 const form = reactive({
   firstName: '',
   lastName: '',
   email: '',
   password: '',
-  role: 0 // Assuming 0 is the default 'User' role
-});
+  role: 0, // Assuming 0 is the default 'User' role
+})
 
-const loading = ref(false);
-const error = ref(null);
-const success = ref(false);
+const loading = ref(false)
+const error = ref(null)
+const success = ref(false)
 
 const handleRegister = async () => {
-  loading.value = true;
-  error.value = null;
-  success.value = false;
-  try {
-    await userService.register(form);
-    success.value = true;
-    setTimeout(() => {
-        router.push('/login');
-    }, 2000);
-  } catch (err) {
-    if (err.response && err.response.data) {
-      error.value = err.response.data;
-    } else {
-      error.value = 'An unexpected error occurred.';
-    }
-  } finally {
-    loading.value = false;
-  }
-};
+  authStore
+    .register(form)
+    .then(() => {
+      success.value = true
+      error.value = null
+      // Redirect to login page after successful registration
+      setTimeout(() => {
+        router.push('/login')
+      }, 2000)
+    })
+    .catch((err) => {
+      error.value = err.response?.data?.message || 'Registration failed. Please try again.'
+      success.value = false
+    })
+    .finally(() => {
+      loading.value = false
+    })
+}
 </script>
 
 <style scoped>
-.register-container { max-width: 400px; margin: 50px auto; padding: 20px; border: 1px solid #ccc; border-radius: 8px; }
-.form-group { margin-bottom: 15px; }
-label { display: block; margin-bottom: 5px; }
-input { width: 100%; padding: 8px; box-sizing: border-box; }
-button { width: 100%; padding: 10px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; }
-button:disabled { background-color: #aaa; }
-.error-message { color: red; margin-top: 10px; }
-.success-message { color: green; margin-top: 10px; }
-.login-link { text-align: center; margin-top: 20px; }
+.register-container {
+  max-width: 400px;
+  margin: 50px auto;
+  padding: 20px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+}
+.form-group {
+  margin-bottom: 15px;
+}
+label {
+  display: block;
+  margin-bottom: 5px;
+}
+input {
+  width: 100%;
+  padding: 8px;
+  box-sizing: border-box;
+}
+button {
+  width: 100%;
+  padding: 10px;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+button:disabled {
+  background-color: #aaa;
+}
+.error-message {
+  color: red;
+  margin-top: 10px;
+}
+.success-message {
+  color: green;
+  margin-top: 10px;
+}
+.login-link {
+  text-align: center;
+  margin-top: 20px;
+}
 </style>

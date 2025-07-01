@@ -1,7 +1,5 @@
-﻿using EggLedger.API.Services;
-using EggLedger.Core.DTOs.Order;
+﻿using EggLedger.Core.DTOs.Order;
 using EggLedger.Core.Interfaces;
-using EggLedger.Core.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;

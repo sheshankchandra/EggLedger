@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace EggLedger.Core.Models
+﻿namespace EggLedger.Core.Models
 {
     public class RefreshToken
     {

@@ -1,6 +1,4 @@
-﻿using EggLedger.Core.Constants;
-
-namespace EggLedger.Core.DTOs.Order
+﻿namespace EggLedger.Core.DTOs.Order
 {
     public class StockOrderDto
     {

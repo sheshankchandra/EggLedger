@@ -1,11 +1,9 @@
-﻿using EggLedger.API.Services;
-using EggLedger.Core.DTOs.Room;
+﻿using EggLedger.Core.DTOs.Room;
 using EggLedger.Core.DTOs.User;
 using EggLedger.Core.Interfaces;
 using FluentResults;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 
 namespace EggLedger.API.Controllers
@@ -24,20 +22,28 @@ namespace EggLedger.API.Controllers
         }
 
         // POST: api/join/{code}
-        [HttpPost("join/")]
-        public async Task<IActionResult> JoinRoom([FromBody] JoinRoomDto dto)
+        [HttpPost("join/{roomCode:int}")]
+        [Authorize]
+        public async Task<IActionResult> JoinRoom([FromRoute] int roomCode)
         {
-            _logger.LogInformation("User attempting to join room with code: {RoomCode}", dto.RoomCode);
-            
-            var result = await _roomService.JoinRoomAsync(dto);
+            _logger.LogInformation("Received request to join a Room.");
+
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+            {
+                return Unauthorized("Invalid user identity");
+            }
+
+            Result<int> result = await _roomService.JoinRoomAsync(userId, roomCode);
+
             if (result.IsSuccess)
             {
-                _logger.LogInformation("User successfully joined room with code: {RoomCode}", dto.RoomCode);
+                _logger.LogInformation("User successfully joined room with code: {RoomCode}", roomCode);
                 return Ok(result.Value);
             }
             
-            _logger.LogWarning("Failed attempt to join room with code: {RoomCode}", dto.RoomCode);
-            return BadRequest(result);
+            _logger.LogWarning("Failed to join room. Errors: {Errors}", string.Join(", ", result.Errors.Select(e => e.Message)));
+            return BadRequest(result.Errors.Select(e => e.Message));
         }
 
         // POST: api/room/create
@@ -53,12 +59,12 @@ namespace EggLedger.API.Controllers
                 return Unauthorized("Invalid user identity");
             }
 
-            var result = await _roomService.CreateRoomAsync(userId, dto);
+            Result<int> result = await _roomService.CreateRoomAsync(userId, dto);
 
-            if (result is { IsSuccess: true, Value: not null })
+            if (result.IsSuccess)
             {
-                _logger.LogInformation("Successfully created the Room : {OrderName}", result.Value);
-                return Ok(result.Value);
+                _logger.LogInformation("Successfully created the Room : {RoomCode}", result.Value);
+                return Ok(result);
             }
 
             _logger.LogWarning("Failed to create room. Errors: {Errors}", string.Join(", ", result.Errors.Select(e => e.Message)));

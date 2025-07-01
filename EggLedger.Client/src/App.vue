@@ -1,10 +1,8 @@
 <template>
   <header>
     <nav>
-      <RouterLink v-if="isAuthenticated" to="/dashboard">Dashboard</RouterLink>
-      <RouterLink v-else to="/login">Home</RouterLink>
-
       <template v-if="isAuthenticated">
+        <RouterLink to="/dashboard">Dashboard</RouterLink>
         <RouterLink to="/profile">Profile</RouterLink>
         <a href="#" @click.prevent="handleLogout">Logout</a>
       </template>

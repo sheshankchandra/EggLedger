@@ -1,16 +1,13 @@
 ﻿using EggLedger.Core.DTOs.Auth;
-using FluentResults;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using EggLedger.Core.DTOs.User;
 using EggLedger.Core.Models;
+using FluentResults;
 
 namespace EggLedger.Core.Interfaces
 {
     public interface IAuthService
     {
+        Task<Result<TokenResponseDto>> CreateUserAsync(UserCreateDto dto);
         Task<Result<TokenResponseDto>> LoginAsync(LoginDto dto);
         Task<Result<TokenResponseDto>> LoginWithProviderAsync(string email, string name, string provider);
         Task<Result<TokenResponseDto>> RefreshTokensAsync(RefreshTokenRequestDto request);

@@ -1,7 +1,7 @@
 ﻿using EggLedger.API.Data;
 using EggLedger.Core.Constants;
 using EggLedger.Core.DTOs.Auth;
-using EggLedger.Core.Helpers;
+using EggLedger.Core.DTOs.User;
 using EggLedger.Core.Interfaces;
 using EggLedger.Core.Models;
 using FluentResults;
@@ -30,6 +30,39 @@ namespace EggLedger.API.Services
             _passwordHasher = new PasswordHasher<User>();
             _configuration = configuration;
             _helperService = helperService;
+        }
+
+        public async Task<Result<TokenResponseDto>> CreateUserAsync(UserCreateDto dto)
+        {
+            try
+            {
+                // Check if email already exists
+                if (await _context.Users.AnyAsync(u => u.Email == dto.Email))
+                    return Result.Fail("Email already exists");
+
+                var user = new User
+                {
+                    UserId = Guid.NewGuid(),
+                    FirstName = dto.FirstName,
+                    LastName = dto.LastName,
+                    Email = dto.Email,
+                    PasswordHash = _passwordHasher.HashPassword(null, dto.Password),
+                    Role = dto.Role,
+                    Provider = null
+                };
+
+                _context.Users.Add(user);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("User created successfully: {UserId}, Email: {Email}", user.UserId, user.Email);
+
+                return await CreateTokenResponse(user);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogCritical(ex, "Unexpected error occurred in CreateUserAsync for email '{Email}'", dto.Email);
+                return Result.Fail("An unexpected error occurred. Please try again later.");
+            }
         }
 
         public async Task<Result<TokenResponseDto>> LoginAsync(LoginDto dto)

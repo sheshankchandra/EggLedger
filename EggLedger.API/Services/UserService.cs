@@ -1,17 +1,10 @@
 ﻿using EggLedger.API.Data;
-using EggLedger.Core.DTOs.Auth;
 using EggLedger.Core.DTOs.User;
 using EggLedger.Core.Interfaces;
 using EggLedger.Core.Models;
 using FluentResults;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
 
 namespace EggLedger.API.Services
 {
@@ -64,37 +57,6 @@ namespace EggLedger.API.Services
                 return Result.Fail("User not found");
             }
             return Result.Ok(user);
-        }
-
-        public async Task<Result<UserSummaryDto>> CreateUserAsync(UserCreateDto dto)
-        {
-            // Check if email already exists
-            if (await _context.Users.AnyAsync(u => u.Email == dto.Email))
-                return Result.Fail("Email already exists");
-
-            var user = new User
-            {
-                UserId = Guid.NewGuid(),
-                FirstName = dto.FirstName,
-                LastName = dto.LastName,
-                Email = dto.Email,
-                PasswordHash = _passwordHasher.HashPassword(null, dto.Password),
-                Role = dto.Role,
-                Provider = null
-            };
-
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
-
-            _logger.LogInformation("User created successfully: {UserId}, Email: {Email}", user.UserId, user.Email);
-
-            return Result.Ok(new UserSummaryDto
-            {
-                UserId = user.UserId,
-                Name = user.Name,
-                Email = user.Email,
-                Role = user.Role
-            });
         }
 
         public async Task<Result<UserSummaryDto>> UpdateUserAsync(Guid id, UserUpdateDto dto)

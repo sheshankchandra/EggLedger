@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace EggLedger.Core.DTOs.Room
+﻿namespace EggLedger.Core.DTOs.Room
 {
     public class CreateRoomDto
     {

@@ -1,10 +1,11 @@
-﻿using System.Security.Claims;
-using EggLedger.Core.DTOs.Auth;
+﻿using EggLedger.Core.DTOs.Auth;
+using EggLedger.Core.DTOs.User;
 using EggLedger.Core.Interfaces;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace EggLedger.API.Controllers;
 
@@ -19,6 +20,17 @@ public class AuthController : ControllerBase
     {
         _authService = authService;
         _logger = logger;
+    }
+
+    // POST: /egg-ledger-api/auth/register
+    [HttpPost("register")]
+    [AllowAnonymous]
+    public async Task<IActionResult> CreateUser([FromBody] UserCreateDto dto)
+    {
+        var result = await _authService.CreateUserAsync(dto);
+        if (result.IsSuccess)
+            return Ok(result.Value);
+        return BadRequest(result.Errors.Select(e => e.Message));
     }
 
     // POST /egg-ledger-api/auth/login
@@ -36,7 +48,7 @@ public class AuthController : ControllerBase
         }
         
         _logger.LogWarning("Failed login attempt for email: {Email}", dto.Email);
-        return Unauthorized(result.Errors.Select(e => e.Message));
+        return BadRequest(result.Errors.Select(e => e.Message));
     }
 
     // GET /egg-ledger-api/auth/google-login

@@ -1,14 +1,10 @@
 using EggLedger.API.Data;
-using EggLedger.API.Helpers;
-using EggLedger.API.Helpers.Auth;
 using EggLedger.API.Services;
 using EggLedger.Core.Helpers;
 using EggLedger.Core.Interfaces;
-using EggLedger.Core.Models;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.OpenApi;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;

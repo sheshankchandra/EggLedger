@@ -1,7 +1,9 @@
 import { defineStore } from 'pinia'
 import authService from '@/services/auth.service'
-import userService from '@/services/user.service'
+import containerService from '@/services/container.service'
+import orderService from '@/services/order.service'
 import roomService from '@/services/room.service'
+import userService from '@/services/user.service'
 import router from '@/router'
 
 export const useAuthStore = defineStore('auth', {
@@ -42,8 +44,19 @@ export const useAuthStore = defineStore('auth', {
     async register(userData) {
       try {
         const response = await authService.register(userData)
-        // Registration successful, now log the user in
-        return response.data
+        const token = response.data.accessToken
+        this.setToken(token)
+        await this.fetchProfile() // Fetch profile right after login
+        await this.fetchUserRooms() // Fetch user's rooms
+
+        // Route based on room membership
+        if (this.hasRooms) {
+          // If user has rooms, let them choose which room to enter
+          router.push('/room-selection')
+        } else {
+          // If user has no rooms, send to lobby to create/join a room
+          router.push('/lobby')
+        }
       } catch (error) {
         console.error('Registration failed:', error)
         throw error

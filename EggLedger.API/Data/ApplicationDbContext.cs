@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using EggLedger.Core.Models;
+﻿using EggLedger.Core.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace EggLedger.API.Data

@@ -1,7 +1,6 @@
 ﻿using EggLedger.Core.DTOs.Order;
 using EggLedger.Core.Models;
 using FluentResults;
-using Microsoft.AspNetCore.Mvc;
 
 namespace EggLedger.Core.Interfaces
 {

@@ -20,8 +20,8 @@ export const roomService = {
   },
 
   // Join a room by code
-  async joinRoom(joinData) {
-    const response = await apiClient.post('/egg-ledger-api/room/join/', joinData)
+  async joinRoom(roomCode) {
+    const response = await apiClient.post(`/egg-ledger-api/room/join/${roomCode}`)
     return response.data
   },
 

@@ -1,6 +1,5 @@
 ﻿using EggLedger.Core.DTOs.Container;
 using EggLedger.Core.Interfaces;
-using FluentResults;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
