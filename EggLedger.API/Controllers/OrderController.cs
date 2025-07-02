@@ -20,7 +20,7 @@ namespace EggLedger.API.Controllers
             _logger = logger;
         }
 
-        // POST: api/{roomCode}/orders/stock
+        // POST: egg-ledger-api/{roomCode}/orders/stock
         [HttpPost("stock")]
         public async Task<IActionResult> CreateStockOrder([FromRoute] int roomCode, [FromBody] StockOrderDto dto)
         {
@@ -39,7 +39,7 @@ namespace EggLedger.API.Controllers
             return BadRequest(result.Errors.Select(e => e.Message));
         }
 
-        // POST: api/{roomCode}/orders/consume
+        // POST: egg-ledger-api/{roomCode}/orders/consume
         [HttpPost("consume")]
         public async Task<IActionResult> CreateConsumeOrder([FromRoute] int roomCode, [FromBody] ConsumeOrderDto dto)
         {
@@ -64,7 +64,7 @@ namespace EggLedger.API.Controllers
             return BadRequest(result.Errors.Select(e => e.Message));
         }
 
-        // GET: api/{roomCode}/orders/{orderId}
+        // GET: egg-ledger-api/{roomCode}/orders/{orderId}
         [HttpGet("{orderId:guid}")]
         public async Task<IActionResult> GetOrder([FromRoute] int roomCode, [FromRoute] Guid orderId)
         {
@@ -82,7 +82,7 @@ namespace EggLedger.API.Controllers
             return NotFound(result.Errors.Select(e => e.Message));
         }
 
-        // GET: api/{roomCode}/orders/user/{userId}
+        // GET: egg-ledger-api/{roomCode}/orders/user/{userId}
         [HttpGet("user/{requestUserId:guid}")]
         public async Task<IActionResult> GetOrdersByUser([FromRoute] int roomCode, [FromRoute] Guid requestUserId)
         {
@@ -99,7 +99,7 @@ namespace EggLedger.API.Controllers
             return NotFound(result.Value);
         }
 
-        // GET: api/{roomCode}/orders/container/{containerId}
+        // GET: egg-ledger-api/{roomCode}/orders/container/{containerId}
         [HttpGet("container/{containerId:guid}")]
         public async Task<IActionResult> GetOrdersByContainer([FromRoute] int roomCode, [FromRoute] Guid containerId)
         {

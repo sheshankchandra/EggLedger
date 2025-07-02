@@ -11,5 +11,6 @@ namespace EggLedger.Core.Interfaces
         Task<Result<List<UserSummaryDto>>> GetAllRoomUsersAsync(int roomCode);
         Task<Result<string>> UpdateRoomPublicStatusAsync(UpdateRoomPublicStatusDto dto);
         Task<Result<List<RoomDto>>> GetAllUserRoomsAsync(Guid userId);
+        Task<Result<RoomDto>> GetRoomByCodeAsync(int roomCode);
     }
 }

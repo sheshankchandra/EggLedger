@@ -21,7 +21,7 @@ namespace EggLedger.API.Controllers
             _logger = logger;
         }
 
-        // POST: api/join/{code}
+        // POST: egg-ledger-api/join/{code}
         [HttpPost("join/{roomCode:int}")]
         [Authorize]
         public async Task<IActionResult> JoinRoom([FromRoute] int roomCode)
@@ -46,7 +46,7 @@ namespace EggLedger.API.Controllers
             return BadRequest(result.Errors.Select(e => e.Message));
         }
 
-        // POST: api/room/create
+        // POST: egg-ledger-api/room/create
         [HttpPost("create/")]
         [Authorize]
         public async Task<IActionResult> CreateRoom([FromBody] CreateRoomDto dto)
@@ -71,8 +71,18 @@ namespace EggLedger.API.Controllers
             return BadRequest(result.Errors.Select(e => e.Message));
         }
 
-        // GET: api/room/{roomCode}/all
-        [HttpGet("{roomCode:int}/all")]
+        // GET: egg-ledger-api/room/{roomCode}/
+        [HttpGet("{roomCode:int}")]
+        public async Task<ActionResult<List<UserSummaryDto>>> GetRoomByCode([FromRoute] int roomCode)
+        {
+            var result = await _roomService.GetRoomByCodeAsync(roomCode);
+            if (result.IsSuccess)
+                return Ok(result.Value);
+            return StatusCode(500, result.Errors);
+        }
+
+        // GET: egg-ledger-api/room/{roomCode}/all
+        [HttpGet("{roomCode:int}/users")]
         public async Task<ActionResult<List<UserSummaryDto>>> GetAllRoomUsers([FromRoute] int roomCode)
         {
             var result = await _roomService.GetAllRoomUsersAsync(roomCode);
@@ -81,7 +91,7 @@ namespace EggLedger.API.Controllers
             return StatusCode(500, result.Errors);
         }
 
-        // GET: api/room/user/all
+        // GET: egg-ledger-api/room/user/all
         [HttpGet("user/all")]
         [Authorize]
         public async Task<ActionResult<List<RoomDto>>> GetAllUserRooms()
@@ -98,7 +108,7 @@ namespace EggLedger.API.Controllers
             return StatusCode(500, result.Errors);
         }
 
-        // POST: api/update/
+        // POST: egg-ledger-api/update/
         [Authorize(Policy = "RoomAdmin")]
         [HttpPost("update/IsPublic")]
         public async Task<IActionResult> UpdateRoomIsPublicStatus([FromBody] UpdateRoomPublicStatusDto dto)

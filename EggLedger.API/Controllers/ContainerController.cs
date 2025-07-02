@@ -18,7 +18,7 @@ namespace EggLedger.API.Controllers
             _logger = logger;
         }
 
-        // GET: api/room/{roomCode}/container/all
+        // GET: egg-ledger-api/room/{roomCode}/container/all
         [Authorize(Policy = "RoomMember")]
         [HttpGet("all")]
         public async Task<ActionResult<List<ContainerSummaryDto>>> GetAllContainers([FromRoute] int roomCode)
@@ -30,7 +30,7 @@ namespace EggLedger.API.Controllers
             return StatusCode(500, result.Errors);
         }
 
-        // GET: api/room/{roomCode}/container/{id}
+        // GET: egg-ledger-api/room/{roomCode}/container/{id}
         [Authorize(Policy = "RoomMember")]
         [HttpGet("{id}")]
         public async Task<ActionResult<ContainerSummaryDto>> GetContainer([FromRoute] int roomCode, Guid id)
@@ -45,7 +45,7 @@ namespace EggLedger.API.Controllers
             return StatusCode(500, result.Errors);
         }
 
-        // POST: api/room/{roomCode}/container/create
+        // POST: egg-ledger-api/room/{roomCode}/container/create
         [Authorize(Policy = "RoomMember")]
         [HttpPost("create")]
         public async Task<IActionResult> CreateContainer([FromRoute] int roomCode, [FromBody] ContainerCreateDto dto)
@@ -57,7 +57,7 @@ namespace EggLedger.API.Controllers
             return BadRequest(result.Errors.Select(e => e.Message));
         }
 
-        // PUT: api/room/{roomCode}/container/{id}
+        // PUT: egg-ledger-api/room/{roomCode}/container/{id}
         [Authorize(Policy = "RoomMember")]
         [HttpPut("update/{id}")]
         public async Task<IActionResult> UpdateContainer([FromRoute] int roomCode, Guid id, [FromBody] ContainerUpdateDto dto)
@@ -72,7 +72,7 @@ namespace EggLedger.API.Controllers
             return BadRequest(result.Errors.Select(e => e.Message));
         }
 
-        // DELETE: api/room/{roomCode}/container/{id}
+        // DELETE: egg-ledger-api/room/{roomCode}/container/{id}
         [Authorize(Policy = "RoomMember")]
         [HttpDelete("delete/{id}")]
         public async Task<IActionResult> DeleteContainer([FromRoute] int roomCode, Guid id)
@@ -87,7 +87,7 @@ namespace EggLedger.API.Controllers
             return BadRequest(result.Errors.Select(e => e.Message));
         }
 
-        // GET: api/room/{roomCode}/container/user/{name}
+        // GET: egg-ledger-api/room/{roomCode}/container/user/{name}
         [Authorize(Policy = "RoomMember")]
         [HttpGet("user/{name}")]
         public async Task<ActionResult<List<ContainerSummaryDto>>> SearchContainers([FromRoute] int roomCode, [FromRoute] string name)
@@ -99,7 +99,7 @@ namespace EggLedger.API.Controllers
             return StatusCode(500, result.Errors);
         }
 
-        // GET: api/room/{roomCode}/container/paged?page=1&pageSize=20
+        // GET: egg-ledger-api/room/{roomCode}/container/paged?page=1&pageSize=20
         [Authorize(Policy = "RoomMember")]
         [HttpGet("paged")]
         public async Task<ActionResult<List<ContainerSummaryDto>>> GetPagedContainers([FromRoute] int roomCode, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)

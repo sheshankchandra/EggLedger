@@ -15,13 +15,13 @@
       <div v-else class="rooms-grid">
         <div
           v-for="room in authStore.getUserRooms"
-          :key="room.id"
+          :key="room.roomId"
           class="room-card"
           @click="enterRoom(room)"
         >
           <div class="room-header">
-            <h4>{{ room.name }}</h4>
-            <span class="room-code">{{ room.code }}</span>
+            <h4>{{ room.roomName }}</h4>
+            <span class="room-code">{{ room.roomCode }}</span>
           </div>
           <div class="room-info">
             <p><strong>Members:</strong> {{ room.memberCount || 0 }}</p>
@@ -64,7 +64,7 @@ const authStore = useAuthStore()
 const enterRoom = (room) => {
   // Store the selected room info for the RoomPage component
   sessionStorage.setItem('selectedRoom', JSON.stringify(room))
-  sessionStorage.setItem('eggLedgerRoomCode', room.code)
+  sessionStorage.setItem('selectedRoomCode', room.roomCode)
   router.push('/room')
 }
 

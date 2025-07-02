@@ -80,7 +80,6 @@
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.store'
-import apiClient from '@/services/api'
 import roomService from '@/services/room.service'
 
 // Initialize stores and router
@@ -125,7 +124,7 @@ const handleCreateRoom = async () => {
       showNotification('Room created successfully!', 'success')
       const newRoomCode = response.value
       await authStore.fetchUserRooms()
-      sessionStorage.setItem('eggLedgerRoomCode', newRoomCode)
+      sessionStorage.setItem('selectedRoomCode', newRoomCode)
       router.push('/room')
     } else {
       throw new Error(response.value || 'Failed to create room.')
@@ -160,7 +159,7 @@ const handleJoinRoom = async () => {
       showNotification('Joined created successfully!', 'success')
       const newRoomCode = response.value
       await authStore.fetchUserRooms()
-      sessionStorage.setItem('eggLedgerRoomCode', newRoomCode)
+      sessionStorage.setItem('selectedRoomCode', newRoomCode)
       router.push('/room')
     } else {
       throw new Error(response.value || 'Failed to create room.')

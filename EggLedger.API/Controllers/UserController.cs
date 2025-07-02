@@ -18,7 +18,7 @@ namespace EggLedger.API.Controllers
             _logger = logger;
         }
 
-        // GET: api/user/all
+        // GET: egg-ledger-api/user/all
         [HttpGet("all")]
         public async Task<ActionResult<List<UserSummaryDto>>> GetAllUsers()
         {
@@ -28,7 +28,7 @@ namespace EggLedger.API.Controllers
             return StatusCode(500, result.Errors);
         }
 
-        // GET: api/user/{id}
+        // GET: egg-ledger-api/user/{id}
         [HttpGet("{id}")]
         public async Task<ActionResult<UserSummaryDto>> GetUser(Guid id)
         {
@@ -40,7 +40,7 @@ namespace EggLedger.API.Controllers
             return StatusCode(500, result.Errors);
         }
 
-        // PUT: api/user/{id}
+        // PUT: egg-ledger-api/user/{id}
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateUser(Guid id, [FromBody] UserUpdateDto dto)
         {
@@ -52,7 +52,7 @@ namespace EggLedger.API.Controllers
             return BadRequest(result.Errors.Select(e => e.Message));
         }
 
-        // DELETE: api/user/{id}
+        // DELETE: egg-ledger-api/user/{id}
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteUser(Guid id)
         {
@@ -64,7 +64,7 @@ namespace EggLedger.API.Controllers
             return BadRequest(result.Errors.Select(e => e.Message));
         }
 
-        // DELETE: api/user/profile
+        // DELETE: egg-ledger-api/user/profile
         [HttpGet("profile")]
         public async Task<IActionResult> GetProfile()
         {

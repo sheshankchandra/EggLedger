@@ -1,271 +1,314 @@
 <template>
   <div class="room-container">
-    <!-- View 1: Join Room -->
-    <div v-if="!roomCode" class="join-room-card">
-      <h2>Join an Egg-Ledger Room</h2>
-      <p>Enter the 6-digit code for your room to start tracking.</p>
-      <form @submit.prevent="joinRoom">
-        <input
-          v-model="enteredRoomCode"
-          type="text"
-          placeholder="e.g., 123456"
-          maxlength="6"
-          class="room-code-input"
-          pattern="\d{6}"
-          title="Please enter a 6-digit number."
-          required
-        />
-        <button type="submit" :disabled="!isRoomCodeValid">Join Room</button>
-      </form>
+    <div v-if="loading" class="loading">
+      <p>Loading room...</p>
     </div>
 
-    <!-- View 2: In the Room -->
-    <div v-else class="in-room-view">
+    <div v-else-if="!roomData" class="error">
+      <h2>Room not found</h2>
+      <p>The room you're trying to access doesn't exist or you don't have permission.</p>
+      <router-link to="/room-selection" class="btn btn-primary">Back to Rooms</router-link>
+    </div>
+
+    <div v-else class="room-content">
+      <!-- Room Header -->
       <div class="room-header">
-        <h2>Room: {{ roomCode }}</h2>
-        <button @click="leaveRoom" class="leave-button">Leave Room</button>
+        <div class="room-info">
+          <h1>{{ roomData.roomName }}</h1>
+          <span class="room-code">Code: {{ roomData.roomCode }}</span>
+        </div>
+        <div class="room-actions">
+          <router-link to="/room-selection" class="btn btn-secondary">Back to Rooms</router-link>
+        </div>
       </div>
 
-      <!-- Notification Area -->
-      <div v-if="notification.message" :class="['notification', notification.type]">
-        {{ notification.message }}
+      <!-- Room Stats -->
+      <div class="room-stats">
+        <div class="stat-card">
+          <h3>🥚 Total Eggs</h3>
+          <p class="stat-number">{{ roomData.totalEggs || 0 }}</p>
+        </div>
+        <div class="stat-card">
+          <h3>📦 Containers</h3>
+          <p class="stat-number">{{ roomData.containerCount || 0 }}</p>
+        </div>
+        <div class="stat-card">
+          <h3>👥 Members</h3>
+          <p class="stat-number">{{ roomData.memberCount || 0 }}</p>
+        </div>
       </div>
 
-      <div class="actions-wrapper">
-        <!-- Stock Eggs Card -->
+      <!-- Action Cards -->
+      <div class="actions-grid">
+        <!-- Stock Eggs -->
         <div class="action-card">
           <h3>🛒 Stock Eggs</h3>
-          <p>Bought new eggs? Log them here.</p>
-          <form @submit.prevent="handleStockOrder">
+          <p>Add new eggs to the room</p>
+          <form @submit.prevent="handleStock">
             <div class="form-group">
-              <label for="stock-name">Stock Name</label>
-              <input id="stock-quantity" v-model.trim="stockForm.name" type="text" />
+              <label>Container Name</label>
+              <input v-model="stockForm.name" type="text" placeholder="e.g., Fresh Eggs" required />
             </div>
             <div class="form-group">
-              <label for="stock-quantity">Quantity</label>
-              <input
-                id="stock-quantity"
-                v-model.number="stockForm.quantity"
-                type="number"
-                min="1"
-                required
-              />
+              <label>Quantity</label>
+              <input v-model.number="stockForm.quantity" type="number" min="1" required />
             </div>
             <div class="form-group">
-              <label for="stock-price">Total Price</label>
-              <input
-                id="stock-price"
-                v-model.number="stockForm.price"
-                type="number"
-                min="0"
-                step="0.01"
-                required
-              />
+              <label>Price per container</label>
+              <input v-model.number="stockForm.price" type="number" step="0.01" min="0" required />
             </div>
-            <button type="submit" :disabled="isLoading">
-              {{ isLoading ? 'Stocking...' : 'Add to Ledger' }}
+            <button type="submit" :disabled="loading" class="btn btn-success">
+              {{ loading ? 'Adding...' : 'Add Stock' }}
             </button>
           </form>
         </div>
 
-        <!-- Consume Eggs Card -->
+        <!-- Consume Eggs -->
         <div class="action-card">
           <h3>🍳 Consume Eggs</h3>
-          <p>Used some eggs? Log them here.</p>
-          <form @submit.prevent="handleConsumeOrder">
+          <p>Record eggs you've used</p>
+          <form @submit.prevent="handleConsume">
             <div class="form-group">
-              <label for="consume-quantity">Quantity (eggs)</label>
-              <input
-                id="consume-quantity"
-                v-model.number="consumeForm.quantity"
-                type="number"
-                min="1"
-                required
-              />
+              <label>Quantity</label>
+              <input v-model.number="consumeForm.quantity" type="number" min="1" required />
             </div>
-            <button type="submit" :disabled="isLoading">
-              {{ isLoading ? 'Consuming...' : 'Update Ledger' }}
+            <button type="submit" :disabled="loading" class="btn btn-primary">
+              {{ loading ? 'Recording...' : 'Record Consumption' }}
             </button>
           </form>
         </div>
+      </div>
+
+      <!-- Notification -->
+      <div v-if="notification" :class="['notification', notification.type]">
+        {{ notification.message }}
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
+import roomService from '@/services/room.service'
+import orderService from '@/services/order.service'
 import apiClient from '@/services/api'
 
-// --- State Management ---
-const roomCode = ref(sessionStorage.getItem('eggLedgerRoomCode') || null)
-const enteredRoomCode = ref('')
-const isLoading = ref(false)
+const router = useRouter()
 
+// State
+const roomData = ref(null)
+const loading = ref(true)
+const notification = ref(null)
+
+// Forms
 const stockForm = reactive({
-  name: '', // Optional, can be used for stock name
-  quantity: 0,
-  price: 0,
+  name: '',
+  quantity: 30,
+  price: 200,
 })
 
 const consumeForm = reactive({
-  quantity: 2,
+  quantity: 1,
 })
 
-const notification = reactive({
-  message: '',
-  type: 'success', // 'success' or 'error'
-})
-
-// --- Computed Properties ---
-const isRoomCodeValid = computed(() => /^\d{6}$/.test(enteredRoomCode.value))
-
-// --- Methods ---
-const joinRoom = () => {
-  if (isRoomCodeValid.value) {
-    roomCode.value = enteredRoomCode.value
-    // Persist in sessionStorage to survive page reloads
-    sessionStorage.setItem('eggLedgerRoomCode', roomCode.value)
-    enteredRoomCode.value = ''
-  }
-}
-
-const leaveRoom = () => {
-  roomCode.value = null
-  sessionStorage.removeItem('eggLedgerRoomCode')
-}
-
-const showNotification = (message, type = 'success', duration = 4000) => {
-  notification.message = message
-  notification.type = type
+// Methods
+const showNotification = (message, type = 'success') => {
+  notification.value = { message, type }
   setTimeout(() => {
-    notification.message = ''
-  }, duration)
+    notification.value = null
+  }, 4000)
 }
 
-const handleStockOrder = async () => {
-  if (isLoading.value) return
-  isLoading.value = true
-
-  const payload = {
-    name: stockForm.name,
-    quantity: stockForm.quantity,
-    price: stockForm.price,
-  }
-
+const loadRoomData = async () => {
   try {
-    const response = await apiClient.post(`/egg-ledger-api/${roomCode.value}/orders/stock`, payload)
-    showNotification(`Successfully stocked ${response.data.quantity} eggs!`, 'success')
-    // Reset form
-    stockForm.name = ''
-    stockForm.quantity = 0
-    stockForm.price = 0
+    loading.value = true
+    const selectedRoom = JSON.parse(sessionStorage.getItem('selectedRoom') || '{}')
+
+    if (selectedRoom) {
+      roomData.value = selectedRoom
+    } else {
+      // No room data available
+      router.push('/room-selection')
+      return
+    }
   } catch (error) {
-    console.error('Failed to create stock order:', error)
-    const errorMessage =
-      error.response?.data?.[0] ||
-      'Failed to stock eggs. The room might not exist or an error occurred.'
-    showNotification(errorMessage, 'error')
+    console.error('Failed to load room data:', error)
+    showNotification('Failed to load room data', 'error')
   } finally {
-    isLoading.value = false
+    loading.value = false
   }
 }
 
-const handleConsumeOrder = async () => {
-  if (isLoading.value) return
-  isLoading.value = true
-
-  // This structure matches your 'ConsumeOrderDto'.
-  const payload = {
-    quantity: consumeForm.quantity,
-  }
-
+const refreshRoomData = async () => {
   try {
-    const response = await apiClient.post(
-      `/egg-ledger-api/${roomCode.value}/orders/consume`,
-      payload,
-    )
-    showNotification(`Successfully consumed ${response.data.quantity} eggs!`, 'success')
-    // Reset form
-    consumeForm.quantity = 2
+    loading.value = true
+    const updatedRoom = await roomService.getRoomByCode(roomData.value.roomCode)
+    console.log('Update data:', updatedRoom)
+    sessionStorage.setItem('selectedRoom', JSON.stringify(updatedRoom))
+    sessionStorage.setItem('selectedRoomCode', updatedRoom.roomCode)
+    if (updatedRoom) {
+      roomData.value = updatedRoom
+      console.log('Successfully updated room data', 'success')
+    } else {
+      showNotification('Failed to get updated room data', 'error')
+      return
+    }
   } catch (error) {
-    console.error('Failed to create consume order:', error)
-    const errorMessage =
-      error.response?.data?.[0] || 'Failed to consume eggs. Not enough eggs in stock?'
-    showNotification(errorMessage, 'error')
+    console.error('Failed to get updated room data:', error)
+    showNotification('Failed to get updated room data', 'error')
   } finally {
-    isLoading.value = false
+    loading.value = false
   }
 }
+
+const handleStock = async () => {
+  try {
+    loading.value = true
+    const orderData = {
+      name: stockForm.name,
+      quantity: stockForm.quantity,
+      price: stockForm.price,
+    }
+
+    console.log('Stocking order data:', orderData)
+    await orderService.stockOrder(roomData.value.roomCode, orderData)
+    console.log('Successfully stocked eggs:', orderData)
+
+    showNotification(`Successfully added ${stockForm.quantity} eggs!`)
+
+    // Reset form
+    Object.assign(stockForm, { name: '', quantity: 30, price: 200 })
+
+    // Refresh room data
+    await refreshRoomData()
+  } catch (error) {
+    console.error('Failed to stock eggs:', error)
+    showNotification('Failed to add eggs', 'error')
+  } finally {
+    loading.value = false
+  }
+}
+
+const handleConsume = async () => {
+  try {
+    loading.value = true
+    const payload = {
+      quantity: consumeForm.quantity,
+    }
+
+    await apiClient.post(`/egg-ledger-api/${roomData.value.code}/orders/consume`, payload)
+    showNotification(`Successfully consumed ${consumeForm.quantity} eggs!`)
+
+    // Reset form
+    consumeForm.quantity = 1
+
+    // Refresh room data
+    await loadRoomData()
+  } catch (error) {
+    console.error('Failed to consume eggs:', error)
+    showNotification('Failed to record consumption', 'error')
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  loadRoomData()
+})
+
+onUnmounted(() => {
+  sessionStorage.removeItem('selectedRoom')
+  sessionStorage.removeItem('selectedRoomCode')
+})
 </script>
 
 <style scoped>
 .room-container {
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
+  max-width: 1200px;
+  margin: 0 auto;
   padding: 2rem;
-  height: 100%;
-  background-color: #f4f7f6;
 }
 
-.join-room-card {
-  background: white;
-  padding: 2rem;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+.loading,
+.error {
   text-align: center;
-  max-width: 400px;
-}
-
-.room-code-input {
-  font-size: 1.5rem;
-  padding: 0.5rem;
-  width: 100%;
-  text-align: center;
-  letter-spacing: 0.5rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  margin: 1rem 0;
-}
-
-.in-room-view {
-  width: 100%;
-  max-width: 900px;
+  padding: 3rem;
 }
 
 .room-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #e0e0e0;
 }
 
-.leave-button {
-  background-color: #f44336;
-  color: white;
-  border: none;
-}
-.leave-button:hover {
-  background-color: #d32f2f;
+.room-info h1 {
+  padding: 0.25rem 0rem 0.25rem 0rem;
+  color: #333;
 }
 
-.actions-wrapper {
+.room-code {
+  background: #e3f2fd;
+  color: #1976d2;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 0.9rem;
+}
+
+.room-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.stat-card {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  text-align: center;
+}
+
+.stat-card h3 {
+  margin: 0 0 0.5rem 0;
+  color: #666;
+  font-size: 1rem;
+}
+
+.stat-number {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #333;
+  margin: 0;
+}
+
+.actions-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 2rem;
+  margin-bottom: 2rem;
 }
 
 .action-card {
   background: white;
-  padding: 1.5rem 2rem;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .action-card h3 {
-  margin-top: 0;
+  margin: 0 0 0.5rem 0;
   color: #333;
+}
+
+.action-card p {
+  color: #666;
+  margin: 0 0 1.5rem 0;
 }
 
 .form-group {
@@ -282,45 +325,72 @@ const handleConsumeOrder = async () => {
 .form-group input {
   width: 100%;
   padding: 0.75rem;
-  border: 1px solid #ccc;
+  border: 1px solid #ddd;
   border-radius: 4px;
-  box-sizing: border-box; /* Important for padding */
   font-size: 1rem;
+  box-sizing: border-box;
 }
 
-button {
-  width: 100%;
-  padding: 0.75rem;
+.btn {
+  display: inline-block;
+  padding: 0.75rem 1.5rem;
   border: none;
-  border-radius: 4px;
-  background-color: #4caf50; /* A nice green */
-  color: white;
-  font-size: 1rem;
+  border-radius: 6px;
+  text-decoration: none;
+  font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.2s ease;
+  text-align: center;
 }
 
-button:disabled {
-  background-color: #cccccc;
+.btn-primary {
+  background: #2196f3;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #1976d2;
+}
+
+.btn-secondary {
+  background: #6c757d;
+  color: white;
+}
+
+.btn-secondary:hover {
+  background: #545b62;
+}
+
+.btn-success {
+  background: #4caf50;
+  color: white;
+}
+
+.btn-success:hover {
+  background: #45a049;
+}
+
+.btn:disabled {
+  background: #ccc;
   cursor: not-allowed;
 }
 
-button:not(:disabled):hover {
-  background-color: #45a049;
+.notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 1rem 1.5rem;
+  border-radius: 6px;
+  color: white;
+  font-weight: 500;
+  z-index: 1000;
 }
 
-/* Notification Styling */
-.notification {
-  padding: 1rem;
-  border-radius: 4px;
-  color: white;
-  margin-bottom: 1.5rem;
-  text-align: center;
-}
 .notification.success {
-  background-color: #28a745;
+  background: #4caf50;
 }
+
 .notification.error {
-  background-color: #dc3545;
+  background: #f44336;
 }
 </style>

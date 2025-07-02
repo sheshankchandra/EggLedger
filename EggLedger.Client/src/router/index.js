@@ -6,7 +6,7 @@ import DashboardView from '../views/DashboardView.vue'
 import ContainerDetailView from '../views/ContainerDetailView.vue'
 import GoogleCallbackView from '../views/GoogleCallbackView.vue'
 import Lobby from '../views/LobbyView.vue'
-import Room from '../views/Room.vue'
+import Room from '../views/RoomView.vue'
 import RoomSelection from '../views/RoomSelectionView.vue'
 import { useAuthStore } from '@/stores/auth.store'
 

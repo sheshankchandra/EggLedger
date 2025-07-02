@@ -168,7 +168,14 @@ namespace EggLedger.API.Services
                         RoomName = ur.Room.RoomName,
                         RoomCode = ur.Room.RoomCode,
                         IsOpen = ur.Room.IsPublic,
-                        AdminUserId = ur.IsAdmin ? userId : null
+                        AdminUserId = ur.IsAdmin ? userId : null,
+                        CreateAt = ur.Room.CreatedAt,
+                        ContainerCount = _context.Containers.Count(c => c.RoomId == ur.Room.RoomId),
+                        TotalEggs = _context.Containers
+                            .Where(c => c.RoomId == ur.Room.RoomId)
+                            .SelectMany(c => _context.OrderDetails.Where(od => od.ContainerId == c.ContainerId))
+                            .Sum(od => (int?)od.DetailQuantity) ?? 0,
+                        MemberCount = _context.UserRooms.Count(ur2 => ur2.RoomId == ur.Room.RoomId)
                     })
                     .ToListAsync();
 
@@ -179,6 +186,47 @@ namespace EggLedger.API.Services
             {
                 _logger.LogError(ex, "Error occurred while getting rooms for user {UserId}", userId);
                 return Result.Fail("Failed to retrieve user rooms");
+            }
+        }
+
+        public async Task<Result<RoomDto>> GetRoomByCodeAsync(int roomCode)
+        {
+            try
+            {
+                var room = await _context.Rooms
+                    .AsNoTracking()
+                    .Where(r => r.RoomCode == roomCode)
+                    .Include(r => r.UserRooms)
+                    .Select(r => new RoomDto
+                    {
+                        RoomId = r.RoomId,
+                        RoomName = r.RoomName,
+                        RoomCode = r.RoomCode,
+                        IsOpen = r.IsPublic,
+                        AdminUserId = r.UserRooms.Where(ur => ur.IsAdmin).Select(ur => ur.UserId).FirstOrDefault(),
+                        CreateAt = r.CreatedAt,
+                        ContainerCount = _context.Containers.Count(c => c.RoomId == r.RoomId),
+                        TotalEggs = _context.Containers
+                            .Where(c => c.RoomId == r.RoomId)
+                            .SelectMany(c => _context.OrderDetails.Where(od => od.ContainerId == c.ContainerId))
+                            .Sum(od => (int?)od.DetailQuantity) ?? 0,
+                        MemberCount = _context.UserRooms.Count(ur2 => ur2.RoomId == r.RoomId)
+                    })
+                    .FirstOrDefaultAsync();
+
+                if (room == null)
+                {
+                    _logger.LogWarning("Room with code {roomCode} not found", roomCode);
+                    return Result.Fail<RoomDto>("Room not found");
+                }
+
+                _logger.LogInformation("Retrieved room {roomCode}", roomCode);
+                return Result.Ok(room);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while retrieving room {roomCode}", roomCode);
+                return Result.Fail("Failed to retrieve room");
             }
         }
     }

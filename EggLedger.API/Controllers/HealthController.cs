@@ -16,7 +16,7 @@ namespace EggLedger.API.Controllers
             _logger = logger;
         }
 
-        // GET /egg-ledger-api/health
+        // GET: egg-ledger-api/health
         [HttpGet]
         public async Task<IActionResult> GetHealth()
         {
@@ -46,7 +46,7 @@ namespace EggLedger.API.Controllers
             }
         }
 
-        // GET /egg-ledger-api/health/database
+        // GET: egg-ledger-api/health/database
         [HttpGet("database")]
         public async Task<IActionResult> GetDatabaseHealth()
         {
