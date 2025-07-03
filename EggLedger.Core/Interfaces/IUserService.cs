@@ -5,9 +5,9 @@ namespace EggLedger.Core.Interfaces
 {
     public interface IUserService
     {
-        Task<Result<List<UserSummaryDto>>> GetAllUsersAsync();
-        Task<Result<UserSummaryDto>> GetUserByIdAsync(Guid id);
-        Task<Result<UserSummaryDto>> UpdateUserAsync(Guid id, UserUpdateDto dto);
-        Task<Result> DeleteUserAsync(Guid id);
+        Task<Result<List<UserSummaryDto>>> GetAllUsersAsync(CancellationToken cancellationToken = default);
+        Task<Result<UserSummaryDto>> GetUserByIdAsync(Guid id, CancellationToken cancellationToken = default);
+        Task<Result<UserSummaryDto>> UpdateUserAsync(Guid id, UserUpdateDto dto, CancellationToken cancellationToken = default);
+        Task<Result> DeleteUserAsync(Guid id, CancellationToken cancellationToken = default);
     }
 }

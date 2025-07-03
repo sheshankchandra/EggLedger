@@ -5,8 +5,8 @@ namespace EggLedger.API.Services
 {
     public interface IDatabaseService
     {
-        Task<bool> IsAvailableAsync();
-        Task<bool> CanConnectAsync();
+        Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default);
+        Task<bool> CanConnectAsync(CancellationToken cancellationToken = default);
     }
 
     public class DatabaseService : IDatabaseService
@@ -20,11 +20,16 @@ namespace EggLedger.API.Services
             _logger = logger;
         }
 
-        public async Task<bool> IsAvailableAsync()
+        public async Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default)
         {
             try
             {
-                return await _context.Database.CanConnectAsync();
+                return await _context.Database.CanConnectAsync(cancellationToken);
+            }
+            catch (OperationCanceledException ex)
+            {
+                _logger.LogInformation(ex, "Database availability check was canceled");
+                return false;
             }
             catch (Exception ex)
             {
@@ -33,13 +38,18 @@ namespace EggLedger.API.Services
             }
         }
 
-        public async Task<bool> CanConnectAsync()
+        public async Task<bool> CanConnectAsync(CancellationToken cancellationToken = default)
         {
             try
             {
-                await _context.Database.OpenConnectionAsync();
+                await _context.Database.OpenConnectionAsync(cancellationToken);
                 await _context.Database.CloseConnectionAsync();
                 return true;
+            }
+            catch (OperationCanceledException ex)
+            {
+                _logger.LogInformation(ex, "Database connection check was canceled");
+                return false;
             }
             catch (Exception ex)
             {

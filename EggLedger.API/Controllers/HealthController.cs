@@ -18,41 +18,54 @@ namespace EggLedger.API.Controllers
 
         // GET: egg-ledger-api/health
         [HttpGet]
-        public async Task<IActionResult> GetHealth()
+        public async Task<IActionResult> GetHealth(CancellationToken cancellationToken)
         {
-            var isHealthy = await _databaseService.IsAvailableAsync();
-            
-            var health = new
+            try
             {
-                status = isHealthy ? "Healthy" : "Unhealthy",
-                timestamp = DateTime.UtcNow,
-                services = new
+                var isHealthy = await _databaseService.IsAvailableAsync(cancellationToken);
+                
+                var health = new
                 {
-                    database = new
+                    status = isHealthy ? "Healthy" : "Unhealthy",
+                    timestamp = DateTime.UtcNow,
+                    services = new
                     {
-                        status = isHealthy ? "Connected" : "Disconnected",
-                        canConnect = isHealthy
+                        database = new
+                        {
+                            status = isHealthy ? "Connected" : "Disconnected",
+                            canConnect = isHealthy
+                        }
                     }
-                }
-            };
+                };
 
-            if (isHealthy)
-            {
-                return Ok(health);
+                if (isHealthy)
+                {
+                    return Ok(health);
+                }
+                else
+                {
+                    return StatusCode(503, health); // Service Unavailable
+                }
             }
-            else
+            catch (OperationCanceledException)
             {
-                return StatusCode(503, health); // Service Unavailable
+                _logger.LogInformation("Request was canceled by the client for GetHealth");
+                return StatusCode(499, "Client closed request.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unhandled exception in GetHealth");
+                return StatusCode(500, "An unexpected error occurred.");
             }
         }
 
         // GET: egg-ledger-api/health/database
         [HttpGet("database")]
-        public async Task<IActionResult> GetDatabaseHealth()
+        public async Task<IActionResult> GetDatabaseHealth(CancellationToken cancellationToken)
         {
             try
             {
-                var canConnect = await _databaseService.CanConnectAsync();
+                var canConnect = await _databaseService.CanConnectAsync(cancellationToken);
                 
                 var response = new
                 {
@@ -65,6 +78,11 @@ namespace EggLedger.API.Controllers
                 };
 
                 return canConnect ? Ok(response) : StatusCode(503, response);
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogInformation("Request was canceled by the client for GetDatabaseHealth");
+                return StatusCode(499, "Client closed request.");
             }
             catch (Exception ex)
             {

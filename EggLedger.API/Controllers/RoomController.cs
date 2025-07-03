@@ -24,97 +24,175 @@ namespace EggLedger.API.Controllers
         // POST: egg-ledger-api/join/{code}
         [HttpPost("join/{roomCode:int}")]
         [Authorize]
-        public async Task<IActionResult> JoinRoom([FromRoute] int roomCode)
+        public async Task<IActionResult> JoinRoom([FromRoute] int roomCode, CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Received request to join a Room.");
-
-            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+            try
             {
-                return Unauthorized("Invalid user identity");
+                _logger.LogInformation("Received request to join a Room.");
+
+                var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+                {
+                    return Unauthorized("Invalid user identity");
+                }
+
+                Result<int> result = await _roomService.JoinRoomAsync(userId, roomCode, cancellationToken);
+
+                if (result.IsSuccess)
+                {
+                    _logger.LogInformation("User successfully joined room with code: {RoomCode}", roomCode);
+                    return Ok(result.Value);
+                }
+                
+                _logger.LogWarning("Failed to join room. Errors: {Errors}", string.Join(", ", result.Errors.Select(e => e.Message)));
+                return BadRequest(result.Errors.Select(e => e.Message));
             }
-
-            Result<int> result = await _roomService.JoinRoomAsync(userId, roomCode);
-
-            if (result.IsSuccess)
+            catch (OperationCanceledException)
             {
-                _logger.LogInformation("User successfully joined room with code: {RoomCode}", roomCode);
-                return Ok(result.Value);
+                _logger.LogInformation("Request was canceled by the client for JoinRoom, roomCode: {RoomCode}", roomCode);
+                return StatusCode(499, "Client closed request.");
             }
-            
-            _logger.LogWarning("Failed to join room. Errors: {Errors}", string.Join(", ", result.Errors.Select(e => e.Message)));
-            return BadRequest(result.Errors.Select(e => e.Message));
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unhandled exception in JoinRoom for roomCode: {RoomCode}", roomCode);
+                return StatusCode(500, "An unexpected error occurred.");
+            }
         }
 
         // POST: egg-ledger-api/room/create
         [HttpPost("create/")]
         [Authorize]
-        public async Task<IActionResult> CreateRoom([FromBody] CreateRoomDto dto)
+        public async Task<IActionResult> CreateRoom([FromBody] CreateRoomDto dto, CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Received request to create a Room.");
-
-            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+            try
             {
-                return Unauthorized("Invalid user identity");
+                _logger.LogInformation("Received request to create a Room.");
+
+                var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+                {
+                    return Unauthorized("Invalid user identity");
+                }
+
+                Result<int> result = await _roomService.CreateRoomAsync(userId, dto, cancellationToken);
+
+                if (result.IsSuccess)
+                {
+                    _logger.LogInformation("Successfully created the Room : {RoomCode}", result.Value);
+                    return Ok(result);
+                }
+
+                _logger.LogWarning("Failed to create room. Errors: {Errors}", string.Join(", ", result.Errors.Select(e => e.Message)));
+                return BadRequest(result.Errors.Select(e => e.Message));
             }
-
-            Result<int> result = await _roomService.CreateRoomAsync(userId, dto);
-
-            if (result.IsSuccess)
+            catch (OperationCanceledException)
             {
-                _logger.LogInformation("Successfully created the Room : {RoomCode}", result.Value);
-                return Ok(result);
+                _logger.LogInformation("Request was canceled by the client for CreateRoom");
+                return StatusCode(499, "Client closed request.");
             }
-
-            _logger.LogWarning("Failed to create room. Errors: {Errors}", string.Join(", ", result.Errors.Select(e => e.Message)));
-            return BadRequest(result.Errors.Select(e => e.Message));
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unhandled exception in CreateRoom");
+                return StatusCode(500, "An unexpected error occurred.");
+            }
         }
 
         // GET: egg-ledger-api/room/{roomCode}/
         [HttpGet("{roomCode:int}")]
-        public async Task<ActionResult<List<UserSummaryDto>>> GetRoomByCode([FromRoute] int roomCode)
+        public async Task<ActionResult<List<UserSummaryDto>>> GetRoomByCode([FromRoute] int roomCode, CancellationToken cancellationToken)
         {
-            var result = await _roomService.GetRoomByCodeAsync(roomCode);
-            if (result.IsSuccess)
-                return Ok(result.Value);
-            return StatusCode(500, result.Errors);
+            try
+            {
+                var result = await _roomService.GetRoomByCodeAsync(roomCode, cancellationToken);
+                if (result.IsSuccess)
+                    return Ok(result.Value);
+                return StatusCode(500, result.Errors);
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogInformation("Request was canceled by the client for GetRoomByCode, roomCode: {RoomCode}", roomCode);
+                return StatusCode(499, "Client closed request.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unhandled exception in GetRoomByCode for roomCode: {RoomCode}", roomCode);
+                return StatusCode(500, "An unexpected error occurred.");
+            }
         }
 
         // GET: egg-ledger-api/room/{roomCode}/all
         [HttpGet("{roomCode:int}/users")]
-        public async Task<ActionResult<List<UserSummaryDto>>> GetAllRoomUsers([FromRoute] int roomCode)
+        public async Task<ActionResult<List<UserSummaryDto>>> GetAllRoomUsers([FromRoute] int roomCode, CancellationToken cancellationToken)
         {
-            var result = await _roomService.GetAllRoomUsersAsync(roomCode);
-            if (result.IsSuccess)
-                return Ok(result.Value);
-            return StatusCode(500, result.Errors);
+            try
+            {
+                var result = await _roomService.GetAllRoomUsersAsync(roomCode, cancellationToken);
+                if (result.IsSuccess)
+                    return Ok(result.Value);
+                return StatusCode(500, result.Errors);
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogInformation("Request was canceled by the client for GetAllRoomUsers, roomCode: {RoomCode}", roomCode);
+                return StatusCode(499, "Client closed request.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unhandled exception in GetAllRoomUsers for roomCode: {RoomCode}", roomCode);
+                return StatusCode(500, "An unexpected error occurred.");
+            }
         }
 
         // GET: egg-ledger-api/room/user/all
         [HttpGet("user/all")]
         [Authorize]
-        public async Task<ActionResult<List<RoomDto>>> GetAllUserRooms()
+        public async Task<ActionResult<List<RoomDto>>> GetAllUserRooms(CancellationToken cancellationToken)
         {
-            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+            try
             {
-                return Unauthorized("Invalid user identity");
-            }
+                var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+                {
+                    return Unauthorized("Invalid user identity");
+                }
 
-            var result = await _roomService.GetAllUserRoomsAsync(userId);
-            if (result.IsSuccess)
-                return Ok(result.Value);
-            return StatusCode(500, result.Errors);
+                var result = await _roomService.GetAllUserRoomsAsync(userId, cancellationToken);
+                if (result.IsSuccess)
+                    return Ok(result.Value);
+                return StatusCode(500, result.Errors);
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogInformation("Request was canceled by the client for GetAllUserRooms");
+                return StatusCode(499, "Client closed request.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unhandled exception in GetAllUserRooms");
+                return StatusCode(500, "An unexpected error occurred.");
+            }
         }
 
         // POST: egg-ledger-api/update/
         [Authorize(Policy = "RoomAdmin")]
         [HttpPost("update/IsPublic")]
-        public async Task<IActionResult> UpdateRoomIsPublicStatus([FromBody] UpdateRoomPublicStatusDto dto)
+        public async Task<IActionResult> UpdateRoomIsPublicStatus([FromBody] UpdateRoomPublicStatusDto dto, CancellationToken cancellationToken)
         {
-            var result = await _roomService.UpdateRoomPublicStatusAsync(dto);
-            return result.IsSuccess ? Ok(result.Value) : BadRequest(result.Reasons);
+            try
+            {
+                var result = await _roomService.UpdateRoomPublicStatusAsync(dto, cancellationToken);
+                return result.IsSuccess ? Ok(result.Value) : BadRequest(result.Reasons);
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogInformation("Request was canceled by the client for UpdateRoomIsPublicStatus");
+                return StatusCode(499, "Client closed request.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unhandled exception in UpdateRoomIsPublicStatus");
+                return StatusCode(500, "An unexpected error occurred.");
+            }
         }
     }
 }

@@ -60,7 +60,7 @@ namespace EggLedger.API.Services
             }
             catch (Exception ex)
             {
-                _logger.LogCritical(ex, "Unexpected error occurred in CreateUserAsync for email '{Email}'", dto.Email);
+                _logger.LogError(ex, "Unexpected error occurred in CreateUserAsync for email '{Email}'", dto.Email);
                 return Result.Fail("An unexpected error occurred. Please try again later.");
             }
         }
@@ -99,73 +99,97 @@ namespace EggLedger.API.Services
             }
             catch (Exception ex)
             {
-                _logger.LogCritical(ex, "Unexpected error occurred in LoginAsync for email '{Email}'", dto.Email);
+                _logger.LogError(ex, "Unexpected error occurred in LoginAsync for email '{Email}'", dto.Email);
                 return Result.Fail("An unexpected error occurred. Please try again later.");
             }
         }
 
         public async Task<Result<TokenResponseDto>> LoginWithProviderAsync(string email, string name, string provider)
         {
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
-
-            if (user == null)
+            try
             {
-                _logger.LogWarning("OAuth login failed for email '{Email}': User not found, creating new user.", email);
-                _logger.LogInformation("Creating new user via OAuth with email: {Email}, name: '{Name}', provider: {Provider}", email, name, provider);
+                var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
 
-                var nameParts = name?.Split(new[] { ' ' }, 2, StringSplitOptions.RemoveEmptyEntries) ?? new string[0];
-                var firstName = nameParts.Length > 0 ? nameParts[0] : "User";
-                var lastName = nameParts.Length > 1 ? nameParts[1] : null;
-
-                user = new User
+                if (user == null)
                 {
-                    UserId = Guid.NewGuid(),
-                    Email = email,
-                    FirstName = firstName,
-                    LastName = lastName,
-                    PasswordHash = null, 
-                    Role = UserRoles.User,
-                    Provider = provider
-                };
-                _context.Users.Add(user);
-                await _context.SaveChangesAsync();
+                    _logger.LogWarning("OAuth login failed for email '{Email}': User not found, creating new user.", email);
+                    _logger.LogInformation("Creating new user via OAuth with email: {Email}, name: '{Name}', provider: {Provider}", email, name, provider);
 
-                _logger.LogInformation("Successfully created new OAuth user: {UserId}, Email: {Email}, Provider: {Provider}", user.UserId, email, provider);
+                    var nameParts = name?.Split(new[] { ' ' }, 2, StringSplitOptions.RemoveEmptyEntries) ?? new string[0];
+                    var firstName = nameParts.Length > 0 ? nameParts[0] : "User";
+                    var lastName = nameParts.Length > 1 ? nameParts[1] : null;
+
+                    user = new User
+                    {
+                        UserId = Guid.NewGuid(),
+                        Email = email,
+                        FirstName = firstName,
+                        LastName = lastName,
+                        PasswordHash = null, 
+                        Role = UserRoles.User,
+                        Provider = provider
+                    };
+                    _context.Users.Add(user);
+                    await _context.SaveChangesAsync();
+
+                    _logger.LogInformation("Successfully created new OAuth user: {UserId}, Email: {Email}, Provider: {Provider}", user.UserId, email, provider);
+                }
+
+                _logger.LogInformation("User '{Email}' successfully logged in via {Provider}.", email, provider);
+                return await CreateTokenResponse(user);
             }
-
-            _logger.LogInformation("User '{Email}' successfully logged in via {Provider}.", email, provider);
-            return await CreateTokenResponse(user);
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error occurred in LoginWithProviderAsync for email '{Email}'", email);
+                return Result.Fail("An unexpected error occurred. Please try again later.");
+            }
         }
 
         public async Task<Result<TokenResponseDto>> RefreshTokensAsync(RefreshTokenRequestDto request)
         {
-            _logger.LogInformation("Processing refresh token request for user {UserId}", request.UserId);
-            
-            var user = await ValidateRefreshTokenAsync(request.UserId, request.RefreshToken);
-            if (user is null)
+            try
             {
-                _logger.LogWarning("Invalid or expired refresh token for user {UserId}", request.UserId);
-                return Result.Fail("Invalid or Expired Refresh Token");
+                _logger.LogInformation("Processing refresh token request for user {UserId}", request.UserId);
+                
+                var user = await ValidateRefreshTokenAsync(request.UserId, request.RefreshToken);
+                if (user is null)
+                {
+                    _logger.LogWarning("Invalid or expired refresh token for user {UserId}", request.UserId);
+                    return Result.Fail("Invalid or Expired Refresh Token");
+                }
+
+                // Revoke the old refresh token
+                await RevokeRefreshTokenAsync(request.UserId, request.RefreshToken);
+
+                _logger.LogInformation("Refresh token successfully processed for user {UserId}", request.UserId);
+
+                // Create new token pair
+                return await CreateTokenResponse(user);
             }
-
-            // Revoke the old refresh token
-            await RevokeRefreshTokenAsync(request.UserId, request.RefreshToken);
-
-            _logger.LogInformation("Refresh token successfully processed for user {UserId}", request.UserId);
-
-            // Create new token pair
-            return await CreateTokenResponse(user);
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error occurred in RefreshTokensAsync for userId {UserId}", request.UserId);
+                return Result.Fail("An unexpected error occurred. Please try again later.");
+            }
         }
 
         public async Task<Result<TokenResponseDto>> CreateTokenResponse(User? user)
         {
-            var tokenResponse =  new TokenResponseDto
+            try
             {
-                AccessToken = GenerateJwtToken(user),
-                RefreshToken = await GenerateAndSaveRefreshTokenAsync(user)
-            };
+                var tokenResponse = new TokenResponseDto
+                {
+                    AccessToken = GenerateJwtToken(user),
+                    RefreshToken = await GenerateAndSaveRefreshTokenAsync(user)
+                };
 
-            return tokenResponse;
+                return tokenResponse;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred in CreateTokenResponse for userId {UserId}", user?.UserId);
+                return Result.Fail("An error occurred while creating token response.");
+            }
         }
 
         public string GenerateJwtToken(User user)
@@ -210,93 +234,133 @@ namespace EggLedger.API.Services
 
         public async Task<string> GenerateAndSaveRefreshTokenAsync(User user)
         {
-            var refreshToken = new RefreshToken
+            try
             {
-                Token = GenerateRefreshToken(),
-                Expires = DateTime.UtcNow.AddDays(7),
-                CreatedByIp = "TODO:CaptureIPAddress",
-                UserId = user.UserId,
-                Created = DateTime.UtcNow
-            };
+                var refreshToken = new RefreshToken
+                {
+                    Token = GenerateRefreshToken(),
+                    Expires = DateTime.UtcNow.AddDays(7),
+                    CreatedByIp = "TODO:CaptureIPAddress",
+                    UserId = user.UserId,
+                    Created = DateTime.UtcNow
+                };
 
-            _context.RefreshTokens.Add(refreshToken);
-            await _context.SaveChangesAsync();
+                _context.RefreshTokens.Add(refreshToken);
+                await _context.SaveChangesAsync();
 
-            _logger.LogDebug("Refresh token generated for user {UserId}", user.UserId);
+                _logger.LogDebug("Refresh token generated for user {UserId}", user.UserId);
 
-            return refreshToken.Token;
+                return refreshToken.Token;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred in GenerateAndSaveRefreshTokenAsync for userId {UserId}", user.UserId);
+                throw;
+            }
         }
 
         public async Task<User?> ValidateRefreshTokenAsync(Guid userId, string refreshToken)
         {
-            var user = await _context.Users
-                .Include(u => u.RefreshTokens)
-                .FirstOrDefaultAsync(u => u.UserId == userId);
+            try
+            {
+                var user = await _context.Users
+                    .Include(u => u.RefreshTokens)
+                    .FirstOrDefaultAsync(u => u.UserId == userId);
 
-            if (user is null) return null;
+                if (user is null) return null;
 
-            var token = user.RefreshTokens
-                .FirstOrDefault(t => t.Token == refreshToken && !t.IsRevoked && !(t.Expires <= DateTime.UtcNow));
+                var token = user.RefreshTokens
+                    .FirstOrDefault(t => t.Token == refreshToken && !t.IsRevoked && !(t.Expires <= DateTime.UtcNow));
 
-            return token != null ? user : null;
+                return token != null ? user : null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred in ValidateRefreshTokenAsync for userId {UserId}", userId);
+                return null;
+            }
         }
 
         public async Task RevokeRefreshTokenAsync(Guid userId, string refreshToken)
         {
-            var token = await _context.RefreshTokens
-                .FirstOrDefaultAsync(t => t.UserId == userId && t.Token == refreshToken);
+            try
+            {
+                var token = await _context.RefreshTokens
+                    .FirstOrDefaultAsync(t => t.UserId == userId && t.Token == refreshToken);
 
-            if (token != null && !token.IsRevoked)
-            {
-                token.Revoked = DateTime.UtcNow;
-                token.RevokedByIp = "TODO:CaptureIPAddress"; // You should capture the actual IP
-                await _context.SaveChangesAsync();
-                _logger.LogInformation("Refresh token revoked for user {UserId}", userId);
+                if (token != null && !token.IsRevoked)
+                {
+                    token.Revoked = DateTime.UtcNow;
+                    token.RevokedByIp = "TODO:CaptureIPAddress"; // You should capture the actual IP
+                    await _context.SaveChangesAsync();
+                    _logger.LogInformation("Refresh token revoked for user {UserId}", userId);
+                }
+                else if (token != null && token.IsRevoked)
+                {
+                    _logger.LogWarning("Attempted to revoke already revoked token for user {UserId}", userId);
+                }
+                else
+                {
+                    _logger.LogWarning("Attempted to revoke non-existent token for user {UserId}", userId);
+                }
             }
-            else if (token != null && token.IsRevoked)
+            catch (Exception ex)
             {
-                _logger.LogWarning("Attempted to revoke already revoked token for user {UserId}", userId);
-            }
-            else
-            {
-                _logger.LogWarning("Attempted to revoke non-existent token for user {UserId}", userId);
+                _logger.LogError(ex, "Error occurred in RevokeRefreshTokenAsync for userId {UserId}", userId);
+                throw;
             }
         }
 
         public async Task RevokeAllUserRefreshTokensAsync(Guid userId)
         {
-            var tokens = await _context.RefreshTokens
-                .Where(t => t.UserId == userId && !t.IsRevoked)
-                .ToListAsync();
+            try
+            {
+                var tokens = await _context.RefreshTokens
+                    .Where(t => t.UserId == userId && !t.IsRevoked)
+                    .ToListAsync();
 
-            foreach (var token in tokens)
-            {
-                token.Revoked = DateTime.UtcNow;
-                token.RevokedByIp = "TODO:CaptureIPAddress";
-            }
+                foreach (var token in tokens)
+                {
+                    token.Revoked = DateTime.UtcNow;
+                    token.RevokedByIp = "TODO:CaptureIPAddress";
+                }
 
-            if (tokens.Any())
-            {
-                await _context.SaveChangesAsync();
-                _logger.LogInformation("Revoked {Count} refresh tokens for user {UserId}", tokens.Count, userId);
+                if (tokens.Any())
+                {
+                    await _context.SaveChangesAsync();
+                    _logger.LogInformation("Revoked {Count} refresh tokens for user {UserId}", tokens.Count, userId);
+                }
+                else
+                {
+                    _logger.LogInformation("No active refresh tokens found to revoke for user {UserId}", userId);
+                }
             }
-            else
+            catch (Exception ex)
             {
-                _logger.LogInformation("No active refresh tokens found to revoke for user {UserId}", userId);
+                _logger.LogError(ex, "Error occurred in RevokeAllUserRefreshTokensAsync for userId {UserId}", userId);
+                throw;
             }
         }
 
         public async Task CleanupExpiredRefreshTokensAsync()
         {
-            var expiredTokens = await _context.RefreshTokens
-                .Where(t => t.Expires <= DateTime.UtcNow)
-                .ToListAsync();
-
-            if (expiredTokens.Any())
+            try
             {
-                _context.RefreshTokens.RemoveRange(expiredTokens);
-                await _context.SaveChangesAsync();
-                _logger.LogInformation("Cleaned up {Count} expired refresh tokens", expiredTokens.Count);
+                var expiredTokens = await _context.RefreshTokens
+                    .Where(t => t.Expires <= DateTime.UtcNow)
+                    .ToListAsync();
+
+                if (expiredTokens.Any())
+                {
+                    _context.RefreshTokens.RemoveRange(expiredTokens);
+                    await _context.SaveChangesAsync();
+                    _logger.LogInformation("Cleaned up {Count} expired refresh tokens", expiredTokens.Count);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred in CleanupExpiredRefreshTokensAsync");
+                throw;
             }
         }
 

@@ -42,6 +42,18 @@ namespace EggLedger.API.Middleware
 
             switch (exception)
             {
+                case OperationCanceledException canceledEx:
+                    _logger.LogInformation(canceledEx, "Request was canceled: {Message}", canceledEx.Message);
+                    context.Response.StatusCode = (int)HttpStatusCode.BadRequest; // 400 or could use 499
+                    response = new
+                    {
+                        error = "The request was canceled.",
+                        details = "The operation was canceled, likely due to client disconnection or timeout.",
+                        timestamp = DateTime.UtcNow,
+                        statusCode = 400
+                    };
+                    break;
+
                 case NpgsqlException npgsqlEx:
                     _logger.LogError(npgsqlEx, "Database connection error: {Message}", npgsqlEx.Message);
                     context.Response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
@@ -115,6 +127,7 @@ namespace EggLedger.API.Middleware
         {
             return exception switch
             {
+                OperationCanceledException => "The request was canceled by the client or due to timeout.",
                 NpgsqlException => "Database connection failed. Please ensure PostgreSQL is running.",
                 TimeoutException => "Operation timed out. Please try again.",
                 UnauthorizedAccessException => "Access denied. Please check your credentials.",
