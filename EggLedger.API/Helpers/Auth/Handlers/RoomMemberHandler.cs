@@ -1,8 +1,13 @@
-﻿using EggLedger.API.Data;
+﻿using System;
 using EggLedger.API.Helpers.Auth.Requirements;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using System.Threading.Tasks;
+using EggLedger.Data;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.Logging;
 
 namespace EggLedger.API.Helpers.Auth.Handlers
 {

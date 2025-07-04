@@ -1,7 +1,13 @@
-﻿using EggLedger.Core.DTOs.User;
-using EggLedger.Core.Interfaces;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using System.Threading;
+using System.Threading.Tasks;
+using EggLedger.DTO.User;
+using EggLedger.Services.Interfaces;
+using Microsoft.Extensions.Logging;
 
 namespace EggLedger.API.Controllers
 {

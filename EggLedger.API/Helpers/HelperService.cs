@@ -1,10 +1,15 @@
-﻿using EggLedger.API.Data;
-using EggLedger.Core.Interfaces;
-using EggLedger.Core.Models;
+﻿using System;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using EggLedger.Data;
+using EggLedger.Models.Models;
+using EggLedger.Services.Interfaces;
 using FluentResults;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
-namespace EggLedger.Core.Helpers
+namespace EggLedger.API.Helpers
 {
     public class HelperService : IHelperService
     {

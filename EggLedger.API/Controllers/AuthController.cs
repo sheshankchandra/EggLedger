@@ -1,11 +1,15 @@
-﻿using EggLedger.Core.DTOs.Auth;
-using EggLedger.Core.DTOs.User;
-using EggLedger.Core.Interfaces;
+﻿using System;
+using System.Linq;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using System.Threading.Tasks;
+using EggLedger.DTO.Auth;
+using EggLedger.DTO.User;
+using EggLedger.Services.Interfaces;
+using Microsoft.Extensions.Logging;
 
 namespace EggLedger.API.Controllers;
 
@@ -115,7 +119,7 @@ public class AuthController : ControllerBase
 
             // Use your user service to find or create the user and generate a JWT
             // This is the same logic you'd use after a successful password login.
-            var loginResult = await _authService.LoginWithProviderAsync(email, name, "Google");
+            var loginResult = await _authService.LoginWithProviderAsync(email, name ?? throw new InvalidOperationException(), "Google");
 
             if (!loginResult.IsSuccess)
             {

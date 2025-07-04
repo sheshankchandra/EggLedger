@@ -1,7 +1,5 @@
-using EggLedger.API.Data;
-using EggLedger.API.Services;
-using EggLedger.Core.Helpers;
-using EggLedger.Core.Interfaces;
+using System;
+using System.IO;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -9,11 +7,21 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 using System.Text;
+using EggLedger.API.Helpers;
 using EggLedger.API.Helpers.Auth.Handlers;
 using EggLedger.API.Helpers.Auth.Requirements;
 using EggLedger.API.Middleware;
+using EggLedger.Data;
+using EggLedger.ServiceDefaults;
+using EggLedger.Services.Interfaces;
+using EggLedger.Services.Services;
 using log4net;
 using log4net.Config;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -92,14 +100,14 @@ builder.Services.AddAuthentication(options =>
             ValidIssuer = builder.Configuration["Jwt:Issuer"],
             ValidAudience = builder.Configuration["Jwt:Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:SecretKey"])
+                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:SecretKey"] ?? throw new InvalidOperationException())
             )
         };
     })
     .AddGoogle(options =>
     {
-        options.ClientId = builder.Configuration["Authentication:Google:ClientId"];
-        options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
+        options.ClientId = builder.Configuration["Authentication:Google:ClientId"] ?? throw new InvalidOperationException();
+        options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"] ?? throw new InvalidOperationException();
     });
 
 builder.Services.AddAuthorization(options =>
@@ -122,8 +130,8 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IRoomService, RoomService>();
 
 // Background Services
-builder.Services.AddHostedService<EggLedger.API.Middleware.DatabaseStartupValidationService>();
-builder.Services.AddHostedService<RefreshTokenCleanupService>();
+builder.Services.AddHostedService<EggLedger.Services.Services.DatabaseStartupValidationService>();
+builder.Services.AddHostedService<EggLedger.Services.Services.RefreshTokenCleanupService>();
 
 // Authorization Handlers
 builder.Services.AddScoped<IAuthorizationHandler, RoomAdminHandler>();

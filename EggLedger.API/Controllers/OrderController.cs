@@ -1,8 +1,13 @@
-﻿using EggLedger.Core.DTOs.Order;
-using EggLedger.Core.Interfaces;
+﻿using System;
+using System.Linq;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using System.Threading;
+using System.Threading.Tasks;
+using EggLedger.DTO.Order;
+using EggLedger.Services.Interfaces;
+using Microsoft.Extensions.Logging;
 
 namespace EggLedger.API.Controllers
 {
@@ -28,7 +33,7 @@ namespace EggLedger.API.Controllers
             {
                 _logger.LogInformation("Received request to create Stocking order.");
 
-                var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+                var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new InvalidOperationException());
                 var result = await _orderService.CreateStockOrderAsync(userId, roomCode, dto, cancellationToken);
 
                 if (result is { IsSuccess: true, Value: not null })
@@ -60,7 +65,7 @@ namespace EggLedger.API.Controllers
             {
                 _logger.LogInformation("Received request to create Consuming order.");
 
-                var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+                var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new InvalidOperationException());
                 var result = await _orderService.CreateConsumeOrderAsync(userId, roomCode, dto, cancellationToken);
 
                 if (result is { IsSuccess: true, Value: not null })
