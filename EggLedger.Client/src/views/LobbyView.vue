@@ -77,10 +77,13 @@
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
+import { reactive, ref, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.store'
 import roomService from '@/services/room.service'
+
+// Simple AbortController for canceling requests
+let abortController = new AbortController()
 
 // Initialize stores and router
 const authStore = useAuthStore()
@@ -112,13 +115,21 @@ const showNotification = (message, type = 'success', duration = 5000) => {
 
 const handleCreateRoom = async () => {
   if (isLoading.value) return
+
+  // Cancel previous requests
+  abortController.abort()
+  abortController = new AbortController()
+
   isLoading.value = true
 
   try {
-    const response = await roomService.createRoom({
-      roomName: createForm.roomName,
-      isOpen: createForm.isPublic,
-    })
+    const response = await roomService.createRoom(
+      {
+        roomName: createForm.roomName,
+        isOpen: createForm.isPublic,
+      },
+      abortController.signal,
+    )
 
     if (response.isSuccess) {
       showNotification('Room created successfully!', 'success')
@@ -130,6 +141,9 @@ const handleCreateRoom = async () => {
       throw new Error(response.value || 'Failed to create room.')
     }
   } catch (error) {
+    if (error.name === 'AbortError' || error.code === 'ERR_CANCELED') {
+      return
+    }
     let errorMessage = 'Could not create the room. Please try again.'
     if (Array.isArray(error.response?.data)) {
       errorMessage = error.response.data.join(', ')
@@ -152,8 +166,12 @@ const handleJoinRoom = async () => {
     return
   }
 
+  // Cancel previous requests
+  abortController.abort()
+  abortController = new AbortController()
+
   try {
-    const response = await roomService.joinRoom(joinForm.roomCode)
+    const response = await roomService.joinRoom(joinForm.roomCode, abortController.signal)
 
     if (response.isSuccess) {
       showNotification('Joined created successfully!', 'success')
@@ -165,6 +183,9 @@ const handleJoinRoom = async () => {
       throw new Error(response.value || 'Failed to create room.')
     }
   } catch (error) {
+    if (error.name === 'AbortError' || error.code === 'ERR_CANCELED') {
+      return
+    }
     let errorMessage = 'Could not join the room. Please check the code and try again.'
     if (Array.isArray(error.response?.data)) {
       errorMessage = error.response.data.join(', ')
@@ -179,6 +200,11 @@ const handleJoinRoom = async () => {
     isLoading.value = false
   }
 }
+
+// Cancel all requests when component unmounts (saves backend resources)
+onUnmounted(() => {
+  abortController.abort()
+})
 </script>
 
 <style scoped>

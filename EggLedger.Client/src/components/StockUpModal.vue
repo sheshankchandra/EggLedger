@@ -22,8 +22,11 @@
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue';
+import { reactive, ref, onUnmounted } from 'vue';
 import { orderService } from '@/services/order.service';
+
+// Simple AbortController for canceling requests
+let abortController = new AbortController();
 
 const props = defineProps({
   container: { type: Object, required: true }
@@ -41,18 +44,30 @@ const loading = ref(false);
 const error = ref(null);
 
 const submitStock = async () => {
+  // Cancel previous requests
+  abortController.abort();
+  abortController = new AbortController();
+
   loading.value = true;
   error.value = null;
   try {
-    await orderService.stockOrder(form);
+    await orderService.stockOrder(form, abortController.signal);
     emit('stocked');
   } catch (err) {
+    if (err.name === 'AbortError' || err.code === 'ERR_CANCELED') {
+      return;
+    }
     error.value = 'Failed to add stock.';
     console.error(err);
   } finally {
     loading.value = false;
   }
 };
+
+// Cancel all requests when component unmounts (saves backend resources)
+onUnmounted(() => {
+  abortController.abort();
+});
 </script>
 
 <style scoped>

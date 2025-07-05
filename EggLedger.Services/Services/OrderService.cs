@@ -38,6 +38,8 @@ namespace EggLedger.Services.Services
                     return Result.Fail("Failed generating an order name");
                 }
 
+                _logger.LogInformation("Creating container {ContainerName} with quantity {Quantity} and price {Amount}", dto.ContainerName, dto.Quantity, dto.Amount);
+
                 var order = new Order
                 {
                     OrderId = Guid.NewGuid(),

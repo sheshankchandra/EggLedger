@@ -1,15 +1,17 @@
-﻿using System;
-using System.Linq;
+﻿using EggLedger.DTO.Auth;
+using EggLedger.DTO.User;
+using EggLedger.Services.Interfaces;
+using EggLedger.Services.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
-using System.Threading.Tasks;
-using EggLedger.DTO.Auth;
-using EggLedger.DTO.User;
-using EggLedger.Services.Interfaces;
 using Microsoft.Extensions.Logging;
+using System;
+using System.Linq;
+using System.Security.Claims;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace EggLedger.API.Controllers;
 
@@ -174,25 +176,26 @@ public class AuthController : ControllerBase
     // POST /egg-ledger-api/auth/logout
     [HttpPost("logout")]
     [Authorize]
-    public async Task<IActionResult> Logout([FromBody] RefreshTokenRequestDto request)
+    public async Task<IActionResult> Logout([FromBody] string refreshToken)
     {
         try
         {
-            _logger.LogInformation("Logout attempt for user: {UserId}", request.UserId);
-            
-            var result = await _authService.LogoutAsync(request.UserId, request.RefreshToken);
+            _logger.LogInformation("Received request to logout a user.");
+
+            var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new InvalidOperationException());
+            var result = await _authService.LogoutAsync(userId, refreshToken);
             if (result.IsSuccess)
             {
-                _logger.LogInformation("Successful logout for user: {UserId}", request.UserId);
+                _logger.LogInformation("Successful logout for user: {userId}", userId);
                 return Ok(new { message = "Logged out successfully" });
             }
             
-            _logger.LogError("Failed logout attempt for user: {UserId}", request.UserId);
+            _logger.LogError("Failed logout attempt for user: {userId}", userId);
             return BadRequest(result.Errors.Select(e => e.Message));
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unhandled exception in Logout for userId: {UserId}", request.UserId);
+            _logger.LogError(ex, "Unhandled exception in Logout for a user");
             return StatusCode(500, "An unexpected error occurred.");
         }
     }

@@ -1,13 +1,9 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import LoginView from '../views/LoginView.vue'
 import RegisterView from '../views/RegisterView.vue'
-import ProfileView from '../views/ProfileView.vue'
-import DashboardView from '../views/DashboardView.vue'
-import ContainerDetailView from '../views/ContainerDetailView.vue'
+import MainView from '../views/MainView.vue'
 import GoogleCallbackView from '../views/GoogleCallbackView.vue'
-import Lobby from '../views/LobbyView.vue'
-import Room from '../views/RoomView.vue'
-import RoomSelection from '../views/RoomSelectionView.vue'
+import LobbyView from '../views/LobbyView.vue'
 import { useAuthStore } from '@/stores/auth.store'
 
 const router = createRouter({
@@ -26,25 +22,8 @@ const router = createRouter({
     {
       path: '/lobby',
       name: 'lobby',
-      component: Lobby,
-    },
-    {
-      path: '/room-selection',
-      name: 'roomSelection',
-      component: RoomSelection,
+      component: LobbyView,
       meta: { requiresAuth: true },
-    },
-    {
-      path: '/room',
-      name: 'room',
-      component: Room,
-      meta: { requiresAuth: true },
-    },
-    {
-      path: '/profile',
-      name: 'profile',
-      component: ProfileView,
-      meta: { requiresAuth: true }, // Mark this route as protected
     },
     {
       path: '/auth/callback',
@@ -52,27 +31,10 @@ const router = createRouter({
       component: GoogleCallbackView,
     },
     {
-      path: '/dashboard',
-      name: 'dashboard',
-      component: DashboardView,
-      meta: { requiresAuth: true },
-    },
-    {
-      path: '/container/:id',
-      name: 'container-detail',
-      component: ContainerDetailView,
-      meta: { requiresAuth: true },
-    },
-    // Redirect root to room selection if logged in and has rooms, lobby if no rooms, otherwise to login
-    {
       path: '/',
-      redirect: () => {
-        const authStore = useAuthStore()
-        if (authStore.isAuthenticated) {
-          return authStore.hasRooms ? '/room-selection' : '/lobby'
-        }
-        return '/login'
-      },
+      name: 'main',
+      component: MainView,
+      meta: { requiresAuth: true },
     },
   ],
 })
@@ -82,13 +44,10 @@ router.beforeEach((to, from, next) => {
   const authStore = useAuthStore()
 
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-    // If route requires auth and user is not authenticated, redirect to login
     next('/login')
-  } else if (to.name === 'login' && authStore.isAuthenticated) {
-    // If user is authenticated and tries to go to login page, redirect based on rooms
-    next(authStore.hasRooms ? '/room-selection' : '/lobby')
+  } else if ((to.name === 'login' || to.name === 'register') && authStore.isAuthenticated) {
+    next('/')
   } else {
-    // Otherwise, allow navigation
     next()
   }
 })
