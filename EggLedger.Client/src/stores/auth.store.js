@@ -9,21 +9,31 @@ export const useAuthStore = defineStore('auth', {
     token: localStorage.getItem('token') || null,
     user: JSON.parse(localStorage.getItem('user')) || null,
     userRooms: JSON.parse(localStorage.getItem('userRooms')) || [],
-    abortController: null,
+    abortControllers: {
+      profile: null,
+      rooms: null,
+      auth: null,
+    },
+    loading: {
+      profile: false,
+      rooms: false,
+    },
   }),
   getters: {
     isAuthenticated: (state) => !!state.token,
     getUser: (state) => state.user,
     getUserRooms: (state) => state.userRooms,
     hasRooms: (state) => state.userRooms && state.userRooms.length > 0,
+    isLoadingRooms: (state) => state.loading.rooms,
+    isLoadingProfile: (state) => state.loading.profile,
   },
   actions: {
-    createAbortController() {
-      if (this.abortController) {
-        this.abortController.abort()
+    createAbortController(type = 'general') {
+      if (this.abortControllers[type]) {
+        this.abortControllers[type].abort()
       }
-      this.abortController = new AbortController()
-      return this.abortController.signal
+      this.abortControllers[type] = new AbortController()
+      return this.abortControllers[type].signal
     },
 
     async login(credentials) {
@@ -57,10 +67,11 @@ export const useAuthStore = defineStore('auth', {
     },
 
     async fetchProfile() {
-      if (!this.token) return
+      if (!this.token || this.loading.profile) return
 
       try {
-        const signal = this.createAbortController()
+        this.loading.profile = true
+        const signal = this.createAbortController('profile')
         const response = await userService.getProfile(signal)
         const user = response.data
         this.setUser(user)
@@ -68,20 +79,25 @@ export const useAuthStore = defineStore('auth', {
         if (error.name === 'AbortError') return
         console.error('Failed to fetch profile:', error)
         this.logout()
+      } finally {
+        this.loading.profile = false
       }
     },
 
     async fetchUserRooms() {
-      if (!this.token) return
+      if (!this.token || this.loading.rooms) return
 
       try {
-        const signal = this.createAbortController()
+        this.loading.rooms = true
+        const signal = this.createAbortController('rooms')
         const userRooms = await roomService.getUserRooms(signal)
         this.setUserRooms(userRooms)
       } catch (error) {
         if (error.name === 'AbortError') return
         console.error('Failed to fetch user rooms:', error)
         this.setUserRooms([])
+      } finally {
+        this.loading.rooms = false
       }
     },
 
@@ -110,9 +126,12 @@ export const useAuthStore = defineStore('auth', {
 
     async logout() {
       try {
-        if (this.abortController) {
-          this.abortController.abort()
-        }
+        // Abort all ongoing requests
+        Object.values(this.abortControllers).forEach((controller) => {
+          if (controller) {
+            controller.abort()
+          }
+        })
         await authService.logout()
       } catch (error) {
         console.error('Logout API call failed:', error)
@@ -121,7 +140,15 @@ export const useAuthStore = defineStore('auth', {
       this.token = null
       this.user = null
       this.userRooms = []
-      this.abortController = null
+      this.abortControllers = {
+        profile: null,
+        rooms: null,
+        auth: null,
+      }
+      this.loading = {
+        profile: false,
+        rooms: false,
+      }
       localStorage.removeItem('token')
       localStorage.removeItem('user')
       localStorage.removeItem('userRooms')

@@ -1,7 +1,9 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import LoginView from '../views/LoginView.vue'
 import RegisterView from '../views/RegisterView.vue'
-import MainView from '../views/MainView.vue'
+import DashboardView from '../views/DashboardView.vue'
+import RoomView from '../views/RoomView.vue'
+import ProfileView from '../views/ProfileView.vue'
 import GoogleCallbackView from '../views/GoogleCallbackView.vue'
 import LobbyView from '../views/LobbyView.vue'
 import { useAuthStore } from '@/stores/auth.store'
@@ -32,8 +34,20 @@ const router = createRouter({
     },
     {
       path: '/',
-      name: 'main',
-      component: MainView,
+      name: 'dashboard',
+      component: DashboardView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/room',
+      name: 'room',
+      component: RoomView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/profile',
+      name: 'profile',
+      component: ProfileView,
       meta: { requiresAuth: true },
     },
   ],

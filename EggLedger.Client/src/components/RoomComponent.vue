@@ -2,7 +2,8 @@
   <div class="dashboard-container">
     <div class="dashboard-header">
       <h2>{{ room.roomName }}</h2>
-      <div class="room-info">
+      <div v-if="containersLoading">Loading containers...</div>
+      <div v-else class="room-info">
         <span class="room-code">Room Code: {{ room.roomCode }}</span>
         <span class="room-stats">
           🥚 {{ room.totalEggs || 0 }} eggs | 📦 {{ room.containerCount || 0 }} containers | 👥
@@ -109,9 +110,11 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
+import { useAuthStore } from '@/stores/auth.store'
 import { containerService } from '@/services/container.service'
 import { orderService } from '@/services/order.service'
 
+const authStore = useAuthStore()
 const props = defineProps({
   room: {
     type: Object,
@@ -195,13 +198,14 @@ const handleStock = async () => {
       abortController.signal,
     )
 
+    await authStore.fetchUserRooms()
+    await fetchContainers()
+    showNotification('Stock added successfully!')
+
     // Reset form
     stockForm.value.containerName = ''
     stockForm.value.quantity = 30
     stockForm.value.amount = 200
-
-    await fetchContainers()
-    showNotification('Stock added successfully!')
   } catch (err) {
     if (err.name === 'AbortError' || err.code === 'ERR_CANCELED') return
     error.value = 'Failed to add stock.'
@@ -229,6 +233,7 @@ const handleConsume = async () => {
       abortController.signal,
     )
 
+    await authStore.fetchUserRooms()
     await fetchContainers()
     showNotification(`Recorded consumption of ${consumeForm.value.quantity} eggs!`)
 

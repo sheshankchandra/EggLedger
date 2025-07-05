@@ -136,7 +136,7 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth.store'
 import roomService from '@/services/room.service'
 
@@ -147,6 +147,11 @@ const showLobby = ref(false)
 const loading = ref(false)
 
 let abortController = new AbortController()
+
+// Fetch user rooms when component mounts
+onMounted(async () => {
+  await authStore.fetchUserRooms()
+})
 
 const createForm = reactive({
   roomName: '',
@@ -254,7 +259,9 @@ const handleJoinRoom = async () => {
       await authStore.fetchUserRooms()
 
       // Find the joined room
-      const joinedRoom = authStore.getUserRooms.find((room) => room.roomCode == joinForm.roomCode)
+      const joinedRoom = authStore.getUserRooms.find(
+        (room) => room.roomCode === Number(joinForm.roomCode),
+      )
       if (joinedRoom) {
         emit('room-selected', joinedRoom)
       }

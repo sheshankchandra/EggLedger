@@ -218,8 +218,7 @@ namespace EggLedger.Services.Services
                         ContainerCount = _context.Containers.Count(c => c.RoomId == ur.Room.RoomId),
                         TotalEggs = _context.Containers
                             .Where(c => c.RoomId == ur.Room.RoomId)
-                            .SelectMany(c => _context.OrderDetails.Where(od => od.ContainerId == c.ContainerId))
-                            .Sum(od => (int?)od.DetailQuantity) ?? 0,
+                            .Sum(c => c.RemainingQuantity),
                         MemberCount = _context.UserRooms.Count(ur2 => ur2.RoomId == ur.Room.RoomId)
                     })
                     .ToListAsync(cancellationToken);

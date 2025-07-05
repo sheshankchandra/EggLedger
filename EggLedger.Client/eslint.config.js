@@ -13,9 +13,21 @@ export default defineConfig([
   globalIgnores(['**/dist/**', '**/dist-ssr/**', '**/coverage/**']),
 
   {
+    name: 'app/browser-files',
+    files: ['src/**/*.{js,vue}'],
     languageOptions: {
       globals: {
         ...globals.browser,
+      },
+    },
+  },
+
+  {
+    name: 'app/node-files',
+    files: ['*.config.{js,mjs}', 'vite.config.js'],
+    languageOptions: {
+      globals: {
+        ...globals.node,
       },
     },
   },
