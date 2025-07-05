@@ -57,6 +57,41 @@
         </div>
       </div>
 
+      <!-- My Containers -->
+      <div class="profile-section">
+        <h3>My Containers {{ selectedRoom ? `in ${selectedRoom.roomName}` : '' }}</h3>
+        <div v-if="!selectedRoom" class="no-room-selected">
+          <p>No room selected.</p>
+          <router-link to="/" class="btn btn-primary">Select Room</router-link>
+        </div>
+        <div v-else-if="loadingContainers" class="loading">Loading...</div>
+        <div v-else-if="userContainers.length === 0" class="no-containers">
+          <p>No containers found. Stock some eggs to create your first container!</p>
+        </div>
+        <div v-else class="containers-list">
+          <div
+            v-for="container in userContainers"
+            :key="container.containerId"
+            class="container-item"
+          >
+            <div class="container-header">
+              <h4>{{ container.containerName }}</h4>
+            </div>
+            <div class="container-stats">
+              <span class="stat-value"
+                >{{ container.remainingQuantity }}/{{ container.totalQuantity }} eggs</span
+              >
+              <span class="stat-value">{{ formatDate(container.purchaseDateTime) }}</span>
+            </div>
+            <div class="container-actions">
+              <button @click="viewContainerDetails(container)" class="btn btn-details">
+                View Details
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Account Actions -->
       <div class="profile-section">
         <h3>Account Actions</h3>
@@ -138,9 +173,12 @@
 </template>
 
 <script setup>
-import { onMounted, computed, ref, reactive } from 'vue'
+import { onMounted, computed, ref, reactive, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.store'
+import { containerService } from '@/services/container.service'
 
+const router = useRouter()
 const authStore = useAuthStore()
 const loading = ref(false)
 const error = ref(null)
@@ -148,6 +186,10 @@ const refreshing = ref(false)
 const showChangePassword = ref(false)
 const changingPassword = ref(false)
 const notification = ref(null)
+const loadingContainers = ref(false)
+const userContainers = ref([])
+
+let abortController = new AbortController()
 
 const passwordForm = reactive({
   current: '',
@@ -156,6 +198,16 @@ const passwordForm = reactive({
 })
 
 const user = computed(() => authStore.getUser)
+
+const selectedRoomCode = computed(() => {
+  return sessionStorage.getItem('selectedRoomCode')
+})
+
+const selectedRoom = computed(() => {
+  if (!selectedRoomCode.value) return null
+  const roomCodeToFind = Number(selectedRoomCode.value)
+  return authStore.getUserRooms.find((room) => room.roomCode === roomCodeToFind) || null
+})
 
 const totalContainers = computed(() => {
   return authStore.getUserRooms.reduce((total, room) => total + (room.containerCount || 0), 0)
@@ -215,10 +267,10 @@ const refreshRooms = async () => {
   refreshing.value = true
   try {
     await authStore.fetchUserRooms()
-    showNotification('Rooms refreshed successfully!')
-  } catch (err) {
-    showNotification('Failed to refresh rooms', 'error')
-    console.error(err)
+    await fetchUserContainers()
+    showNotification('Refreshed successfully!')
+  } catch {
+    showNotification('Failed to refresh', 'error')
   } finally {
     refreshing.value = false
   }
@@ -260,6 +312,51 @@ const confirmLogout = () => {
   }
 }
 
+// Navigate to container details with container information
+const viewContainerDetails = (container) => {
+  try {
+    // Store container info in sessionStorage temporarily
+    sessionStorage.setItem('currentContainerInfo', JSON.stringify(container))
+
+    router.push({
+      name: 'container-detail',
+      params: { containerId: container.containerId },
+    })
+  } catch (error) {
+    console.error('Error navigating to container details:', error)
+    console.log('Container object:', container)
+  }
+}
+
+// Fetch user's containers from the currently selected room
+const fetchUserContainers = async () => {
+  if (!user.value || !selectedRoom.value) {
+    userContainers.value = []
+    return
+  }
+
+  loadingContainers.value = true
+
+  try {
+    abortController.abort()
+    abortController = new AbortController()
+
+    const response = await containerService.searchContainersByOwner(
+      selectedRoom.value.roomCode,
+      user.value.name,
+      abortController.signal,
+    )
+
+    userContainers.value = response.data || []
+  } catch (err) {
+    if (err.name === 'AbortError') return
+    console.error('Error fetching containers:', err)
+    showNotification('Failed to load containers', 'error')
+  } finally {
+    loadingContainers.value = false
+  }
+}
+
 onMounted(async () => {
   if (!user.value) {
     loading.value = true
@@ -272,6 +369,16 @@ onMounted(async () => {
     } finally {
       loading.value = false
     }
+  }
+
+  // Fetch user containers after profile is loaded
+  await fetchUserContainers()
+})
+
+// Watch for changes in selected room to refresh containers
+watch(selectedRoom, async (newRoom, oldRoom) => {
+  if (newRoom?.roomCode !== oldRoom?.roomCode) {
+    await fetchUserContainers()
   }
 })
 </script>
@@ -436,6 +543,93 @@ onMounted(async () => {
   border-radius: 4px;
   font-size: 0.8rem;
   font-weight: 600;
+}
+
+/* Container Styles */
+.no-room-selected {
+  text-align: center;
+  padding: 2rem;
+  background: #fff3cd;
+  border-radius: 8px;
+  color: #856404;
+}
+
+.no-containers {
+  text-align: center;
+  padding: 2rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  color: #666;
+}
+
+.containers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.container-item {
+  background: #f8f9fa;
+  padding: 1.5rem;
+  border-radius: 8px;
+  border-left: 4px solid #ff9800;
+  transition: all 0.2s ease;
+}
+
+.container-item:hover {
+  background: #e9ecef;
+  transform: translateY(-1px);
+}
+
+.container-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.container-header h4 {
+  margin: 0;
+  color: #333;
+  font-size: 1.1rem;
+}
+
+.container-stats {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.stat-value {
+  background: white;
+  padding: 0.5rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  color: #333;
+}
+
+.container-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.btn-details {
+  background: #17a2b8;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.btn-details:hover {
+  background: #138496;
+  text-decoration: none;
+  color: white;
+  transform: translateY(-1px);
 }
 
 .actions-grid {
@@ -626,6 +820,21 @@ onMounted(async () => {
   .room-details {
     flex-direction: column;
     gap: 0.5rem;
+  }
+
+  .container-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .container-stats {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .container-actions {
+    justify-content: flex-start;
   }
 }
 </style>

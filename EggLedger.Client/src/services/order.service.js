@@ -26,15 +26,6 @@ export const orderService = {
   getOrdersByContainer(roomCode, containerId, signal) {
     return apiClient.get(`/egg-ledger-api/${roomCode}/orders/container/${containerId}`, { signal })
   },
-
-  getOrdersForContainer(containerId, signal, roomCode) {
-    // If roomCode is not provided, you might need to get it from a store or context
-    if (!roomCode) {
-      // You might need to get roomCode from your auth store or current route
-      console.warn('getOrdersForContainer: roomCode not provided, this might cause issues')
-    }
-    return this.getOrdersByContainer(roomCode || '', containerId, signal)
-  },
 }
 
 export default orderService

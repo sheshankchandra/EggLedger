@@ -6,6 +6,7 @@ import RoomView from '../views/RoomView.vue'
 import ProfileView from '../views/ProfileView.vue'
 import GoogleCallbackView from '../views/GoogleCallbackView.vue'
 import LobbyView from '../views/LobbyView.vue'
+import ContainerDetailView from '../views/ContainerDetailView.vue'
 import { useAuthStore } from '@/stores/auth.store'
 
 const router = createRouter({
@@ -49,6 +50,15 @@ const router = createRouter({
       name: 'profile',
       component: ProfileView,
       meta: { requiresAuth: true },
+    },
+    {
+      path: '/container/:containerId',
+      name: 'container-detail',
+      component: ContainerDetailView,
+      meta: { requiresAuth: true },
+      props: (route) => ({
+        containerId: route.params.containerId,
+      }),
     },
   ],
 })
