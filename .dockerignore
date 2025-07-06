@@ -1,0 +1,85 @@
+# IDE and editor files
+**/.classpath
+**/.dockerignore
+**/.env
+**/.git
+**/.gitignore
+**/.project
+**/.settings
+**/.toolstarget
+**/.vs
+**/.vscode
+.idea/
+
+# Project files
+**/*.*proj.user
+**/*.dbmdl
+**/*.jfm
+**/azds.yaml
+
+# Build output
+**/bin
+**/obj
+**/out
+**/dist
+
+# Docker files
+**/charts
+**/docker-compose*
+**/Dockerfile*
+
+# Node.js
+**/node_modules
+**/npm-debug.log
+**/.pnpm-debug.log*
+**/yarn-debug.log*
+**/yarn-error.log*
+
+# Secrets and configuration
+**/secrets.dev.yaml
+**/values.dev.yaml
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Documentation
+LICENSE
+README.md
+VisualStudioSolutionSecrets.txt
+
+# Logs
+*.log
+
+# Test results
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+
+# .NET Core
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# NuGet
+*.nupkg
+.nuget/
+!**/packages/build/
+*.nuget.props
+*.nuget.targets
+
+# Operating System Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Git exceptions
+!**/.gitignore
+!.git/HEAD
+!.git/config
+!.git/packed-refs
+!.git/refs/heads/**
