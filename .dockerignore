@@ -2,6 +2,8 @@
 **/.classpath
 **/.dockerignore
 **/.env
+**/.env.local
+**/.env.production
 **/.git
 **/.gitignore
 **/.project
@@ -10,12 +12,20 @@
 **/.vs
 **/.vscode
 .idea/
+*.swp
+*.swo
+*~
 
 # Project files
 **/*.*proj.user
 **/*.dbmdl
 **/*.jfm
 **/azds.yaml
+
+# Documentation
+*.md
+DOCKER.md
+README.md
 
 # Build output
 **/bin

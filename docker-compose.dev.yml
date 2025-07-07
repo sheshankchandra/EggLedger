@@ -7,63 +7,74 @@ services:
   # PostgreSQL Database
   postgres:
     image: postgres:15-alpine
+    container_name: eggledger-postgres-dev
     environment:
-      POSTGRES_DB: eggledger
+      POSTGRES_DB: eggledgerDB
       POSTGRES_USER: eggledger
       POSTGRES_PASSWORD: eggledger123
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data_dev:/var/lib/postgresql/data
+      - ./SQL Helper:/docker-entrypoint-initdb.d
     ports:
       - "5432:5432"
     networks:
-      - eggledger-network
+      - eggledger-dev-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U eggledger -d eggledgerDB"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
-  # EggLedger API (Development)
+  # EggLedger API (Development with hot reload)
   api:
     build:
       context: .
-      dockerfile: EggLedger.API/Dockerfile
-      target: base
+      dockerfile: EggLedger.API/Dockerfile.dev
+    container_name: eggledger-api-dev
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Host=postgres;Database=eggledger;Username=eggledger;Password=eggledger123
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=eggledgerDB;Username=eggledger;Password=eggledger123;Port=5432
+      - ASPNETCORE_HTTP_PORTS=8080
     ports:
       - "8080:8080"
-      - "8081:8081"
     volumes:
-      - ./EggLedger.API:/app
-      - ./EggLedger.Data:/src/EggLedger.Data
-      - ./EggLedger.Models:/src/EggLedger.Models
-      - ./EggLedger.DTO:/src/EggLedger.DTO
-      - ./EggLedger.Services:/src/EggLedger.Services
-      - ./EggLedger.ServiceDefaults:/src/EggLedger.ServiceDefaults
+      - ./EggLedger.API:/src/EggLedger.API:cached
+      - ./EggLedger.Data:/src/EggLedger.Data:cached
+      - ./EggLedger.Models:/src/EggLedger.Models:cached
+      - ./EggLedger.DTO:/src/EggLedger.DTO:cached
+      - ./EggLedger.Services:/src/EggLedger.Services:cached
+      - ./EggLedger.ServiceDefaults:/src/EggLedger.ServiceDefaults:cached
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     networks:
-      - eggledger-network
+      - eggledger-dev-network
+    restart: unless-stopped
 
   # EggLedger Client (Development with hot reload)
-  client-dev:
+  client:
     build:
       context: ./EggLedger.Client
-      dockerfile: Dockerfile
-      target: build
+      dockerfile: Dockerfile.dev
+    container_name: eggledger-client-dev
     ports:
       - "5173:5173"
     volumes:
-      - ./EggLedger.Client:/app
+      - ./EggLedger.Client:/app:cached
       - /app/node_modules
     environment:
       - VITE_API_URL=http://localhost:8080
-    command: npm run dev -- --host
+      - NODE_ENV=development
     depends_on:
       - api
     networks:
-      - eggledger-network
+      - eggledger-dev-network
+    restart: unless-stopped
 
 volumes:
-  postgres_data:
+  postgres_data_dev:
 
 networks:
-  eggledger-network:
+  eggledger-dev-network:
     driver: bridge
