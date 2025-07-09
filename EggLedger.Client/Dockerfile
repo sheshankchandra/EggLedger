@@ -40,7 +40,7 @@ RUN chown -R nextjs:nodejs /usr/share/nginx/html && \
 # Switch to non-root user
 USER nextjs
 
-EXPOSE 80
+EXPOSE 5173
 
 # Use dumb-init for proper signal handling
 ENTRYPOINT ["dumb-init", "--"]
