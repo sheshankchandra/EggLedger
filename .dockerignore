@@ -48,11 +48,6 @@ README.md
 # Secrets and configuration
 **/secrets.dev.yaml
 **/values.dev.yaml
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
 
 # Documentation
 LICENSE

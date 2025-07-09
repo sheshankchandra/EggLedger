@@ -11,7 +11,6 @@ A full-stack roommate resource and expense management application built with ASP
 
 - **Room-based organization** with unique room codes
 - **Resource tracking** for shared items and expenses
-- **Automatic balance calculations** using FIFO order tracking
 - **User authentication** with JWT and Google OAuth
 - **Real-time updates** for stock levels and consumption
 - **Role-based permissions** for room admins and members
@@ -39,8 +38,8 @@ A full-stack roommate resource and expense management application built with ASP
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/eggledger.git
-cd eggledger
+git clone https://github.com/sheshankchandra/EggLedger.git
+cd EggLedger
 
 # Restore all packages
 dotnet restore
@@ -69,8 +68,8 @@ If you prefer to run components separately:
 ```bash
 # Using Docker
 docker run --name eggledger-postgres \
-  -e POSTGRES_USER=asapdb \
-  -e POSTGRES_PASSWORD=asap \
+  -e POSTGRES_USER=eggledger \
+  -e POSTGRES_PASSWORD=eggledger123 \
   -e POSTGRES_DB=EggLedgerDB \
   -p 5432:5432 -d postgres:13
 ```
@@ -84,7 +83,7 @@ dotnet ef database update
 dotnet run
 ```
 
-API available at `https://localhost:7224`
+API available at `http://localhost:8080`
 
 #### Frontend Setup
 
@@ -100,42 +99,32 @@ Frontend available at `http://localhost:5173`
 
 ### Backend Environment Variables
 
+Copy `appsettings-example.json` to `appsettings.json` and configure:
+
 ```
-ConnectionStrings__DefaultConnection=Host=localhost;Port=5432;Username=asapdb;Password=asap;Database=EggLedgerDB
-Jwt__SecretKey=your-secret-key
-Jwt__Issuer=EggLedger
-Jwt__Audience=EggLedger
+{
+  "ConnectionStrings:DefaultConnection": Host=eggledger-postgres;Port=5432;Username=eggledger;Password=eggledger123;
+}
 ```
 
 ### Frontend Environment Variables
 
 ```
-VITE_API_BASE_URL=https://localhost:7224
+VITE_API_BASE_URL=http://localhost:8080
+BASE_URL=/
 ```
 
 ### Logging
 
-EggLedger uses log4net for comprehensive logging. Logs are stored outside the repository in system-appropriate locations.
+EggLedger uses log4net for comprehensive logging. Log directories are automatically created by the application based on your operating system.
 
 **Default Log Locations:**
-- **Windows**: `%TEMP%\EggLedger\` (e.g., `C:\Users\[Username]\AppData\Local\Temp\EggLedger\`)
-- **Linux/macOS**: `/tmp/EggLedger/`
-
-**Custom Log Path:**
-Set the `EGGLEDGER_LOG_PATH` environment variable to specify a custom location:
-```bash
-# Windows
-set EGGLEDGER_LOG_PATH=C:\Logs\EggLedger
-
-# Linux/macOS
-export EGGLEDGER_LOG_PATH=/var/log/eggledger
-```
+- **Windows**: `C:\Logs\EggLedger\`
+- **Linux/macOS**: `/var/log/eggledger/` (falls back to `~/logs/eggledger/` if permission denied)
 
 **Log Files:**
 - `eggledger-api.log` - All application logs (INFO and above)
 - `eggledger-api-errors.log` - Error logs only (ERROR and FATAL)
-
-For detailed logging configuration, see [README-LOGGING.md](README-LOGGING.md).
 
 ## API Endpoints
 
@@ -224,7 +213,7 @@ The solution is organized as a .NET solution with integrated frontend orchestrat
 
 ## Documentation
 
-API documentation available at `https://localhost:7224/scalar/v2` when running in development mode.
+API documentation available at `http://localhost:8080/scalar/v2` when running in development mode.
 
 ## Contributing
 
