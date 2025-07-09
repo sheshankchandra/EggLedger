@@ -4,6 +4,17 @@ Write-Host "Starting EggLedger Environment..." -ForegroundColor Green
 # Stop any running containers
 docker-compose down
 
+# Remove old images to force rebuild
+Write-Host "Removing old images..." -ForegroundColor Yellow
+docker rmi eggledger-api 2>$null
+docker rmi eggledger_api 2>$null
+docker rmi eggledger-client 2>$null
+docker rmi eggledger_client 2>$null
+
+# Build the API image first
+Write-Host "Building API image..." -ForegroundColor Yellow
+docker-compose build api
+
 # Start only the database
 Write-Host "Starting database..." -ForegroundColor Yellow
 docker-compose up -d postgres
@@ -20,9 +31,9 @@ do {
 } while ($LASTEXITCODE -ne 0)
 Write-Host "Database is ready!" -ForegroundColor Green
 
-# Run migrations locally
+# Run migrations using the built API image
 Write-Host "Running EF Core migrations..." -ForegroundColor Yellow
-dotnet ef database update --project EggLedger.API
+docker-compose run --rm api dotnet ef database update --project EggLedger.API
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Migration failed!" -ForegroundColor Red
     exit 1
