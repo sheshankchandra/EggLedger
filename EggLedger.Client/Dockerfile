@@ -31,11 +31,13 @@ COPY --from=build /app/dist /usr/share/nginx/html
 # Copy nginx configuration
 COPY nginx.conf /etc/nginx/nginx.conf
 
-# Change ownership of nginx files
+# Change ownership of nginx files and create pid directory
 RUN chown -R nextjs:nodejs /usr/share/nginx/html && \
     chown -R nextjs:nodejs /var/cache/nginx && \
     chown -R nextjs:nodejs /var/log/nginx && \
-    chown -R nextjs:nodejs /etc/nginx/conf.d
+    chown -R nextjs:nodejs /etc/nginx/conf.d && \
+    mkdir -p /var/run/nginx && \
+    chown -R nextjs:nodejs /var/run/nginx
 
 # Switch to non-root user
 USER nextjs
