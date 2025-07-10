@@ -296,7 +296,7 @@ namespace EggLedger.Services.Services
                 return Result.Fail<int>("Room not found");
             }
 
-            bool isRoomBelongsToUser = roomEntity.UserRooms.Any(ur => ur.User.UserId == userId);
+            bool isRoomBelongsToUser = roomEntity.UserRooms.Any(ur => ur.User.UserId == userId && ur.IsAdmin);
 
             if (!isRoomBelongsToUser)
             {
