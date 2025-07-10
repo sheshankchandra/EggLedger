@@ -201,33 +201,43 @@ namespace EggLedger.API.Controllers
             }
         }
 
+        // POST: egg-ledger-api/delete/{roomCode}
         [Authorize(Policy = "RoomAdmin")]
-        [HttpPost("/delete/{roomCode:int}")]
+        [HttpPost("delete/{roomCode:int}")]
         public async Task<IActionResult> DeleteRoom([FromRoute] int roomCode, CancellationToken ct)
         {
-
             try
             {
+                _logger.LogInformation("Received request to delete room with code: {RoomCode}", roomCode);
+                
                 var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
                 if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
                 {
+                    _logger.LogWarning("Delete room request denied - Invalid user identity for room code: {RoomCode}", roomCode);
                     return Unauthorized("Invalid user identity");
                 }
 
-                var result = await _roomService.DeleteRoom(roomCode, userId);
-                return result.IsSuccess ? Ok(result.Value) : BadRequest(result.Reasons);
+                var result = await _roomService.DeleteRoomAsync(roomCode, userId, ct);
+                
+                if (result.IsSuccess)
+                {
+                    _logger.LogInformation("Successfully deleted room with code: {RoomCode} by user: {UserId}", roomCode, userId);
+                    return Ok(result.Value);
+                }
+                
+                _logger.LogWarning("Failed to delete room with code: {RoomCode}. Errors: {Errors}", roomCode, string.Join(", ", result.Errors.Select(e => e.Message)));
+                return BadRequest(result.Errors.Select(e => e.Message));
             }
             catch (OperationCanceledException)
             {
-                _logger.LogInformation("Request was canceled by the client for UpdateRoomIsPublicStatus");
+                _logger.LogInformation("Request was canceled by the client for DeleteRoom, roomCode: {RoomCode}", roomCode);
                 return StatusCode(499, "Client closed request.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unhandled exception in UpdateRoomIsPublicStatus");
+                _logger.LogError(ex, "Unhandled exception in DeleteRoom for roomCode: {RoomCode}", roomCode);
                 return StatusCode(500, "An unexpected error occurred.");
             }
-
         }
     }
 }

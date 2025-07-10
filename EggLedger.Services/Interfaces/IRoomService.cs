@@ -12,6 +12,6 @@ namespace EggLedger.Services.Interfaces
         Task<Result<string>> UpdateRoomPublicStatusAsync(UpdateRoomPublicStatusDto dto, CancellationToken cancellationToken = default);
         Task<Result<List<RoomDto>>> GetAllUserRoomsAsync(Guid userId, CancellationToken cancellationToken = default);
         Task<Result<RoomDto>> GetRoomByCodeAsync(int roomCode, CancellationToken cancellationToken = default);
-        Task<Result<int>> DeleteRoom(int roomCode, Guid userId, CancellationToken cancellationToken = default);
+        Task<Result<int>> DeleteRoomAsync(int roomCode, Guid userId, CancellationToken cancellationToken = default);
     }
 }

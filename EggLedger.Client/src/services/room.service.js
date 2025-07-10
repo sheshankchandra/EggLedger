@@ -36,6 +36,12 @@ export const roomService = {
     const response = await apiClient.post('/egg-ledger-api/room/update/IsPublic', updateData, { signal })
     return response.data
   },
+
+  // Delete a room (admin only)
+  async deleteRoom(roomCode, signal) {
+    const response = await apiClient.post(`/egg-ledger-api/room/delete/${roomCode}`, {}, { signal })
+    return response.data
+  },
 }
 
 export default roomService

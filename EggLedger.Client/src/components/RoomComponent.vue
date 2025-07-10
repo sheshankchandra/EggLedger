@@ -1,7 +1,17 @@
 <template>
   <div class="dashboard-container">
     <div class="dashboard-header">
-      <h2>{{ room.roomName }}</h2>
+      <div class="header-top">
+        <h2>{{ room.roomName }}</h2>
+        <button
+          v-if="isRoomAdmin"
+          @click="showDeleteConfirm"
+          class="delete-room-btn"
+          title="Delete Room"
+        >
+          🗑️ Delete Room
+        </button>
+      </div>
       <div v-if="containersLoading">Loading containers...</div>
       <div v-else class="room-info">
         <span class="room-code">Room Code: {{ room.roomCode }}</span>
@@ -101,6 +111,37 @@
       </div>
     </div>
 
+    <!-- Delete Room Confirmation Modal -->
+    <div v-if="showDeleteModal" class="delete-modal">
+      <div class="delete-content">
+        <div class="delete-header">
+          <h3>⚠️ Delete Room</h3>
+          <button @click="closeDeleteModal" class="close-btn">×</button>
+        </div>
+        <div class="delete-body">
+          <p>Are you sure you want to delete "<strong>{{ room.roomName }}</strong>"?</p>
+          <p class="warning-text">
+            This action cannot be undone. All data associated with this room will be permanently deleted.
+          </p>
+          <div class="room-stats-summary">
+            <p><strong>This will permanently delete:</strong></p>
+            <ul>
+              <li>{{ room.containerCount || 0 }} containers</li>
+              <li>{{ room.totalEggs || 0 }} eggs worth of data</li>
+              <li>All transaction history</li>
+              <li>{{ room.memberCount || 0 }} member associations</li>
+            </ul>
+          </div>
+        </div>
+        <div class="delete-actions">
+          <button @click="closeDeleteModal" class="btn btn-secondary">Cancel</button>
+          <button @click="confirmDeleteRoom" :disabled="loading" class="btn btn-danger">
+            {{ loading ? 'Deleting...' : 'Delete Room' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Notification -->
     <div v-if="notification" :class="['notification', notification.type]">
       {{ notification.message }}
@@ -109,12 +150,15 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.store'
 import { containerService } from '@/services/container.service'
 import { orderService } from '@/services/order.service'
+import roomService from '@/services/room.service'
 
 const authStore = useAuthStore()
+const router = useRouter()
 const props = defineProps({
   room: {
     type: Object,
@@ -132,6 +176,16 @@ const notification = ref(null)
 
 const showDetailModal = ref(false)
 const selectedContainer = ref(null)
+const showDeleteModal = ref(false)
+
+// Computed properties
+const isRoomAdmin = computed(() => {
+  const user = authStore.getUser
+  if (!user || !user.userId || !props.room || !props.room.adminUserId) {
+    return false
+  }
+  return user.userId === props.room.adminUserId
+})
 
 const stockForm = ref({
   containerName: '',
@@ -157,6 +211,61 @@ const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString()
   } catch {
     return 'Unknown'
+  }
+}
+
+const showDeleteConfirm = () => {
+  showDeleteModal.value = true
+}
+
+const closeDeleteModal = () => {
+  showDeleteModal.value = false
+}
+
+const confirmDeleteRoom = async () => {
+  if (loading.value) return
+
+  // Additional safety check
+  if (!isRoomAdmin.value) {
+    showNotification('You do not have permission to delete this room.', 'error')
+    closeDeleteModal()
+    return
+  }
+
+  abortController.abort()
+  abortController = new AbortController()
+  loading.value = true
+
+  try {
+    await roomService.deleteRoom(props.room.roomCode, abortController.signal)
+    showNotification('Room deleted successfully!', 'success')
+
+    // Clear the selected room from session storage
+    sessionStorage.removeItem('selectedRoomCode')
+
+    // Refresh user rooms in the auth store
+    await authStore.fetchUserRooms()
+
+    // Navigate back to dashboard
+    setTimeout(() => {
+      router.push('/')
+    }, 1500)
+
+    closeDeleteModal()
+  } catch (error) {
+    if (error.name === 'AbortError' || error.code === 'ERR_CANCELED') return
+
+    let errorMessage = 'Could not delete the room. Please try again.'
+    if (Array.isArray(error.response?.data)) {
+      errorMessage = error.response.data.join(', ')
+    } else if (typeof error.response?.data === 'string') {
+      errorMessage = error.response.data
+    } else if (error.response?.data?.message) {
+      errorMessage = error.response.data.message
+    }
+    showNotification(errorMessage, 'error')
+  } finally {
+    loading.value = false
   }
 }
 
@@ -277,9 +386,54 @@ onUnmounted(() => {
   text-align: center;
 }
 
+.header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
 .dashboard-header h2 {
-  margin: 0 0 0.5rem 0;
+  margin: 0;
   color: #333;
+  flex: 1;
+  text-align: left;
+}
+
+.delete-room-btn {
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.delete-room-btn:hover {
+  background: #c82333;
+}
+
+.delete-room-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+  .header-top {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .dashboard-header h2 {
+    text-align: center;
+  }
 }
 
 .room-info {
@@ -589,6 +743,119 @@ onUnmounted(() => {
 
 .notification.error {
   background: #f44336;
+}
+
+/* Delete Modal Styles */
+.delete-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.delete-content {
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+.delete-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.delete-header h3 {
+  margin: 0;
+  color: #dc3545;
+  font-size: 1.5rem;
+}
+
+.delete-body {
+  margin-bottom: 2rem;
+}
+
+.delete-body p {
+  margin: 0.5rem 0;
+  color: #333;
+  line-height: 1.5;
+}
+
+.warning-text {
+  color: #dc3545;
+  font-weight: 500;
+  background: #fff5f5;
+  padding: 0.75rem;
+  border-radius: 4px;
+  border-left: 4px solid #dc3545;
+}
+
+.room-stats-summary {
+  background: #f8f9fa;
+  padding: 1rem;
+  border-radius: 6px;
+  margin-top: 1rem;
+}
+
+.room-stats-summary ul {
+  margin: 0.5rem 0 0 0;
+  padding-left: 1.5rem;
+}
+
+.room-stats-summary li {
+  margin: 0.25rem 0;
+  color: #666;
+}
+
+.delete-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+}
+
+.btn-secondary {
+  background: #6c757d;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background-color 0.2s;
+}
+
+.btn-secondary:hover {
+  background: #5a6268;
+}
+
+.btn-danger {
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background-color 0.2s;
+}
+
+.btn-danger:hover {
+  background: #c82333;
+}
+
+.btn-danger:disabled {
+  background: #ccc;
+  cursor: not-allowed;
 }
 
 @media (max-width: 768px) {
