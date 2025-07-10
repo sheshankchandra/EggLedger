@@ -9,5 +9,10 @@
         public Guid ReceiverId { get; set; }
         public int Amount { get; set; }
         public int Status { get; set; }
+
+        // Navigation properties
+        public virtual User Payer { get; set; } = null!;
+        public virtual User Receiver { get; set; } = null!;
+        public virtual Order Order { get; set; } = null!;
     }
 }

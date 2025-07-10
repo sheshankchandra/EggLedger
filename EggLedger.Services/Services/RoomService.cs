@@ -37,6 +37,7 @@ namespace EggLedger.Services.Services
 
                 var userRoom = new UserRoom
                 {
+                    Id = Guid.NewGuid(),
                     RoomId = room.RoomId,
                     UserId = userId,
                     IsAdmin = true,
@@ -90,6 +91,7 @@ namespace EggLedger.Services.Services
 
                 var userRoom = new UserRoom
                 {
+                    Id = Guid.NewGuid(),
                     RoomId = room.RoomId,
                     UserId = userId,
                     IsAdmin = false,

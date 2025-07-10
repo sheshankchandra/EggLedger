@@ -102,7 +102,7 @@ namespace EggLedger.Services.Services
                 var userRoom = await _context.UserRooms
                     .FirstOrDefaultAsync(ur => ur.UserId == userId && ur.Room.RoomCode == roomCode, cancellationToken);
 
-                var orderNameResult = await _helperService.GenerateOrderName(user, 2, cancellationToken);
+                var orderNameResult = await _helperService.GenerateOrderName(user!, 2, cancellationToken);
                 if (orderNameResult.IsFailed)
                 {
                     _logger.LogWarning("Unable to generate the order name for user: {UserId}", userId);
@@ -126,7 +126,7 @@ namespace EggLedger.Services.Services
                 // Only select containers with available stock, ordered by purchase date
                 var availableContainers = await _context.Containers
                     .Where(c => c.RemainingQuantity > 0)
-                    .Where(c => c.RoomId == userRoom.RoomId)
+                    .Where(c => c.RoomId == userRoom!.RoomId)
                     .OrderBy(c => c.PurchaseDateTime)
                     .ToListAsync(cancellationToken);
 

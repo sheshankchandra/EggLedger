@@ -48,12 +48,21 @@ namespace EggLedger.Services.Services
                     FirstName = dto.FirstName,
                     LastName = dto.LastName,
                     Email = dto.Email,
-                    PasswordHash = _passwordHasher.HashPassword(null, dto.Password),
                     Role = dto.Role,
                     Provider = null
                 };
 
+                string hashedPassword = _passwordHasher.HashPassword(user, dto.Password);
+
+                var userPassword = new UserPassword()
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = user.UserId,
+                    PasswordHash = hashedPassword
+                };
+
                 _context.Users.Add(user);
+                _context.UserPasswords.Add(userPassword);
                 await _context.SaveChangesAsync();
 
                 _logger.LogInformation("User created successfully: {UserId}, Email: {Email}", user.UserId, user.Email);
@@ -79,10 +88,19 @@ namespace EggLedger.Services.Services
                     return Result.Fail("Invalid email");
                 }
 
+                var userPassword = await _context.UserPasswords
+                    .FirstOrDefaultAsync(up => up.UserId == user.UserId);
+
+                if (userPassword == null)
+                {
+                    _logger.LogWarning("This account was created using Google Sign-In. Please log in with Google");
+                    return Result.Fail("Invalid Login Method");
+                }
+
                 PasswordVerificationResult result;
                 try
                 {
-                    result = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, dto.Password);
+                    result = _passwordHasher.VerifyHashedPassword(user, userPassword.PasswordHash, dto.Password);
                 }
                 catch (FormatException ex)
                 {
@@ -117,7 +135,7 @@ namespace EggLedger.Services.Services
                     _logger.LogWarning("OAuth login failed for email '{Email}': User not found, creating new user.", email);
                     _logger.LogInformation("Creating new user via OAuth with email: {Email}, name: '{Name}', provider: {Provider}", email, name, provider);
 
-                    var nameParts = name?.Split(new[] { ' ' }, 2, StringSplitOptions.RemoveEmptyEntries) ?? new string[0];
+                    var nameParts = name?.Split([' '], 2, StringSplitOptions.RemoveEmptyEntries) ?? [];
                     var firstName = nameParts.Length > 0 ? nameParts[0] : "User";
                     var lastName = nameParts.Length > 1 ? nameParts[1] : null;
 
@@ -127,7 +145,6 @@ namespace EggLedger.Services.Services
                         Email = email,
                         FirstName = firstName,
                         LastName = lastName,
-                        PasswordHash = null, 
                         Role = UserRoles.User,
                         Provider = provider
                     };
@@ -211,16 +228,16 @@ namespace EggLedger.Services.Services
                 .ToList();
             claims.AddRange(roomIds.Select(roomId => new Claim("Room", roomId.ToString())));
 
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:SecretKey"]));
-            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-            var expiry = DateTime.UtcNow.AddMinutes(int.Parse(_configuration["Jwt:ExpiryInMinutes"]));
+            SymmetricSecurityKey securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:SecretKey"] ?? throw new InvalidOperationException()));
+            SigningCredentials credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
+            DateTime expiry = DateTime.UtcNow.AddMinutes(int.Parse(_configuration["Jwt:ExpiryInMinutes"] ?? throw new InvalidOperationException()));
 
             var token = new JwtSecurityToken(
                 issuer: _configuration["Jwt:Issuer"],
                 audience: _configuration["Jwt:Audience"],
                 claims: claims,
                 expires: expiry,
-                signingCredentials: creds
+                signingCredentials: credentials
             );
 
             return new JwtSecurityTokenHandler().WriteToken(token);
@@ -240,6 +257,7 @@ namespace EggLedger.Services.Services
             {
                 var refreshToken = new RefreshToken
                 {
+                    Id = Guid.NewGuid(),
                     Token = GenerateRefreshToken(),
                     Expires = DateTime.UtcNow.AddDays(7),
                     CreatedByIp = "TODO:CaptureIPAddress",

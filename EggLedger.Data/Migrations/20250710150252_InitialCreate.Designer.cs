@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace EggLedger.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250709214357_InitialCreate")]
+    [Migration("20250710150252_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -28,7 +28,6 @@ namespace EggLedger.Data.Migrations
             modelBuilder.Entity("EggLedger.Models.Models.Container", b =>
                 {
                     b.Property<Guid>("ContainerId")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<decimal>("Amount")
@@ -69,7 +68,6 @@ namespace EggLedger.Data.Migrations
             modelBuilder.Entity("EggLedger.Models.Models.Order", b =>
                 {
                     b.Property<Guid>("OrderId")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<decimal>("Amount")
@@ -105,7 +103,6 @@ namespace EggLedger.Data.Migrations
             modelBuilder.Entity("EggLedger.Models.Models.OrderDetail", b =>
                 {
                     b.Property<Guid>("OrderDetailId")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<decimal>("Amount")
@@ -138,7 +135,6 @@ namespace EggLedger.Data.Migrations
             modelBuilder.Entity("EggLedger.Models.Models.RefreshToken", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("Created")
@@ -180,7 +176,6 @@ namespace EggLedger.Data.Migrations
             modelBuilder.Entity("EggLedger.Models.Models.Room", b =>
                 {
                     b.Property<Guid>("RoomId")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
@@ -208,7 +203,6 @@ namespace EggLedger.Data.Migrations
             modelBuilder.Entity("EggLedger.Models.Models.Transaction", b =>
                 {
                     b.Property<Guid>("TransactionId")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<int>("Amount")
@@ -229,6 +223,9 @@ namespace EggLedger.Data.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uuid");
+
                     b.HasKey("TransactionId");
 
                     b.HasIndex("OrderId");
@@ -237,13 +234,14 @@ namespace EggLedger.Data.Migrations
 
                     b.HasIndex("ReceiverId");
 
+                    b.HasIndex("UserId");
+
                     b.ToTable("Transactions");
                 });
 
             modelBuilder.Entity("EggLedger.Models.Models.User", b =>
                 {
                     b.Property<Guid>("UserId")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<string>("Email")
@@ -260,10 +258,6 @@ namespace EggLedger.Data.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<string>("PasswordHash")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
                     b.Property<string>("Provider")
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
@@ -279,13 +273,31 @@ namespace EggLedger.Data.Migrations
                     b.ToTable("Users");
                 });
 
+            modelBuilder.Entity("EggLedger.Models.Models.UserPassword", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.ToTable("UserPasswords");
+                });
+
             modelBuilder.Entity("EggLedger.Models.Models.UserRoom", b =>
                 {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
 
                     b.Property<bool>("IsAdmin")
                         .HasColumnType("boolean");
@@ -371,25 +383,44 @@ namespace EggLedger.Data.Migrations
 
             modelBuilder.Entity("EggLedger.Models.Models.Transaction", b =>
                 {
-                    b.HasOne("EggLedger.Models.Models.Order", null)
+                    b.HasOne("EggLedger.Models.Models.Order", "Order")
                         .WithMany("Transactions")
                         .HasForeignKey("OrderId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("EggLedger.Models.Models.User", null)
-                        .WithMany("Transactions")
+                    b.HasOne("EggLedger.Models.Models.User", "Payer")
+                        .WithMany()
                         .HasForeignKey("PayerId")
                         .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("FK_Transaction_Payer");
+                        .IsRequired();
 
-                    b.HasOne("EggLedger.Models.Models.User", null)
+                    b.HasOne("EggLedger.Models.Models.User", "Receiver")
                         .WithMany()
                         .HasForeignKey("ReceiverId")
                         .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("FK_Transaction_Receiver");
+                        .IsRequired();
+
+                    b.HasOne("EggLedger.Models.Models.User", null)
+                        .WithMany("Transactions")
+                        .HasForeignKey("UserId");
+
+                    b.Navigation("Order");
+
+                    b.Navigation("Payer");
+
+                    b.Navigation("Receiver");
+                });
+
+            modelBuilder.Entity("EggLedger.Models.Models.UserPassword", b =>
+                {
+                    b.HasOne("EggLedger.Models.Models.User", "User")
+                        .WithOne("UserPassword")
+                        .HasForeignKey("EggLedger.Models.Models.UserPassword", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("EggLedger.Models.Models.UserRoom", b =>
@@ -439,6 +470,8 @@ namespace EggLedger.Data.Migrations
                     b.Navigation("RefreshTokens");
 
                     b.Navigation("Transactions");
+
+                    b.Navigation("UserPassword");
 
                     b.Navigation("UserRooms");
                 });

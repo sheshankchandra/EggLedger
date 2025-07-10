@@ -112,7 +112,30 @@ namespace EggLedger.Services.Services
                     user.Email = dto.Email;
                     emailChanged = true;
                 }
-                if (dto.Password != null) user.PasswordHash = _passwordHasher.HashPassword(user, dto.Password);
+                
+                // Handle password update
+                if (dto.Password != null)
+                {
+                    var userPassword = await _context.UserPasswords
+                        .FirstOrDefaultAsync(up => up.UserId == id, cancellationToken);
+                    
+                    if (userPassword != null)
+                    {
+                        userPassword.PasswordHash = _passwordHasher.HashPassword(user, dto.Password);
+                    }
+                    else
+                    {
+                        // Create new password record if it doesn't exist
+                        userPassword = new UserPassword
+                        {
+                            Id = Guid.NewGuid(),
+                            UserId = id,
+                            PasswordHash = _passwordHasher.HashPassword(user, dto.Password)
+                        };
+                        _context.UserPasswords.Add(userPassword);
+                    }
+                }
+                
                 if (dto.Role.HasValue) user.Role = dto.Role.Value;
 
                 await _context.SaveChangesAsync(cancellationToken);

@@ -3,29 +3,24 @@
 # Start production environment
 echo "Starting EggLedger Environment..."
 
-# Stop any running containers
-docker-compose -f docker-compose.yml down
+# Stop any running containers and remove volumes
+docker-compose -f docker-compose.yml down -v
 
-# Start only the database
-echo "Starting database..."
-docker-compose up -d postgres
+# Build Database
+echo "Building database image..."
+docker-compose -f docker-compose.yml build postgres --no-cache
 
-# Wait for database to be ready
-echo "Waiting for database to be ready..."
-sleep 10
-until docker-compose exec postgres pg_isready -U eggledger -d eggledgerDB; do
-  echo "Database is unavailable - sleeping"
-  sleep 2
-done
-echo "Database is ready!"
+# Start Database container
+echo "Starting Database container..."
+docker-compose -f docker-compose.yml up -d postgres
 
-# Run migrations locally
-echo "Running EF Core migrations..."
-dotnet ef database update --project EggLedger.API
+# Build all remaining images
+echo "Building all remaining images..."
+docker-compose -f docker-compose.yml build --no-cache
 
-# Build and start production containers in detached mode
+# Start all application services
 echo "Starting application services..."
-docker-compose -f docker-compose.yml up --build -d
+docker-compose -f docker-compose.yml up -d
 
 echo ""
 echo "Production environment started successfully!"
