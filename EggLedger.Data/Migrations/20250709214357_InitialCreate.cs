@@ -4,7 +4,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace EggLedger.API.Migrations
+namespace EggLedger.Data.Migrations
 {
     /// <inheritdoc />
     public partial class InitialCreate : Migration

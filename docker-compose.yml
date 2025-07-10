@@ -1,23 +1,20 @@
-# Docker Compose for Production Environment
 # This version includes production-optimized settings
-
-version: '3.8'
 
 services:
   # PostgreSQL Database
   postgres:
     image: postgres:15-alpine
-    container_name: eggledger-postgres-prod
+    container_name: eggledger-postgres
     environment:
       POSTGRES_DB: eggledgerDB
       POSTGRES_USER: eggledger
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-eggledger123}
+      POSTGRES_PASSWORD: eggledger123
     volumes:
-      - postgres_data_prod:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
     networks:
-      - eggledger-prod-network
+      - eggledger-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U eggledger -d eggledgerDB"]
       interval: 30s
@@ -25,16 +22,15 @@ services:
       retries: 3
     restart: unless-stopped
 
-  # EggLedger API (Production)
+  # EggLedger API
   api:
     build:
       context: .
       dockerfile: EggLedger.API/Dockerfile
-    container_name: eggledger-api-prod
+    container_name: eggledger-api
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:8080
-      - ConnectionStrings__DefaultConnection=Host=postgres;Database=eggledgerDB;Username=eggledger;Password=${POSTGRES_PASSWORD:-eggledger123};Port=5432
       - ASPNETCORE_HTTP_PORTS=8080
     ports:
       - "8080:8080"
@@ -42,7 +38,7 @@ services:
       postgres:
         condition: service_healthy
     networks:
-      - eggledger-prod-network
+      - eggledger-network
     restart: unless-stopped
     deploy:
       resources:
@@ -51,21 +47,22 @@ services:
         reservations:
           memory: 256M
 
-  # EggLedger Client (Production)
+  # EggLedger Client
   client:
     build:
       context: ./EggLedger.Client
       dockerfile: Dockerfile
       target: production
-    container_name: eggledger-client-prod
+    container_name: eggledger-client
+    user: root
     ports:
-      - "80:80"
+      - "5173:5173"
     environment:
       - VITE_API_URL=http://localhost:8080
     depends_on:
       - api
     networks:
-      - eggledger-prod-network
+      - eggledger-network
     restart: unless-stopped
     deploy:
       resources:
@@ -75,8 +72,8 @@ services:
           memory: 64M
 
 volumes:
-  postgres_data_prod:
+  postgres_data:
 
 networks:
-  eggledger-prod-network:
+  eggledger-network:
     driver: bridge
