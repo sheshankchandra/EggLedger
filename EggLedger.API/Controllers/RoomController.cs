@@ -49,7 +49,7 @@ namespace EggLedger.API.Controllers
                     _logger.LogInformation("User successfully joined room with code: {RoomCode}", roomCode);
                     return Ok(result.Value);
                 }
-                
+
                 _logger.LogWarning("Failed to join room. Errors: {Errors}", string.Join(", ", result.Errors.Select(e => e.Message)));
                 return BadRequest(result.Errors.Select(e => e.Message));
             }
@@ -199,6 +199,35 @@ namespace EggLedger.API.Controllers
                 _logger.LogError(ex, "Unhandled exception in UpdateRoomIsPublicStatus");
                 return StatusCode(500, "An unexpected error occurred.");
             }
+        }
+
+        [Authorize(Policy = "RoomAdmin")]
+        [HttpPost("/delete/{roomCode:int}")]
+        public async Task<IActionResult> DeleteRoom([FromRoute] int roomCode, CancellationToken ct)
+        {
+
+            try
+            {
+                var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+                {
+                    return Unauthorized("Invalid user identity");
+                }
+
+                var result = await _roomService.DeleteRoom(roomCode, userId);
+                return result.IsSuccess ? Ok(result.Value) : BadRequest(result.Reasons);
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogInformation("Request was canceled by the client for UpdateRoomIsPublicStatus");
+                return StatusCode(499, "Client closed request.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unhandled exception in UpdateRoomIsPublicStatus");
+                return StatusCode(500, "An unexpected error occurred.");
+            }
+
         }
     }
 }

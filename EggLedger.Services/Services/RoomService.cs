@@ -282,5 +282,33 @@ namespace EggLedger.Services.Services
                 return Result.Fail("Failed to retrieve room");
             }
         }
+
+        public async Task<Result<int>> DeleteRoom(int roomCode, Guid userId, CancellationToken ct)
+        {
+            var roomEntity = await _context.Rooms
+                .Include(r => r.UserRooms)
+                .ThenInclude(ur => ur.User)
+                .SingleOrDefaultAsync(r => r.RoomCode == roomCode, ct);
+
+            if (roomEntity == null)
+            {
+                _logger.LogWarning("Room with code {RoomCode} not found", roomCode);
+                return Result.Fail<int>("Room not found");
+            }
+
+            bool isRoomBelongsToUser = roomEntity.UserRooms.Any(ur => ur.User.UserId == userId);
+
+            if (!isRoomBelongsToUser)
+            {
+                _logger.LogWarning("User {UserId} does not own room {RoomCode}", userId, roomCode);
+                return Result.Fail<int>("Room doesn't belong to user");
+            }
+
+            _context.Rooms.Remove(roomEntity);
+            int affectedRows = await _context.SaveChangesAsync(ct);
+
+            return Result.Ok(affectedRows);
+        }
+
     }
 }
