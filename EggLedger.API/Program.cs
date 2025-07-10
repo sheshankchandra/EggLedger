@@ -131,7 +131,6 @@ builder.Services.AddScoped<IRoomService, RoomService>();
 
 // Background Services
 builder.Services.AddHostedService<EggLedger.Services.Services.DatabaseStartupValidationService>();
-builder.Services.AddHostedService<EggLedger.Services.Services.RefreshTokenCleanupService>();
 
 // Authorization Handlers
 builder.Services.AddScoped<IAuthorizationHandler, RoomAdminHandler>();
@@ -139,6 +138,21 @@ builder.Services.AddScoped<IAuthorizationHandler, RoomMemberHandler>();
 #endregion
 
 var app = builder.Build();
+
+using(var scope = app.Services.CreateScope())
+{
+    var doEfMigration = builder.Configuration["Ef_Migrate"] ?? throw new InvalidOperationException();
+    if(doEfMigration  == "true")
+    {
+        Console.WriteLine("Migrating the Entities");
+        var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        await dbContext.Database.MigrateAsync();
+    }
+    else
+    {
+        Console.WriteLine("Migrating Entities is not enabled");
+    }
+}
 
 #region Aspire Endpoints
 app.MapDefaultEndpoints();
