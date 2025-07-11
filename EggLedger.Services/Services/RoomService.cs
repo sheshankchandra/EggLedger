@@ -284,5 +284,57 @@ namespace EggLedger.Services.Services
                 return Result.Fail("Failed to retrieve room");
             }
         }
+
+        public async Task<Result<int>> DeleteRoomAsync(int roomCode, Guid userId, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                var room = await _context.Rooms
+                    .FirstOrDefaultAsync(r => r.RoomCode == roomCode, cancellationToken);
+
+                if (room == null)
+                {
+                    _logger.LogError("Unable to find the Room : {RoomCode}", roomCode);
+                    return Result.Fail("Unable to find the Room");
+                }
+
+                var userRoom = await _context.UserRooms.FirstOrDefaultAsync(ur => ur.RoomId == room.RoomId && 
+                    ur.UserId == userId, cancellationToken: cancellationToken);
+
+                if (userRoom == null)
+                {
+                    _logger.LogError("User : {UserId} not found in the Room : {RoomCode}", userId, roomCode);
+                    return Result.Fail("User not found in the Room");
+                }
+                else if (!userRoom.IsAdmin)
+                {
+                    _logger.LogError("User : {UserId} is not Admin for the Room : {RoomCode}", userId, roomCode);
+                    return Result.Fail("User is not Admin for the Room");
+                }
+
+                _logger.LogInformation("Deleting room {RoomName} (Code: {RoomCode}) and it's associated containers",
+                    room.RoomName, roomCode);
+
+                _context.Rooms.Remove(room);
+
+                var affectedRows =  await _context.SaveChangesAsync(cancellationToken);
+
+                _logger.LogInformation("Successfully deleted room with code {RoomCode}. Affected rows: {AffectedRows}", 
+                    roomCode, affectedRows);
+
+                return Result.Ok(affectedRows);
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogInformation("DeleteRoomAsync was canceled for room code {RoomCode}", roomCode);
+                return Result.Fail<int>("Operation was canceled");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while deleting room with code {RoomCode}", roomCode);
+                return Result.Fail<int>("An error occurred while deleting the room");
+            }
+        }
+
     }
 }
