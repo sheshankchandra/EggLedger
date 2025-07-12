@@ -4,6 +4,9 @@ WORKDIR /app
 EXPOSE 8080
 EXPOSE 8081
 
+# Set environment for Docker
+ENV ASPNETCORE_ENVIRONMENT=Docker
+
 # Create non-root user
 RUN adduser --disabled-password --gecos '' appuser
 

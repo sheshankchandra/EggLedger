@@ -118,9 +118,10 @@ BASE_URL=/
 
 EggLedger uses log4net for comprehensive logging. Log directories are automatically created by the application based on your operating system.
 
-**Default Log Locations:**
-- **Windows**: `C:\Logs\EggLedger\`
-- **Linux/macOS**: `/var/log/eggledger/` (falls back to `~/logs/eggledger/` if permission denied)
+**Log Locations:**
+- **Windows**: `%LOCALAPPDATA%\EggLedger\` (e.g., `C:\Users\[username]\AppData\Local\EggLedger\`)
+- **Linux**: `/var/log/eggledger/` (falls back to `~/.local/share/eggledger/logs/` if no permissions)
+- **macOS**: `~/Library/Logs/EggLedger/`
 
 **Log Files:**
 - `eggledger-api.log` - All application logs (INFO and above)

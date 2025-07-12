@@ -2,6 +2,7 @@
 using EggLedger.DTO.Room;
 using EggLedger.DTO.User;
 using EggLedger.Models.Models;
+using EggLedger.Models.Enums;
 using EggLedger.Services.Interfaces;
 using FluentResults;
 using Microsoft.EntityFrameworkCore;
@@ -32,7 +33,9 @@ namespace EggLedger.Services.Services
                     RoomName = dto.RoomName,
                     RoomCode = _helperService.GenerateNewRoomCode(),
                     IsPublic = dto.IsOpen,
-                    CreatedAt = DateTime.UtcNow
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedBy = userId,
+                    Status = RoomStatus.Active
                 };
 
                 var userRoom = new UserRoom
@@ -68,12 +71,14 @@ namespace EggLedger.Services.Services
         {
             try
             {
-                var room = await _context.Rooms.Include(room => room.UserRooms)
-                                               .FirstOrDefaultAsync(r => r.RoomCode == roomCode, cancellationToken);
+                var room = await _context.Rooms
+                    .Include(room => room.UserRooms)
+                    .Where(r => r.RoomCode == roomCode && r.Status == RoomStatus.Active)
+                    .FirstOrDefaultAsync(cancellationToken);
 
                 if (room == null)
                 {
-                    _logger.LogWarning("Room not found, code '{RoomCode}'", roomCode);
+                    _logger.LogWarning("Active room not found, code '{RoomCode}'", roomCode);
                     return Result.Fail("Room not found");
                 }
 
@@ -121,7 +126,9 @@ namespace EggLedger.Services.Services
         {
             try
             {
-                var room = await _context.Rooms.Where(r => r.RoomCode == roomCode).FirstOrDefaultAsync(cancellationToken);
+                var room = await _context.Rooms
+                    .Where(r => r.RoomCode == roomCode && r.Status == RoomStatus.Active)
+                    .FirstOrDefaultAsync(cancellationToken);
 
                 if (room == null)
                 {
@@ -160,11 +167,12 @@ namespace EggLedger.Services.Services
             {
                 UserRoom? userRoom = await _context.UserRooms
                     .Include(ur => ur.Room)
-                    .FirstOrDefaultAsync(ur => ur.RoomId == dto.RoomId && ur.UserId == dto.UserId, cancellationToken);
+                    .Where(ur => ur.RoomId == dto.RoomId && ur.UserId == dto.UserId && ur.Room.Status == RoomStatus.Active)
+                    .FirstOrDefaultAsync(cancellationToken);
 
                 if (userRoom == null)
                 {
-                    _logger.LogError("Room '{RoomId}' not found or user '{UserId}' is not in that room", dto.RoomId, dto.UserId);
+                    _logger.LogError("Active room '{RoomId}' not found or user '{UserId}' is not in that room", dto.RoomId, dto.UserId);
                     return Result.Fail("Room not found or user is not in that room");
                 }
 
@@ -183,6 +191,8 @@ namespace EggLedger.Services.Services
                 }
 
                 room.IsPublic = dto.IsOpen;
+                room.ModifiedAt = DateTime.UtcNow;
+                room.ModifiedBy = dto.UserId;
 
                 _logger.LogInformation("Updated room '{RoomName}' visibility to {IsPublic}", room.RoomName, room.IsPublic);
 
@@ -208,7 +218,7 @@ namespace EggLedger.Services.Services
                 var userRooms = await _context.UserRooms
                     .AsNoTracking()
                     .Include(ur => ur.Room)
-                    .Where(ur => ur.UserId == userId)
+                    .Where(ur => ur.UserId == userId && ur.Room.Status == RoomStatus.Active)
                     .Select(ur => new RoomDto
                     {
                         RoomId = ur.Room.RoomId,
@@ -217,15 +227,15 @@ namespace EggLedger.Services.Services
                         IsOpen = ur.Room.IsPublic,
                         AdminUserId = ur.IsAdmin ? userId : null,
                         CreateAt = ur.Room.CreatedAt,
-                        ContainerCount = _context.Containers.Count(c => c.RoomId == ur.Room.RoomId),
+                        ContainerCount = _context.Containers.Count(c => c.RoomId == ur.Room.RoomId && c.Status != ContainerStatus.Archived),
                         TotalEggs = _context.Containers
-                            .Where(c => c.RoomId == ur.Room.RoomId)
+                            .Where(c => c.RoomId == ur.Room.RoomId && c.Status != ContainerStatus.Archived)
                             .Sum(c => c.RemainingQuantity),
                         MemberCount = _context.UserRooms.Count(ur2 => ur2.RoomId == ur.Room.RoomId)
                     })
                     .ToListAsync(cancellationToken);
 
-                _logger.LogInformation("Retrieved {Count} rooms for user {UserId}", userRooms.Count, userId);
+                _logger.LogInformation("Retrieved {Count} active rooms for user {UserId}", userRooms.Count, userId);
                 return Result.Ok(userRooms);
             }
             catch (OperationCanceledException ex)
@@ -246,7 +256,7 @@ namespace EggLedger.Services.Services
             {
                 var room = await _context.Rooms
                     .AsNoTracking()
-                    .Where(r => r.RoomCode == roomCode)
+                    .Where(r => r.RoomCode == roomCode && r.Status == RoomStatus.Active)
                     .Include(r => r.UserRooms)
                     .Select(r => new RoomDto
                     {
@@ -256,9 +266,9 @@ namespace EggLedger.Services.Services
                         IsOpen = r.IsPublic,
                         AdminUserId = r.UserRooms.Where(ur => ur.IsAdmin).Select(ur => ur.UserId).FirstOrDefault(),
                         CreateAt = r.CreatedAt,
-                        ContainerCount = _context.Containers.Count(c => c.RoomId == r.RoomId),
+                        ContainerCount = _context.Containers.Count(c => c.RoomId == r.RoomId && c.Status != ContainerStatus.Archived),
                         TotalEggs = _context.Containers
-                            .Where(c => c.RoomId == r.RoomId)
+                            .Where(c => c.RoomId == r.RoomId && c.Status != ContainerStatus.Archived)
                             .Sum(c => c.RemainingQuantity),
                         MemberCount = _context.UserRooms.Count(ur2 => ur2.RoomId == r.RoomId)
                     })
@@ -266,7 +276,7 @@ namespace EggLedger.Services.Services
 
                 if (room == null)
                 {
-                    _logger.LogWarning("Room with code {RoomCode} not found", roomCode);
+                    _logger.LogWarning("Active room with code {RoomCode} not found", roomCode);
                     return Result.Fail<RoomDto>("Room not found");
                 }
 
@@ -289,40 +299,104 @@ namespace EggLedger.Services.Services
         {
             try
             {
-                var room = await _context.Rooms
-                    .FirstOrDefaultAsync(r => r.RoomCode == roomCode, cancellationToken);
+                // Single query to get room with user validation
+                var roomWithUserValidation = await _context.Rooms
+                    .Where(r => r.RoomCode == roomCode && r.Status == RoomStatus.Active)
+                    .Select(r => new
+                    {
+                        Room = r,
+                        UserRoom = r.UserRooms.FirstOrDefault(ur => ur.UserId == userId),
+                        ContainerCount = r.Containers.Count(c => c.Status != ContainerStatus.Archived),
+                        ActiveOrderDetailsCount = _context.OrderDetails
+                            .Count(od => od.Container.RoomId == r.RoomId && 
+                                        od.Container.Status != ContainerStatus.Archived &&
+                                        od.OrderDetailStatus != OrderDetailStatus.Completed)
+                    })
+                    .FirstOrDefaultAsync(cancellationToken);
 
-                if (room == null)
+                if (roomWithUserValidation?.Room == null)
                 {
-                    _logger.LogError("Unable to find the Room : {RoomCode}", roomCode);
+                    _logger.LogError("Unable to find active room with code: {RoomCode}", roomCode);
                     return Result.Fail("Unable to find the Room");
                 }
 
-                var userRoom = await _context.UserRooms.FirstOrDefaultAsync(ur => ur.RoomId == room.RoomId && 
-                    ur.UserId == userId, cancellationToken: cancellationToken);
-
-                if (userRoom == null)
+                if (roomWithUserValidation.UserRoom == null)
                 {
                     _logger.LogError("User : {UserId} not found in the Room : {RoomCode}", userId, roomCode);
                     return Result.Fail("User not found in the Room");
                 }
-                else if (!userRoom.IsAdmin)
+
+                if (!roomWithUserValidation.UserRoom.IsAdmin)
                 {
                     _logger.LogError("User : {UserId} is not Admin for the Room : {RoomCode}", userId, roomCode);
                     return Result.Fail("User is not Admin for the Room");
                 }
 
-                _logger.LogInformation("Deleting room {RoomName} (Code: {RoomCode}) and it's associated containers",
+                // Check for active orders that would be affected
+                if (roomWithUserValidation.ActiveOrderDetailsCount > 0)
+                {
+                    _logger.LogWarning("Cannot archive room {RoomCode} - has {Count} active order details", 
+                        roomCode, roomWithUserValidation.ActiveOrderDetailsCount);
+                    return Result.Fail("Cannot archive room with active orders. Please complete or cancel all orders first.");
+                }
+
+                var room = roomWithUserValidation.Room;
+                
+                _logger.LogInformation("Archiving room {RoomName} (Code: {RoomCode}) and associated containers",
                     room.RoomName, roomCode);
 
-                _context.Rooms.Remove(room);
+                using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+                
+                try
+                {
+                    var archiveTime = DateTime.UtcNow;
+                    int totalAffectedRows = 0;
 
-                var affectedRows =  await _context.SaveChangesAsync(cancellationToken);
+                    // Archive containers (preserves order history)
+                    var containersToArchive = await _context.Containers
+                        .Where(c => c.RoomId == room.RoomId && c.Status != ContainerStatus.Archived)
+                        .ToListAsync(cancellationToken);
 
-                _logger.LogInformation("Successfully deleted room with code {RoomCode}. Affected rows: {AffectedRows}", 
-                    roomCode, affectedRows);
+                    foreach (var container in containersToArchive)
+                    {
+                        container.Status = ContainerStatus.Archived;
+                        container.DeletedAt = archiveTime;
+                        container.DeletedBy = userId;
+                        container.DeletionReason = "Room archived";
+                        container.ModifiedAt = archiveTime;
+                        container.ModifiedBy = userId;
+                    }
+                    totalAffectedRows += containersToArchive.Count;
 
-                return Result.Ok(affectedRows);
+                    // Remove user memberships (this is safe to hard delete)
+                    var userRoomsDeleted = await _context.UserRooms
+                        .Where(ur => ur.RoomId == room.RoomId)
+                        .ExecuteDeleteAsync(cancellationToken);
+                    totalAffectedRows += userRoomsDeleted;
+
+                    // Archive the room
+                    room.Status = RoomStatus.Archived;
+                    room.DeletedAt = archiveTime;
+                    room.DeletedBy = userId;
+                    room.DeletionReason = "Room archived by admin";
+                    room.ModifiedAt = archiveTime;
+                    room.ModifiedBy = userId;
+                    totalAffectedRows += 1;
+
+                    await _context.SaveChangesAsync(cancellationToken);
+                    await transaction.CommitAsync(cancellationToken);
+
+                    _logger.LogInformation("Successfully archived room {RoomCode}. " +
+                        "Containers archived: {ContainersArchived}, UserRooms removed: {UserRoomsDeleted}", 
+                        roomCode, containersToArchive.Count, userRoomsDeleted);
+
+                    return Result.Ok(totalAffectedRows);
+                }
+                catch (Exception)
+                {
+                    await transaction.RollbackAsync(cancellationToken);
+                    throw;
+                }
             }
             catch (OperationCanceledException)
             {
@@ -331,8 +405,8 @@ namespace EggLedger.Services.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred while deleting room with code {RoomCode}", roomCode);
-                return Result.Fail<int>("An error occurred while deleting the room");
+                _logger.LogError(ex, "Error occurred while archiving room with code {RoomCode}", roomCode);
+                return Result.Fail<int>("An error occurred while archiving the room");
             }
         }
 

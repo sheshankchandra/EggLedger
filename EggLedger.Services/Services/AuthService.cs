@@ -7,12 +7,13 @@ using EggLedger.DTO.Auth;
 using EggLedger.DTO.User;
 using EggLedger.Models.Enums;
 using EggLedger.Models.Models;
+using EggLedger.Models.Options;
 using EggLedger.Services.Interfaces;
 using FluentResults;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
 namespace EggLedger.Services.Services
@@ -22,15 +23,19 @@ namespace EggLedger.Services.Services
         private readonly ApplicationDbContext _context;
         private readonly ILogger<AuthService> _logger;
         private readonly PasswordHasher<User> _passwordHasher;
-        private readonly IConfiguration _configuration;
+        private readonly JwtOptions _jwtOptions;
         private readonly IHelperService _helperService;
 
-        public AuthService(ApplicationDbContext context, ILogger<AuthService> logger, IConfiguration configuration, IHelperService helperService)
+        public AuthService(
+            ApplicationDbContext context, 
+            ILogger<AuthService> logger, 
+            IOptions<JwtOptions> jwtOptions, 
+            IHelperService helperService)
         {
             _context = context;
             _logger = logger;
             _passwordHasher = new PasswordHasher<User>();
-            _configuration = configuration;
+            _jwtOptions = jwtOptions.Value;
             _helperService = helperService;
         }
 
@@ -228,16 +233,16 @@ namespace EggLedger.Services.Services
                 .ToList();
             claims.AddRange(roomIds.Select(roomId => new Claim("Room", roomId.ToString())));
 
-            SymmetricSecurityKey securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:SecretKey"] ?? throw new InvalidOperationException()));
-            SigningCredentials credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
-            DateTime expiry = DateTime.UtcNow.AddMinutes(int.Parse(_configuration["Jwt:ExpiryInMinutes"] ?? throw new InvalidOperationException()));
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtOptions.SecretKey));
+            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+            var expiry = DateTime.UtcNow.AddMinutes(_jwtOptions.ExpiryInMinutes);
 
             var token = new JwtSecurityToken(
-                issuer: _configuration["Jwt:Issuer"],
-                audience: _configuration["Jwt:Audience"],
+                issuer: _jwtOptions.Issuer,
+                audience: _jwtOptions.Audience,
                 claims: claims,
                 expires: expiry,
-                signingCredentials: credentials
+                signingCredentials: creds
             );
 
             return new JwtSecurityTokenHandler().WriteToken(token);

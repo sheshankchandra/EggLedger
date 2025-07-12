@@ -3,6 +3,7 @@ using System;
 using EggLedger.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace EggLedger.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250711202417_ArchiveRooms")]
+    partial class ArchiveRooms
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -262,27 +265,37 @@ namespace EggLedger.Data.Migrations
                     b.Property<Guid>("OrderId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid>("OrderId1")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid>("PayerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PayerUserId")
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("ReceiverId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid>("ReceiverUserId")
+                        .HasColumnType("uuid");
+
                     b.Property<int>("Status")
                         .HasColumnType("integer");
-
-                    b.Property<Guid?>("UserId")
-                        .HasColumnType("uuid");
 
                     b.HasKey("TransactionId");
 
                     b.HasIndex("OrderId");
 
+                    b.HasIndex("OrderId1");
+
                     b.HasIndex("PayerId");
+
+                    b.HasIndex("PayerUserId");
 
                     b.HasIndex("ReceiverId");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("ReceiverUserId");
 
                     b.ToTable("Transactions");
                 });
@@ -431,29 +444,43 @@ namespace EggLedger.Data.Migrations
 
             modelBuilder.Entity("EggLedger.Models.Models.Transaction", b =>
                 {
-                    b.HasOne("EggLedger.Models.Models.Order", "Order")
+                    b.HasOne("EggLedger.Models.Models.Order", null)
                         .WithMany("Transactions")
                         .HasForeignKey("OrderId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("EggLedger.Models.Models.User", "Payer")
+                    b.HasOne("EggLedger.Models.Models.Order", "Order")
                         .WithMany()
+                        .HasForeignKey("OrderId1")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("EggLedger.Models.Models.User", null)
+                        .WithMany("Transactions")
                         .HasForeignKey("PayerId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("FK_Transaction_Payer");
 
-                    b.HasOne("EggLedger.Models.Models.User", "Receiver")
+                    b.HasOne("EggLedger.Models.Models.User", "Payer")
+                        .WithMany()
+                        .HasForeignKey("PayerUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("EggLedger.Models.Models.User", null)
                         .WithMany()
                         .HasForeignKey("ReceiverId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("FK_Transaction_Receiver");
 
-                    b.HasOne("EggLedger.Models.Models.User", null)
-                        .WithMany("Transactions")
-                        .HasForeignKey("UserId");
+                    b.HasOne("EggLedger.Models.Models.User", "Receiver")
+                        .WithMany()
+                        .HasForeignKey("ReceiverUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("Order");
 

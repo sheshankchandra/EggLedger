@@ -179,15 +179,17 @@ namespace EggLedger.Data
 
                 // Transaction to User (Payer)
                 entity.HasOne(d => d.Payer)
-                      .WithMany() // No back navigation for payer transactions
+                      .WithMany()
                       .HasForeignKey(d => d.PayerId)
-                      .OnDelete(DeleteBehavior.Restrict);
+                      .OnDelete(DeleteBehavior.Restrict)
+                      .HasConstraintName("FK_Transaction_Payer");
 
                 // Transaction to User (Receiver)
                 entity.HasOne(d => d.Receiver)
-                      .WithMany() // No back navigation for receiver transactions
+                      .WithMany()
                       .HasForeignKey(d => d.ReceiverId)
-                      .OnDelete(DeleteBehavior.Restrict);
+                      .OnDelete(DeleteBehavior.Restrict)
+                      .HasConstraintName("FK_Transaction_Receiver");
             });
 
             // Configure the User entity
@@ -206,11 +208,10 @@ namespace EggLedger.Data
                 entity.Property(e => e.Email)
                       .IsRequired()
                       .HasMaxLength(255);
-                // Add a unique index to Email to ensure uniqueness
                 entity.HasIndex(e => e.Email).IsUnique();
                 entity.Property(e => e.Role).IsRequired(); // Assuming Role is an integer or enum
                 entity.Property(e => e.Provider)
-                      .HasMaxLength(50); // For external login providers (e.g., "Google", "Facebook")
+                      .HasMaxLength(50);
             });
 
             // Configure the UserPassword entity
@@ -237,7 +238,7 @@ namespace EggLedger.Data
                       .OnDelete(DeleteBehavior.Cascade); // Deleting a User will delete their UserPassword
             });
 
-            // Configure the UserRoom entity (Join table for Many-to-Many between User and Room)
+            // Configure the UserRoom entity
             modelBuilder.Entity<UserRoom>(entity =>
             {
                 // Primary Key configuration
@@ -249,21 +250,19 @@ namespace EggLedger.Data
                 entity.Property(e => e.IsAdmin).IsRequired();
                 entity.Property(e => e.JoinedAt).IsRequired();
 
-                // Composite unique index to ensure a User can only be associated with a Room once
+                // Composite unique index
                 entity.HasIndex(ur => new { ur.UserId, ur.RoomId }).IsUnique();
 
                 // Relationships (Foreign Keys)
-                // UserRoom to User
                 entity.HasOne(d => d.User)
-                      .WithMany(p => p.UserRooms) // User has many UserRoom entries
+                      .WithMany(p => p.UserRooms)
                       .HasForeignKey(d => d.UserId)
-                      .OnDelete(DeleteBehavior.Cascade); // Deleting a User will delete their UserRoom associations
+                      .OnDelete(DeleteBehavior.Cascade);
 
-                // UserRoom to Room
                 entity.HasOne(d => d.Room)
-                      .WithMany(p => p.UserRooms) // Room has many UserRoom entries
+                      .WithMany(p => p.UserRooms)
                       .HasForeignKey(d => d.RoomId)
-                      .OnDelete(DeleteBehavior.Cascade); // Deleting a Room will delete its UserRoom associations
+                      .OnDelete(DeleteBehavior.Cascade);
             });
 
         }
