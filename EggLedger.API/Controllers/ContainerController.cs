@@ -1,13 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using EggLedger.DTO.Container;
+﻿using EggLedger.DTO.Container;
 using EggLedger.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Security.Claims;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace EggLedger.API.Controllers
 {
@@ -102,7 +103,7 @@ namespace EggLedger.API.Controllers
             }
         }
 
-        // PUT: egg-ledger-api/room/{roomCode}/container/{id}
+        // PUT: egg-ledger-api/room/{roomCode}/container/update/{id}
         [Authorize(Policy = "RoomMember")]
         [HttpPut("update/{id}")]
         public async Task<IActionResult> UpdateContainer([FromRoute] int roomCode, Guid id, [FromBody] ContainerUpdateDto dto, CancellationToken cancellationToken)
@@ -130,14 +131,14 @@ namespace EggLedger.API.Controllers
             }
         }
 
-        // DELETE: egg-ledger-api/room/{roomCode}/container/{id}
+        // PUT: egg-ledger-api/room/{roomCode}/container/archive/{id}
         [Authorize(Policy = "RoomMember")]
-        [HttpDelete("delete/{id}")]
-        public async Task<IActionResult> DeleteContainer([FromRoute] int roomCode, Guid id, CancellationToken cancellationToken)
+        [HttpPut("archive/{id}")]
+        public async Task<IActionResult> ArchiveContainer([FromRoute] int roomCode, Guid id, CancellationToken cancellationToken)
         {
             try
             {
-                var result = await _containerService.DeleteContainerAsync(id, cancellationToken);
+                var result = await _containerService.ArchiveContainerAsync(id, cancellationToken);
                 if (result.IsSuccess)
                     return NoContent();
 
@@ -148,12 +149,40 @@ namespace EggLedger.API.Controllers
             }
             catch (OperationCanceledException)
             {
-                _logger.LogInformation("Request was canceled by the client for DeleteContainer, roomCode: {RoomCode}, id: {Id}", roomCode, id);
+                _logger.LogInformation("Request was canceled by the client for ArchiveContainer, roomCode: {RoomCode}, id: {Id}", roomCode, id);
                 return StatusCode(499, "Client closed request.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unhandled exception in DeleteContainer for roomCode: {RoomCode}, id: {Id}", roomCode, id);
+                _logger.LogError(ex, "Unhandled exception in ArchiveContainer for roomCode: {RoomCode}, id: {Id}", roomCode, id);
+                return StatusCode(500, "An unexpected error occurred.");
+            }
+        }
+
+        // PUT: egg-ledger-api/room/{roomCode}/container/suspend/{id}
+        [Authorize(Policy = "RoomMember")]
+        [HttpPut("suspend/{id}")]
+        public async Task<IActionResult> SuspendContainer([FromRoute] int roomCode, Guid id, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var result = await _containerService.SuspendContainerAsync(id, cancellationToken);
+                if (result.IsSuccess)
+                    return NoContent();
+
+                if (result.Errors.Any(e => e.Message == "Container not found"))
+                    return NotFound();
+
+                return BadRequest(result.Errors.Select(e => e.Message));
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogInformation("Request was canceled by the client for SuspendContainer, roomCode: {RoomCode}, id: {Id}", roomCode, id);
+                return StatusCode(499, "Client closed request.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unhandled exception in SuspendContainer for roomCode: {RoomCode}, id: {Id}", roomCode, id);
                 return StatusCode(500, "An unexpected error occurred.");
             }
         }
@@ -179,6 +208,39 @@ namespace EggLedger.API.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Unhandled exception in SearchContainers for roomCode: {RoomCode}, name: {Name}", roomCode, name);
+                return StatusCode(500, "An unexpected error occurred.");
+            }
+        }
+
+        // GET: egg-ledger-api/room/{roomCode}/container/user/all
+        [Authorize(Policy = "RoomMember")]
+        [HttpGet("user/all")]
+        public async Task<ActionResult<List<ContainerSummaryDto>>> GetMyContainers([FromRoute] int roomCode, CancellationToken cancellationToken)
+        {
+            try
+            {
+                _logger.LogInformation("Received request to GetMyContainers");
+
+                var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+                {
+                    return Unauthorized("Invalid user identity");
+                }
+
+                var result = await _containerService.GetMyContainers(userId, roomCode, cancellationToken);
+                if (result.IsSuccess)
+                    return Ok(result.Value);
+
+                return StatusCode(500, result.Errors);
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogInformation("Request was canceled by the client for GetMyContainers, roomCode: {RoomCode}", roomCode);
+                return StatusCode(499, "Client closed request.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unhandled exception in GetMyContainers for roomCode: {RoomCode}", roomCode);
                 return StatusCode(500, "An unexpected error occurred.");
             }
         }

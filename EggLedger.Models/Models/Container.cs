@@ -21,14 +21,8 @@ namespace EggLedger.Models.Models
         /// Status of the container (Available, Depleted, Archived, Suspended)
         /// </summary>
         public ContainerStatus Status { get; set; } = ContainerStatus.Available;
-        
-        public decimal Price => Amount / TotalQuantity;
         public DateTime? CompletedDateTime { get; set; }
-        
-        // Navigation properties
-        public User Buyer { get; set; } = null!;
-        public Room Room { get; set; } = null!;
-        public virtual ICollection<OrderDetail> OrderDetails { get; set; } = new List<OrderDetail>();
+        public decimal Price => Amount / TotalQuantity;
 
         /// <summary>
         /// Checks if the container is currently available for orders
@@ -44,5 +38,11 @@ namespace EggLedger.Models.Models
         /// Checks if the container is depleted (no remaining quantity)
         /// </summary>
         public bool IsDepleted => RemainingQuantity <= 0 || Status == ContainerStatus.Depleted;
+
+        #region Navigation properties
+        public User Buyer { get; set; } = null!;
+        public Room Room { get; set; } = null!;
+        public virtual ICollection<OrderDetail> OrderDetails { get; set; } = new List<OrderDetail>(); 
+        #endregion
     }
 }

@@ -21,7 +21,10 @@ public interface IContainerService
     Task<Result<ContainerSummaryDto>> CreateContainerAsync(int roomCode, ContainerCreateDto dto, CancellationToken cancellationToken = default);
     
     Task<Result<ContainerSummaryDto>> UpdateContainerAsync(Guid containerId, ContainerUpdateDto dto, CancellationToken cancellationToken = default);
-    Task<Result> DeleteContainerAsync(Guid containerId, CancellationToken cancellationToken = default);
+    Task<Result> ArchiveContainerAsync(Guid containerId, CancellationToken cancellationToken = default);
+    Task<Result> SuspendContainerAsync(Guid containerId, CancellationToken cancellationToken = default);
     Task<Result<List<ContainerSummaryDto>>> SearchContainersByOwnerNameAsync(int roomCode, string ownerName, CancellationToken cancellationToken = default);
+
+    Task<Result<List<ContainerSummaryDto>>> GetMyContainers(Guid userId, int roomCode, CancellationToken cancellationToken = default);
     Task<Result<List<ContainerSummaryDto>>> GetPagedContainersAsync(int roomCode, int page, int pageSize, CancellationToken cancellationToken = default);
 }

@@ -1,5 +1,6 @@
 ﻿using EggLedger.Data;
 using EggLedger.DTO.Container;
+using EggLedger.Models.Enums;
 using EggLedger.Models.Models;
 using EggLedger.Services.Interfaces;
 using FluentResults;
@@ -20,7 +21,7 @@ namespace EggLedger.Services.Services
         }
 
         /// <summary>
-        /// Retrieves all containers with summary information for a specific room.
+        /// Retrieves all active containers with summary information for a specific room.
         /// </summary>
         public async Task<Result<List<ContainerSummaryDto>>> GetAllContainersAsync(int roomCode, CancellationToken cancellationToken = default)
         {
@@ -32,7 +33,7 @@ namespace EggLedger.Services.Services
 
                 var containersList = await _context.Containers
                     .AsNoTracking()
-                    .Where(c => c.RoomId == room.RoomId)
+                    .Where(c => c.RoomId == room.RoomId && c.IsAvailable)
                     .OrderBy(c => c.PurchaseDateTime)
                     .Select(c => new ContainerSummaryDto
                     {
@@ -44,6 +45,7 @@ namespace EggLedger.Services.Services
                         RemainingQuantity = c.RemainingQuantity,
                         Amount = c.Amount,
                         RoomName = c.Room.RoomName,
+                        Status = c.Status,
                         Price = c.Price,
                         CompletedDateTime = c.CompletedDateTime
                     })
@@ -92,6 +94,7 @@ namespace EggLedger.Services.Services
                     RemainingQuantity = container.RemainingQuantity,
                     Amount = container.Amount,
                     RoomName = container.Room.RoomName,
+                    Status = container.Status,
                     Price = container.Price,
                     CompletedDateTime = container.CompletedDateTime
                 };
@@ -145,6 +148,7 @@ namespace EggLedger.Services.Services
                     RemainingQuantity = container.RemainingQuantity,
                     Amount = container.Amount,
                     RoomName = container.Room.RoomName,
+                    Status = container.Status,
                     Price = container.Price,
                     CompletedDateTime = container.CompletedDateTime
                 };
@@ -164,7 +168,7 @@ namespace EggLedger.Services.Services
             }
         }
 
-        public async Task<Result> DeleteContainerAsync(Guid containerId, CancellationToken cancellationToken = default)
+        public async Task<Result> ArchiveContainerAsync(Guid containerId, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -177,21 +181,52 @@ namespace EggLedger.Services.Services
                     return Result.Fail("Container not found");
                 }
 
-                _context.Containers.Remove(container);
+                container.Status = ContainerStatus.Archived;
                 await _context.SaveChangesAsync(cancellationToken);
 
-                _logger.LogInformation("Container {ContainerId} deleted successfully.", containerId);
+                _logger.LogInformation("Container {ContainerId} Archived successfully.", containerId);
                 return Result.Ok();
             }
             catch (OperationCanceledException ex)
             {
-                _logger.LogInformation(ex, "DeleteContainerAsync was canceled for containerId {ContainerId}", containerId);
+                _logger.LogInformation(ex, "ArchiveContainerAsync was canceled for containerId {ContainerId}", containerId);
                 return Result.Fail("Operation was canceled.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred in DeleteContainerAsync for containerId {ContainerId}", containerId);
-                return Result.Fail("An error occurred while deleting the container.");
+                _logger.LogError(ex, "Error occurred in ArchiveContainerAsync for containerId {ContainerId}", containerId);
+                return Result.Fail("An error occurred while Archiving the container.");
+            }
+        }
+
+        public async Task<Result> SuspendContainerAsync(Guid containerId, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                var container = await _context.Containers
+                    .FirstOrDefaultAsync(c => c.ContainerId == containerId, cancellationToken);
+
+                if (container == null)
+                {
+                    _logger.LogWarning("Container with ID {ContainerId} not found.", containerId);
+                    return Result.Fail("Container not found");
+                }
+
+                container.Status = ContainerStatus.Suspended;
+                await _context.SaveChangesAsync(cancellationToken);
+
+                _logger.LogInformation("Container {ContainerId} Suspended successfully.", containerId);
+                return Result.Ok();
+            }
+            catch (OperationCanceledException ex)
+            {
+                _logger.LogInformation(ex, "SuspendContainerAsync was canceled for containerId {ContainerId}", containerId);
+                return Result.Fail("Operation was canceled.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred in SuspendContainerAsync for containerId {ContainerId}", containerId);
+                return Result.Fail("An error occurred while Suspending the container.");
             }
         }
 
@@ -224,6 +259,7 @@ namespace EggLedger.Services.Services
                         RemainingQuantity = container.RemainingQuantity,
                         Amount = container.Amount,
                         RoomName = container.Room.RoomName,
+                        Status = container.Status,
                         Price = container.Price,
                         CompletedDateTime = container.CompletedDateTime
                     })
@@ -240,6 +276,50 @@ namespace EggLedger.Services.Services
             {
                 _logger.LogError(ex, "Error occurred in SearchContainersByOwnerNameAsync for roomCode {RoomCode}, ownerName {OwnerName}", roomCode, ownerName);
                 return Result.Fail("An error occurred while searching containers.");
+            }
+        }
+
+        public async Task<Result<List<ContainerSummaryDto>>> GetMyContainers(Guid userId, int roomCode, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                var room = await _context.Rooms.FirstOrDefaultAsync(r => r.RoomCode == roomCode, cancellationToken);
+                if (room == null)
+                {
+                    return Result.Fail("Room not found");
+                }
+
+                var containers = await _context.Containers
+                    .AsNoTracking()
+                    .Where(c => c.RoomId == room.RoomId && c.BuyerId == userId)
+                    .OrderBy(c => c.PurchaseDateTime)
+                    .Select(container => new ContainerSummaryDto
+                    {
+                        ContainerId = container.ContainerId,
+                        ContainerName = container.ContainerName,
+                        PurchaseDateTime = container.PurchaseDateTime,
+                        BuyerName = container.Buyer.Name,
+                        TotalQuantity = container.TotalQuantity,
+                        RemainingQuantity = container.RemainingQuantity,
+                        Amount = container.Amount,
+                        RoomName = container.Room.RoomName,
+                        Status = container.Status,
+                        Price = container.Price,
+                        CompletedDateTime = container.CompletedDateTime
+                    })
+                    .ToListAsync(cancellationToken);
+
+                return Result.Ok(containers);
+            }
+            catch (OperationCanceledException ex)
+            {
+                _logger.LogInformation(ex, "GetMyContainers was canceled for roomCode {RoomCode}, BuyerId {BuyerId}", roomCode, userId);
+                return Result.Fail("Operation was canceled.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred in GetMyContainers for roomCode {RoomCode}, BuyerId {BuyerId}", roomCode, userId);
+                return Result.Fail("An error occurred while getting containers.");
             }
         }
 
@@ -273,6 +353,7 @@ namespace EggLedger.Services.Services
                         RemainingQuantity = container.RemainingQuantity,
                         Amount = container.Amount,
                         RoomName = container.Room.RoomName,
+                        Status = container.Status,
                         Price = container.Price,
                         CompletedDateTime = container.CompletedDateTime
                     })
@@ -304,7 +385,7 @@ namespace EggLedger.Services.Services
                 }
 
                 // Validate buyer exists
-                var buyer = await _context.Users.FindAsync(new object[] { dto.BuyerId }, cancellationToken);
+                var buyer = await _context.Users.FindAsync([dto.BuyerId], cancellationToken);
                 if (buyer == null)
                 {
                     return Result.Fail("Buyer not found");
@@ -320,6 +401,7 @@ namespace EggLedger.Services.Services
                     BuyerId = dto.BuyerId,
                     RoomId = room.RoomId,
                     PurchaseDateTime = DateTime.UtcNow,
+                    Status = ContainerStatus.Available,
                 };
 
                 _context.Containers.Add(container);
@@ -334,6 +416,7 @@ namespace EggLedger.Services.Services
                     TotalQuantity = container.TotalQuantity,
                     RemainingQuantity = container.RemainingQuantity,
                     Amount = container.Amount,
+                    Status = container.Status,
                     Price = container.Price,
                     RoomName = room.RoomName,
                     CompletedDateTime = container.CompletedDateTime
