@@ -16,17 +16,18 @@
         <h3>🚀 Create a New Room</h3>
         <form @submit.prevent="handleCreateRoom">
           <div class="form-group">
-            <label for="room-name">Room Name</label>
+            <label for="room-name" class="form-label">Room Name</label>
             <input
               id="room-name"
               v-model="createForm.roomName"
               type="text"
               placeholder="e.g., The Eggvengers"
+              class="form-input"
               required
             />
           </div>
           <div class="form-group">
-            <label>Room Visibility</label>
+            <label class="form-label">Room Visibility</label>
             <div class="radio-group">
               <label>
                 <input
@@ -43,7 +44,7 @@
               </label>
             </div>
           </div>
-          <button type="submit" :disabled="isLoading">
+          <button type="submit" :disabled="isLoading" class="btn btn-primary w-full">
             {{ isLoading ? 'Creating...' : 'Create Room' }}
           </button>
         </form>
@@ -54,7 +55,7 @@
         <h3>🚪 Join an Existing Room</h3>
         <form @submit.prevent="handleJoinRoom">
           <div class="form-group">
-            <label for="room-code">6-Digit Room Code</label>
+            <label for="room-code" class="form-label">6-Digit Room Code</label>
             <input
               id="room-code"
               v-model="joinForm.roomCode"
@@ -63,11 +64,11 @@
               maxlength="6"
               pattern="\d{6}"
               title="Please enter a 6-digit number."
+              class="form-input room-code-input"
               required
-              class="room-code-input"
             />
           </div>
-          <button type="submit" :disabled="isLoading">
+          <button type="submit" :disabled="isLoading" class="btn btn-primary w-full">
             {{ isLoading ? 'Joining...' : 'Join Room' }}
           </button>
         </form>
@@ -210,30 +211,30 @@ onUnmounted(() => {
 <style scoped>
 .lobby-container {
   max-width: 900px;
-  margin: 2rem auto;
-  padding: 2rem;
+  margin: var(--spacing-xl) auto;
+  padding: var(--spacing-xl);
 }
 
 .lobby-header {
   text-align: center;
-  margin-bottom: 2rem;
+  margin-bottom: var(--spacing-xl);
 }
 
 .lobby-header h2 {
-  font-size: 2rem;
-  font-weight: 600;
-  color: #333;
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
 }
 
 .lobby-header p {
-  font-size: 1.1rem;
-  color: #666;
+  font-size: var(--font-size-lg);
+  color: var(--text-secondary);
 }
 
 .options-wrapper {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 2rem;
+  gap: var(--spacing-xl);
 }
 
 @media (min-width: 768px) {
@@ -243,46 +244,46 @@ onUnmounted(() => {
 }
 
 .option-card {
-  background: white;
-  padding: 2rem;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  border-top: 4px solid #4caf50;
+  background: var(--bg-primary);
+  padding: var(--spacing-xl);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  border-top: 4px solid var(--color-primary);
 }
 
 .option-card h3 {
   margin-top: 0;
-  margin-bottom: 1.5rem;
+  margin-bottom: var(--spacing-lg);
   text-align: center;
-  color: #333;
+  color: var(--text-primary);
 }
 
 .form-group {
-  margin-bottom: 1.5rem;
+  margin-bottom: var(--spacing-lg);
 }
 
 .form-group label {
   display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 500;
-  color: #555;
+  margin-bottom: var(--spacing-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-muted);
 }
 
 .form-group input[type='text'] {
   width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  padding: var(--spacing-md);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
   box-sizing: border-box;
-  font-size: 1rem;
+  font-size: var(--font-size-base);
 }
 
 .radio-group {
   display: flex;
-  gap: 1rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  padding: 0.5rem;
+  gap: var(--spacing-md);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-sm);
 }
 
 .radio-group label {
@@ -290,12 +291,12 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0.5rem;
-  border-radius: 4px;
+  padding: var(--spacing-sm);
+  border-radius: var(--radius-md);
   cursor: pointer;
   transition:
-    background-color 0.2s,
-    color 0.2s;
+    background-color var(--transition-fast),
+    color var(--transition-fast);
 }
 
 .radio-group input[type='radio'] {
@@ -303,56 +304,40 @@ onUnmounted(() => {
 }
 
 .radio-group input[type='radio']:checked + span {
-  color: white;
+  color: var(--text-inverse);
 }
 
 .radio-group label:has(input[value='false']:checked) {
-  background-color: #5c6bc0; /* Indigo for private */
+  background-color: var(--color-secondary); /* Indigo for private */
 }
 
 .radio-group label:has(input[value='true']:checked) {
-  background-color: #66bb6a; /* Green for public */
+  background-color: var(--color-success); /* Green for public */
 }
 
 .room-code-input {
   text-align: center;
-  font-size: 1.2rem;
+  font-size: var(--font-size-lg);
   letter-spacing: 0.5rem;
 }
 
-button {
+.w-full {
   width: 100%;
-  padding: 0.8rem;
-  border: none;
-  border-radius: 4px;
-  background-color: #4caf50;
-  color: white;
-  font-size: 1rem;
-  font-weight: bold;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-button:disabled {
-  background-color: #cccccc;
-  cursor: not-allowed;
-}
-
-button:not(:disabled):hover {
-  background-color: #45a049;
 }
 
 .notification {
-  padding: 1rem;
-  border-radius: 4px;
-  color: white;
-  margin-bottom: 1.5rem;
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+  color: var(--text-inverse);
+  margin-bottom: var(--spacing-lg);
   text-align: center;
 }
+
 .notification.success {
-  background-color: #28a745;
+  background-color: var(--color-success);
 }
+
 .notification.error {
-  background-color: #dc3545;
+  background-color: var(--color-danger);
 }
 </style>

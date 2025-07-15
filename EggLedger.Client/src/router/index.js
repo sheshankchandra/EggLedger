@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import LoginView from '../views/LoginView.vue'
 import RegisterView from '../views/RegisterView.vue'
+import AccountsView from '../views/AccountsView.vue'
 import DashboardView from '../views/DashboardView.vue'
 import RoomView from '../views/RoomView.vue'
 import ProfileView from '../views/ProfileView.vue'
@@ -21,6 +22,17 @@ const router = createRouter({
       path: '/register',
       name: 'register',
       component: RegisterView,
+    },
+    // New unified accounts routes
+    {
+      path: '/eggledger/accounts/login',
+      name: 'accounts-login',
+      component: AccountsView,
+    },
+    {
+      path: '/eggledger/accounts/signup',
+      name: 'accounts-signup',
+      component: AccountsView,
     },
     {
       path: '/lobby',
@@ -67,9 +79,12 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore()
 
+  // Define auth-related routes
+  const authRoutes = ['login', 'register', 'accounts-login', 'accounts-signup']
+
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-    next('/login')
-  } else if ((to.name === 'login' || to.name === 'register') && authStore.isAuthenticated) {
+    next('/eggledger/accounts/login')
+  } else if (authRoutes.includes(to.name) && authStore.isAuthenticated) {
     next('/')
   } else {
     next()

@@ -33,7 +33,7 @@ namespace EggLedger.Services.Services
 
                 var containersList = await _context.Containers
                     .AsNoTracking()
-                    .Where(c => c.RoomId == room.RoomId && c.IsAvailable)
+                    .Where(c => c.RoomId == room.RoomId && c.Status == ContainerStatus.Available && c.RemainingQuantity > 0)
                     .OrderBy(c => c.PurchaseDateTime)
                     .Select(c => new ContainerSummaryDto
                     {
@@ -43,7 +43,7 @@ namespace EggLedger.Services.Services
                         BuyerName = c.Buyer.Name,
                         TotalQuantity = c.TotalQuantity,
                         RemainingQuantity = c.RemainingQuantity,
-                        Amount = c.Amount,
+                        Amount = c.Amount,  
                         RoomName = c.Room.RoomName,
                         Status = c.Status,
                         Price = c.Price,

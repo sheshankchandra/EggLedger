@@ -18,8 +18,10 @@
         </div>
       </div>
 
-      <div v-if="loading" class="loading">Loading container details...</div>
-      <div v-if="error" class="error-message">{{ error }}</div>
+      <div v-if="loading" class="card text-center p-5">
+        <p class="text-secondary">Loading container details...</p>
+      </div>
+      <div v-if="error" class="alert alert-error">{{ error }}</div>
 
       <!-- Show orders even if container info is not available -->
       <div v-if="!loading && !error" class="container-content">
@@ -56,9 +58,11 @@
 
         <div class="orders-section">
           <h3>Order History</h3>
-          <div v-if="loadingOrders" class="loading">Loading orders...</div>
-          <div v-else-if="orders.length === 0" class="no-orders">
-            <p>No orders found for this container.</p>
+          <div v-if="loadingOrders" class="card text-center p-5">
+            <p class="text-secondary">Loading orders...</p>
+          </div>
+          <div v-else-if="orders.length === 0" class="card text-center p-5">
+            <p class="text-secondary">No orders found for this container.</p>
           </div>
           <div v-else class="orders-list">
             <div v-for="order in orders" :key="order.orderId" class="order-item">
@@ -202,26 +206,38 @@ const getOrderTypeClass = (orderType) => {
 }
 
 const getOrderTypeSign = (orderType) => {
-  return orderType === 1 ? '+' : '-'
-}
-
-const getOrderStatusDisplay = (orderStatus) => {
-  switch (orderStatus) {
-    case 100:
-      return 'Completed'
-    case 101:
-      return 'Processing'
+  switch (orderType) {
+    case 1:
+      return '+'
+    case 2:
+      return '-'
     default:
-      return 'Unknown'
+      return ''
   }
 }
 
 const getContainerQuantity = (order) => {
-  // For this specific container, get the quantity from order details
-  // Use containerId from containerInfo first, then fallback to props
-  const containerId = containerInfo.value?.containerId || props.containerId
-  const containerDetail = order.orderDetails?.find((detail) => detail.containerId === containerId)
-  return containerDetail?.detailQuantity || order.quantity || 0
+  if (!order.orderDetails || order.orderDetails.length === 0) {
+    return order.quantity || 0
+  }
+
+  const containerDetail = order.orderDetails.find(
+    (d) => d.containerId === (containerInfo.value?.containerId || props.containerId),
+  )
+  return containerDetail ? containerDetail.detailQuantity : 0
+}
+
+const getOrderStatusDisplay = (orderStatus) => {
+  switch (orderStatus) {
+    case 1:
+      return 'Active'
+    case 2:
+      return 'Completed'
+    case 3:
+      return 'Cancelled'
+    default:
+      return 'Unknown'
+  }
 }
 
 const formatDate = (dateString) => {
@@ -243,69 +259,60 @@ const formatDateTime = (dateString) => {
 }
 
 const goBack = () => {
-  router.back()
+  router.push('/profile')
 }
 
 onMounted(async () => {
-  error.value = null
-
-  try {
-    const ordersData = await fetchContainerOrders()
-    if (ordersData) {
-      orders.value = ordersData
-    }
-  } catch (err) {
-    if (err.name === 'AbortError') return
-    error.value = 'Failed to load container orders.'
-    console.error('Error loading orders:', err)
+  const ordersData = await fetchContainerOrders()
+  if (ordersData) {
+    orders.value = ordersData
   }
 })
 
 onUnmounted(() => {
-  // Clean up the stored container info when leaving the page
-  sessionStorage.removeItem('currentContainerInfo')
   abortController.abort()
 })
 </script>
+
 <style scoped>
 .container-detail-view {
   min-height: 100vh;
-  background: #f5f5f5;
+  background: var(--bg-secondary);
 }
 
 .container-detail-container {
-  max-width: 1200px;
+  max-width: var(--container-max-width);
   margin: 0 auto;
-  padding: 2rem;
+  padding: var(--spacing-xl);
 }
 
 .container-header {
-  background: white;
-  border-radius: 8px;
-  padding: 1.5rem;
-  margin-bottom: 2rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  background: var(--bg-primary);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-xl);
+  box-shadow: var(--shadow-sm);
 }
 
 .header-content {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
+  gap: var(--spacing-lg);
 }
 
 .container-title h2 {
-  margin: 0 0 0.5rem 0;
-  color: #333;
-  font-size: 1.8rem;
+  margin: 0 0 var(--spacing-sm) 0;
+  color: var(--text-primary);
 }
 
 .breadcrumb {
-  color: #666;
-  font-size: 0.9rem;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
 }
 
 .breadcrumb a {
-  color: #4caf50;
+  color: var(--color-primary);
   text-decoration: none;
 }
 
@@ -314,221 +321,181 @@ onUnmounted(() => {
 }
 
 .separator {
-  margin: 0 0.5rem;
-}
-
-.btn {
-  padding: 0.75rem 1.5rem;
-  border-radius: 6px;
-  border: none;
-  cursor: pointer;
-  font-weight: 500;
-  transition: all 0.2s ease;
-}
-
-.btn-secondary {
-  background: #6c757d;
-  color: white;
-}
-
-.btn-secondary:hover {
-  background: #5a6268;
-}
-
-.loading {
-  text-align: center;
-  padding: 2rem;
-  color: #666;
-}
-
-.error-message {
-  background: #f8d7da;
-  color: #721c24;
-  padding: 1rem;
-  border-radius: 6px;
-  margin-bottom: 1rem;
+  margin: 0 var(--spacing-sm);
 }
 
 .container-content {
   display: grid;
-  gap: 2rem;
+  gap: var(--spacing-xl);
 }
 
 .info-section,
 .orders-section {
-  background: white;
-  border-radius: 8px;
-  padding: 1.5rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  background: var(--bg-primary);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  box-shadow: var(--shadow-sm);
 }
 
 .info-section h3,
 .orders-section h3 {
-  margin: 0 0 1.5rem 0;
-  color: #333;
-  border-bottom: 2px solid #e9ecef;
-  padding-bottom: 0.5rem;
+  margin: 0 0 var(--spacing-lg) 0;
+  color: var(--text-primary);
+  border-bottom: 2px solid var(--border-light);
+  padding-bottom: var(--spacing-sm);
 }
 
 .container-info-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1rem;
+  gap: var(--spacing-md);
 }
 
 .info-item {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: var(--spacing-xs);
 }
 
 .info-item label {
-  font-weight: 600;
-  color: #555;
-  font-size: 0.9rem;
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
 }
 
 .info-item span {
-  color: #333;
-  padding: 0.5rem;
-  background: #f8f9fa;
-  border-radius: 4px;
-}
-
-.no-container,
-.no-orders {
-  text-align: center;
-  padding: 2rem;
-  color: #666;
+  color: var(--text-primary);
+  padding: var(--spacing-sm);
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-md);
 }
 
 .orders-list {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: var(--spacing-md);
 }
 
 .order-item {
-  border: 1px solid #e9ecef;
-  border-radius: 6px;
-  padding: 1rem;
-  transition: box-shadow 0.2s ease;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  transition: box-shadow var(--transition-normal);
 }
 
 .order-item:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-sm);
 }
 
 .order-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--spacing-sm);
 }
 
 .order-type {
-  font-weight: 600;
-  padding: 0.25rem 0.75rem;
+  font-weight: var(--font-weight-semibold);
+  padding: var(--spacing-xs) var(--spacing-md);
   border-radius: 20px;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
 }
 
 .order-type.stock {
-  background: #d4edda;
-  color: #155724;
+  background: var(--color-primary-light);
+  color: var(--color-success);
 }
 
 .order-type.consume {
-  background: #f8d7da;
-  color: #721c24;
+  background: #fed7d7;
+  color: var(--color-danger);
 }
 
 .order-type.unknown {
-  background: #f8f9fa;
-  color: #6c757d;
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
 }
 
 .order-date {
-  color: #666;
-  font-size: 0.9rem;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
 }
 
 .order-details {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--spacing-sm);
 }
 
 .order-info {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: var(--spacing-xs);
 }
 
 .order-name {
-  font-weight: 600;
-  color: #333;
-  font-size: 1rem;
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  font-size: var(--font-size-base);
 }
 
 .order-metrics {
   display: flex;
-  gap: 1rem;
+  gap: var(--spacing-md);
   align-items: center;
 }
 
 .quantity {
-  font-weight: 600;
-  font-size: 1.1rem;
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-lg);
 }
 
 .amount {
-  color: #28a745;
-  font-weight: 500;
+  color: var(--color-success);
+  font-weight: var(--font-weight-medium);
 }
 
 .order-status {
-  color: #666;
-  font-size: 0.9rem;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
 }
 
 .order-detail-info {
-  margin-top: 0.5rem;
-  padding-top: 0.5rem;
-  border-top: 1px solid #e9ecef;
+  margin-top: var(--spacing-sm);
+  padding-top: var(--spacing-sm);
+  border-top: 1px solid var(--border-light);
 }
 
 .detail-item {
-  color: #666;
-  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
 }
 
 @media (max-width: 768px) {
   .container-detail-container {
-    padding: 1rem;
+    padding: var(--spacing-md);
   }
 
   .header-content {
     flex-direction: column;
-    gap: 1rem;
+    gap: var(--spacing-md);
   }
 
   .container-info-grid {
     grid-template-columns: 1fr;
   }
 
-  .transaction-header,
   .order-details {
     flex-direction: column;
     align-items: flex-start;
-    gap: 0.5rem;
+    gap: var(--spacing-sm);
   }
 
   .order-metrics {
     flex-direction: column;
     align-items: flex-start;
-    gap: 0.25rem;
+    gap: var(--spacing-xs);
   }
 }
 </style>

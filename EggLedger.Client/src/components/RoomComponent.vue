@@ -6,13 +6,13 @@
         <button
           v-if="isRoomAdmin"
           @click="showDeleteConfirm"
-          class="delete-room-btn"
+          class="btn btn-danger btn-sm"
           title="Delete Room"
         >
           🗑️ Delete Room
         </button>
       </div>
-      <div v-if="containersLoading">Loading containers...</div>
+      <div v-if="containersLoading" class="text-secondary">Loading containers...</div>
       <div v-else class="room-info">
         <span class="room-code">Room Code: {{ room.roomCode }}</span>
         <span class="room-stats">
@@ -32,18 +32,18 @@
           <p>Add new eggs to the room</p>
           <form @submit.prevent="handleStock">
             <div class="form-group">
-              <label>Container Name</label>
-              <input v-model="stockForm.containerName" type="text" placeholder="e.g., Fresh Eggs" />
+              <label class="form-label">Container Name</label>
+              <input v-model="stockForm.containerName" type="text" placeholder="e.g., Fresh Eggs" class="form-input" />
             </div>
             <div class="form-group">
-              <label>Quantity <span class="required">*</span></label>
-              <input v-model.number="stockForm.quantity" type="number" min="1" required />
+              <label class="form-label">Quantity <span class="required">*</span></label>
+              <input v-model.number="stockForm.quantity" type="number" min="1" class="form-input" required />
             </div>
             <div class="form-group">
-              <label>Price per container <span class="required">*</span></label>
-              <input v-model.number="stockForm.amount" type="number" step="0.01" min="0" required />
+              <label class="form-label">Price per container <span class="required">*</span></label>
+              <input v-model.number="stockForm.amount" type="number" step="0.01" min="0" class="form-input" required />
             </div>
-            <button type="submit" :disabled="loading" class="btn btn-success">
+            <button type="submit" :disabled="loading" class="btn btn-success w-full">
               {{ loading ? 'Adding...' : 'Add Stock' }}
             </button>
           </form>
@@ -55,22 +55,22 @@
           <p>Record eggs you've used</p>
           <form @submit.prevent="handleConsume">
             <div class="form-group">
-              <label>Quantity <span class="required">*</span></label>
-              <input v-model.number="consumeForm.quantity" type="number" min="1" required />
+              <label class="form-label">Quantity <span class="required">*</span></label>
+              <input v-model.number="consumeForm.quantity" type="number" min="1" class="form-input" required />
             </div>
-            <button type="submit" :disabled="loading" class="btn btn-primary">
+            <button type="submit" :disabled="loading" class="btn btn-primary w-full">
               {{ loading ? 'Recording...' : 'Record Consumption' }}
             </button>
           </form>
         </div>
       </div>
-      <p v-if="error" class="error-message">{{ error }}</p>
+      <div v-if="error" class="alert alert-error">{{ error }}</div>
     </div>
 
     <div class="container-list">
       <h3>Containers in this Room</h3>
-      <div v-if="containersLoading">Loading containers...</div>
-      <div v-else-if="containers.length === 0">No containers found. Add one above!</div>
+      <div v-if="containersLoading" class="text-secondary">Loading containers...</div>
+      <div v-else-if="containers.length === 0" class="text-secondary">No containers found. Add one above!</div>
       <ul v-else>
         <li v-for="container in containers" :key="container.containerId" class="container-item">
           <div class="container-info">
@@ -81,7 +81,7 @@
             <small class="owner-info">Owner: {{ container.buyerName }}</small>
           </div>
           <div class="container-actions">
-            <button @click="openContainerDetail(container)" class="btn-details">
+            <button @click="openContainerDetail(container)" class="btn btn-info btn-sm">
               View Details
             </button>
           </div>
@@ -90,39 +90,41 @@
     </div>
 
     <!-- Container Detail Modal -->
-    <div v-if="showDetailModal" class="detail-modal">
-      <div class="detail-content">
-        <div class="detail-header">
-          <h3>{{ selectedContainer.containerName }} - Details</h3>
+    <div v-if="showDetailModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 class="modal-title">{{ selectedContainer.containerName }} - Details</h3>
           <button @click="closeDetailModal" class="close-btn">×</button>
         </div>
-        <div class="detail-info">
-          <p><strong>Owner:</strong> {{ selectedContainer.buyerName }}</p>
-          <p>
-            <strong>Capacity:</strong>
-            {{ selectedContainer.TotalQuantity || selectedContainer.totalQuantity }}
-          </p>
-          <p>
-            <strong>Current Stock:</strong>
-            {{ selectedContainer.RemainingQuantity || selectedContainer.remainingQuantity }}
-          </p>
-          <p><strong>Created:</strong> {{ formatDate(selectedContainer.purchaseDateTime) }}</p>
+        <div class="modal-body">
+          <div class="detail-info">
+            <p><strong>Owner:</strong> {{ selectedContainer.buyerName }}</p>
+            <p>
+              <strong>Capacity:</strong>
+              {{ selectedContainer.TotalQuantity || selectedContainer.totalQuantity }}
+            </p>
+            <p>
+              <strong>Current Stock:</strong>
+              {{ selectedContainer.RemainingQuantity || selectedContainer.remainingQuantity }}
+            </p>
+            <p><strong>Created:</strong> {{ formatDate(selectedContainer.purchaseDateTime) }}</p>
+          </div>
         </div>
       </div>
     </div>
 
     <!-- Delete Room Confirmation Modal -->
-    <div v-if="showDeleteModal" class="delete-modal">
-      <div class="delete-content">
-        <div class="delete-header">
-          <h3>⚠️ Delete Room</h3>
+    <div v-if="showDeleteModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 class="modal-title text-danger">⚠️ Delete Room</h3>
           <button @click="closeDeleteModal" class="close-btn">×</button>
         </div>
-        <div class="delete-body">
+        <div class="modal-body">
           <p>Are you sure you want to delete "<strong>{{ room.roomName }}</strong>"?</p>
-          <p class="warning-text">
+          <div class="alert alert-warning">
             This action cannot be undone. All data associated with this room will be permanently deleted.
-          </p>
+          </div>
           <div class="room-stats-summary">
             <p><strong>This will permanently delete:</strong></p>
             <ul>
@@ -133,7 +135,7 @@
             </ul>
           </div>
         </div>
-        <div class="delete-actions">
+        <div class="modal-footer">
           <button @click="closeDeleteModal" class="btn btn-secondary">Cancel</button>
           <button @click="confirmDeleteRoom" :disabled="loading" class="btn btn-danger">
             {{ loading ? 'Deleting...' : 'Delete Room' }}
@@ -376,137 +378,64 @@ onUnmounted(() => {
 
 <style scoped>
 .dashboard-container {
-  max-width: 1200px;
+  max-width: var(--container-max-width);
   margin: 0 auto;
-  padding: 1rem;
+  padding: var(--spacing-xl);
 }
 
 .dashboard-header {
-  margin-bottom: 2rem;
-  text-align: center;
+  background: var(--bg-primary);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-xl);
+  box-shadow: var(--shadow-sm);
 }
 
 .header-top {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--spacing-md);
   flex-wrap: wrap;
-  gap: 1rem;
+  gap: var(--spacing-md);
 }
 
 .dashboard-header h2 {
   margin: 0;
-  color: #333;
+  color: var(--text-primary);
   flex: 1;
   text-align: left;
-}
-
-.delete-room-btn {
-  background: #dc3545;
-  color: white;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  transition: background-color 0.2s;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.delete-room-btn:hover {
-  background: #c82333;
-}
-
-.delete-room-btn:disabled {
-  background: #ccc;
-  cursor: not-allowed;
-}
-
-@media (max-width: 768px) {
-  .header-top {
-    flex-direction: column;
-    align-items: center;
-  }
-
-  .dashboard-header h2 {
-    text-align: center;
-  }
 }
 
 .room-info {
   display: flex;
   justify-content: center;
-  gap: 1rem;
+  gap: var(--spacing-md);
   flex-wrap: wrap;
-  margin-top: 0.5rem;
+  margin-top: var(--spacing-sm);
 }
 
 .room-code {
-  background: #e3f2fd;
-  color: #1976d2;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  font-family: monospace;
-  font-size: 0.9rem;
+  background: var(--color-primary-light);
+  color: var(--color-secondary);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-md);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-sm);
 }
 
 .room-stats {
-  color: #666;
-  font-size: 0.9rem;
-}
-
-.add-container-form {
-  background: #f9f9f9;
-  padding: 1.5rem;
-  border-radius: 8px;
-  margin-bottom: 2rem;
-}
-
-.add-container-form h3 {
-  margin: 0 0 1rem 0;
-  color: #333;
-}
-
-.add-container-form form {
-  display: flex;
-  gap: 1rem;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.add-container-form input {
-  padding: 0.5rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  flex: 1;
-  min-width: 150px;
-}
-
-.add-container-form button {
-  padding: 0.5rem 1rem;
-  background: #4caf50;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.add-container-form button:disabled {
-  background: #ccc;
-  cursor: not-allowed;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
 }
 
 .container-list {
-  margin-bottom: 2rem;
+  margin-bottom: var(--spacing-xl);
 }
 
 .container-list h3 {
-  margin: 0 0 1rem 0;
-  color: #333;
+  margin: 0 0 var(--spacing-md) 0;
+  color: var(--text-primary);
 }
 
 .container-list ul {
@@ -518,11 +447,11 @@ onUnmounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  margin-bottom: 0.5rem;
-  background: white;
+  padding: var(--spacing-md);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--spacing-sm);
+  background: var(--bg-primary);
 }
 
 .container-info {
@@ -531,343 +460,184 @@ onUnmounted(() => {
 
 .container-info strong {
   display: block;
-  margin-bottom: 0.25rem;
+  margin-bottom: var(--spacing-xs);
 }
 
 .owner-info {
-  color: #666;
-  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
   display: block;
-  margin-top: 0.25rem;
+  margin-top: var(--spacing-xs);
 }
 
 .container-actions {
   display: flex;
-  gap: 0.5rem;
+  gap: var(--spacing-sm);
   flex-wrap: wrap;
 }
 
 .container-actions button {
-  padding: 0.5rem 0.75rem;
+  padding: var(--spacing-sm) var(--spacing-md);
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-md);
   cursor: pointer;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   white-space: nowrap;
 }
 
-.btn-details {
-  background: #007bff;
-  color: white;
-}
-
 .main-actions {
-  margin-bottom: 2rem;
+  margin-bottom: var(--spacing-xl);
 }
 
 .main-actions h3 {
-  margin: 0 0 1rem 0;
-  color: #333;
+  margin: 0 0 var(--spacing-md) 0;
+  color: var(--text-primary);
 }
 
 .actions-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 1rem;
+  gap: var(--spacing-md);
 }
 
 .action-card {
-  background: white;
-  padding: 1.5rem;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background: var(--bg-primary);
+  padding: var(--spacing-lg);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
 }
 
 .action-card h4 {
-  margin: 0 0 0.5rem 0;
-  color: #333;
+  margin: 0 0 var(--spacing-sm) 0;
+  color: var(--text-primary);
 }
 
 .action-card p {
-  margin: 0 0 1rem 0;
-  color: #666;
-  font-size: 0.9rem;
+  margin: 0 0 var(--spacing-md) 0;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
 }
 
 .form-row {
   display: flex;
-  gap: 0.5rem;
+  gap: var(--spacing-sm);
   align-items: center;
 }
 
 .form-row select,
 .form-row input {
-  padding: 0.5rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  padding: var(--spacing-sm);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
   flex: 1;
 }
 
 .form-row button {
-  padding: 0.5rem 1rem;
-  background: #4caf50;
-  color: white;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--color-primary);
+  color: var(--text-inverse);
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-md);
   cursor: pointer;
   white-space: nowrap;
 }
 
 .form-row button:disabled {
-  background: #ccc;
+  background: var(--color-gray-400);
   cursor: not-allowed;
 }
 
 .form-group {
-  margin-bottom: 1rem;
+  margin-bottom: var(--spacing-md);
 }
 
 .form-group label {
   display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 500;
-  color: #333;
+  margin-bottom: var(--spacing-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
 }
 
 .form-group label .required {
-  color: #f44336;
-  font-weight: bold;
+  color: var(--color-danger);
+  font-weight: var(--font-weight-bold);
   margin-left: 2px;
 }
 
 .form-group input,
 .form-group select {
   width: 100%;
-  padding: 0.5rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  padding: var(--spacing-sm);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
   box-sizing: border-box;
 }
 
 .btn {
-  padding: 0.5rem 1rem;
+  padding: var(--spacing-sm) var(--spacing-md);
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-md);
   cursor: pointer;
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
   width: 100%;
-  margin-top: 0.5rem;
+  margin-top: var(--spacing-sm);
 }
 
 .btn-success {
-  background: #4caf50;
-  color: white;
+  background: var(--color-success);
+  color: var(--text-inverse);
 }
 
 .btn-primary {
-  background: #007bff;
-  color: white;
+  background: var(--color-primary);
+  color: var(--text-inverse);
 }
 
 .btn:disabled {
-  background: #ccc;
+  background: var(--color-gray-400);
   cursor: not-allowed;
-}
-
-.detail-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.detail-content {
-  background: white;
-  border-radius: 8px;
-  padding: 2rem;
-  width: 90%;
-  max-width: 400px;
-}
-
-.detail-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-}
-
-.detail-header h3 {
-  margin: 0;
-  color: #333;
-}
-
-.close-btn {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  cursor: pointer;
-  color: #666;
 }
 
 .detail-info p {
-  margin: 0.5rem 0;
-  color: #555;
-}
-
-.error-message {
-  color: #f44336;
-  font-size: 0.9rem;
-  margin-top: 0.5rem;
-}
-
-.notification {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  padding: 1rem 1.5rem;
-  border-radius: 6px;
-  color: white;
-  font-weight: 500;
-  z-index: 1000;
-}
-
-.notification.success {
-  background: #4caf50;
-}
-
-.notification.error {
-  background: #f44336;
-}
-
-/* Delete Modal Styles */
-.delete-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.delete-content {
-  background: white;
-  border-radius: 12px;
-  padding: 2rem;
-  width: 90%;
-  max-width: 500px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-}
-
-.delete-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-}
-
-.delete-header h3 {
-  margin: 0;
-  color: #dc3545;
-  font-size: 1.5rem;
-}
-
-.delete-body {
-  margin-bottom: 2rem;
-}
-
-.delete-body p {
-  margin: 0.5rem 0;
-  color: #333;
-  line-height: 1.5;
-}
-
-.warning-text {
-  color: #dc3545;
-  font-weight: 500;
-  background: #fff5f5;
-  padding: 0.75rem;
-  border-radius: 4px;
-  border-left: 4px solid #dc3545;
+  margin: var(--spacing-sm) 0;
+  color: var(--text-secondary);
 }
 
 .room-stats-summary {
-  background: #f8f9fa;
-  padding: 1rem;
-  border-radius: 6px;
-  margin-top: 1rem;
+  background: var(--bg-tertiary);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+  margin-top: var(--spacing-md);
 }
 
 .room-stats-summary ul {
-  margin: 0.5rem 0 0 0;
-  padding-left: 1.5rem;
+  margin: var(--spacing-sm) 0 0 0;
+  padding-left: var(--spacing-lg);
 }
 
 .room-stats-summary li {
-  margin: 0.25rem 0;
-  color: #666;
+  margin: var(--spacing-xs) 0;
+  color: var(--text-secondary);
 }
 
-.delete-actions {
-  display: flex;
-  gap: 1rem;
-  justify-content: flex-end;
-}
-
-.btn-secondary {
-  background: #6c757d;
-  color: white;
-  border: none;
-  padding: 0.75rem 1.5rem;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 1rem;
-  transition: background-color 0.2s;
-}
-
-.btn-secondary:hover {
-  background: #5a6268;
-}
-
-.btn-danger {
-  background: #dc3545;
-  color: white;
-  border: none;
-  padding: 0.75rem 1.5rem;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 1rem;
-  transition: background-color 0.2s;
-}
-
-.btn-danger:hover {
-  background: #c82333;
-}
-
-.btn-danger:disabled {
-  background: #ccc;
-  cursor: not-allowed;
+.w-full {
+  width: 100%;
 }
 
 @media (max-width: 768px) {
-  .add-container-form form {
+  .header-top {
     flex-direction: column;
-    align-items: stretch;
+    align-items: center;
+  }
+
+  .dashboard-header h2 {
+    text-align: center;
   }
 
   .container-item {
     flex-direction: column;
     align-items: stretch;
-    gap: 1rem;
+    gap: var(--spacing-md);
   }
 
   .actions-grid {

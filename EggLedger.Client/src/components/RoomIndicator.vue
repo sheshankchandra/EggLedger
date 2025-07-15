@@ -5,7 +5,7 @@
         selectedRoom.roomCode
       }})</span
     >
-    <button @click="switchRoom" class="switch-room-btn">Switch Room</button>
+    <button @click="switchRoom" class="btn btn-warning btn-sm">Switch Room</button>
   </div>
 </template>
 
@@ -36,22 +36,12 @@ const switchRoom = () => {
 
 <style scoped>
 .room-indicator {
-  background: #e8f5e8;
-  padding: 0.5rem 2rem;
+  background: var(--color-primary-light);
+  padding: var(--spacing-sm) var(--spacing-xl);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  max-width: 1200px;
+  max-width: var(--container-max-width);
   margin: 0 auto;
-}
-
-.switch-room-btn {
-  background: #ff9800;
-  color: white;
-  border: none;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.9rem;
 }
 </style>

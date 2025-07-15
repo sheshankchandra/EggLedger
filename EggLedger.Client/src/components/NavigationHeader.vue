@@ -9,7 +9,7 @@
         </router-link>
         <router-link to="/profile" class="nav-btn" active-class="active"> Profile </router-link>
         <div class="nav-spacer"></div>
-        <button @click="handleLogout" class="logout-btn">Logout</button>
+        <button @click="handleLogout" class="btn btn-danger btn-sm">Logout</button>
       </nav>
     </div>
   </header>
@@ -39,15 +39,15 @@ const handleLogout = () => {
 
 <style scoped>
 .main-header {
-  background: white;
-  border-bottom: 1px solid #e0e0e0;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--border-light);
+  box-shadow: var(--shadow-sm);
 }
 
 .header-content {
-  max-width: 1200px;
+  max-width: var(--container-max-width);
   margin: 0 auto;
-  padding: 1rem 2rem;
+  padding: var(--spacing-md) var(--spacing-xl);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -55,56 +55,42 @@ const handleLogout = () => {
 
 .app-title {
   margin: 0;
-  color: #333;
+  color: var(--text-primary);
   cursor: pointer;
-  transition: color 0.2s;
+  transition: color var(--transition-fast);
 }
 
 .app-title:hover {
-  color: #4caf50;
+  color: var(--color-primary);
 }
 
 .main-nav {
   display: flex;
-  gap: 1rem;
+  gap: var(--spacing-md);
   align-items: center;
 }
 
 .nav-spacer {
-  width: 2rem;
+  width: var(--spacing-xl);
 }
 
 .nav-btn {
-  padding: 0.5rem 1rem;
-  border: 1px solid #ddd;
-  background: white;
-  border-radius: 4px;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 1px solid var(--border-medium);
+  background: var(--bg-primary);
+  border-radius: var(--radius-md);
   text-decoration: none;
-  color: #333;
-  transition: all 0.2s;
+  color: var(--text-primary);
+  transition: all var(--transition-normal);
 }
 
 .nav-btn:hover {
-  background: #f0f0f0;
+  background: var(--bg-tertiary);
 }
 
 .nav-btn.active {
-  background: #4caf50;
-  color: white;
-  border-color: #4caf50;
-}
-
-.logout-btn {
-  padding: 0.5rem 1rem;
-  border: 1px solid #f44336;
-  background: #f44336;
-  color: white;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.logout-btn:hover {
-  background: #d32f2f;
+  background: var(--color-primary);
+  color: var(--text-inverse);
+  border-color: var(--color-primary);
 }
 </style>
