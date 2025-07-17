@@ -61,6 +61,7 @@
 .btn-danger {
   background: var(--color-danger);
   color: var(--text-inverse);
+  margin-left: var(--spacing-xl);
 }
 
 .btn-danger:hover:not(:disabled) {
@@ -227,21 +228,21 @@
   margin: 0;
 }
 
-.radio-group input[type="radio"],
-.checkbox-group input[type="checkbox"] {
+.radio-group input[type='radio'],
+.checkbox-group input[type='checkbox'] {
   display: none;
 }
 
-.radio-group input[type="radio"]:checked + span,
-.checkbox-group input[type="checkbox"]:checked + span {
+.radio-group input[type='radio']:checked + span,
+.checkbox-group input[type='checkbox']:checked + span {
   color: var(--text-inverse);
 }
 
-.radio-group label:has(input[value="false"]:checked) {
+.radio-group label:has(input[value='false']:checked) {
   background-color: var(--color-secondary);
 }
 
-.radio-group label:has(input[value="true"]:checked) {
+.radio-group label:has(input[value='true']:checked) {
   background-color: var(--color-success);
 }
 

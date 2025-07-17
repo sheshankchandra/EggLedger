@@ -70,7 +70,9 @@
           <p class="text-secondary">Loading...</p>
         </div>
         <div v-else-if="userContainers.length === 0" class="card text-center p-5">
-          <p class="text-secondary">No containers found. Stock some eggs to create your first container!</p>
+          <p class="text-secondary">
+            No containers found. Stock some eggs to create your first container!
+          </p>
         </div>
         <div v-else class="containers-list">
           <div
@@ -109,7 +111,6 @@
           <button @click="showChangePassword = true" class="btn btn-primary">
             Change Password
           </button>
-          <button @click="confirmLogout" class="btn btn-danger">Logout</button>
         </div>
       </div>
 
@@ -309,12 +310,6 @@ const handleChangePassword = async () => {
     console.error(err)
   } finally {
     changingPassword.value = false
-  }
-}
-
-const confirmLogout = () => {
-  if (confirm('Are you sure you want to logout?')) {
-    authStore.logout()
   }
 }
 
@@ -611,15 +606,6 @@ watch(selectedRoom, async (newRoom, oldRoom) => {
 
 .btn-secondary:hover {
   background: var(--color-secondary-dark);
-}
-
-.btn-danger {
-  background: var(--color-danger);
-  color: var(--text-inverse);
-}
-
-.btn-danger:hover {
-  background: var(--color-danger-dark);
 }
 
 .btn:disabled {

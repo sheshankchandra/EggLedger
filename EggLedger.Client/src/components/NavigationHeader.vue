@@ -1,15 +1,23 @@
 <template>
   <header class="main-header">
     <div class="header-content">
-      <h1 @click="$router.push('/')" class="app-title">EggLedger</h1>
+      <div @click="$router.push('/')" class="app-branding">
+        <img src="/eggledger.png" alt="EggLedger Logo" class="app-logo" />
+        <h1 class="app-title">EggLedger</h1>
+      </div>
       <nav class="main-nav">
-        <router-link to="/" class="nav-btn" active-class="active"> Dashboard </router-link>
+        <router-link to="/" class="nav-btn" active-class="active">
+          Dashboard
+        </router-link>
         <router-link to="/room" class="nav-btn" active-class="active" v-if="selectedRoom">
           Room
         </router-link>
-        <router-link to="/profile" class="nav-btn" active-class="active"> Profile </router-link>
-        <div class="nav-spacer"></div>
-        <button @click="handleLogout" class="btn btn-danger btn-sm">Logout</button>
+        <router-link to="/profile" class="nav-btn" active-class="active">
+          Profile
+        </router-link>
+        <button @click="handleLogout" class="btn btn-danger">
+          Logout
+        </button>
       </nav>
     </div>
   </header>
@@ -53,14 +61,24 @@ const handleLogout = () => {
   align-items: center;
 }
 
+.app-branding {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  cursor: pointer;
+}
+
+.app-logo {
+  height: 32px;
+}
+
 .app-title {
   margin: 0;
   color: var(--text-primary);
-  cursor: pointer;
   transition: color var(--transition-fast);
 }
 
-.app-title:hover {
+.app-branding:hover .app-title {
   color: var(--color-primary);
 }
 
@@ -92,5 +110,17 @@ const handleLogout = () => {
   background: var(--color-primary);
   color: var(--text-inverse);
   border-color: var(--color-primary);
+}
+
+@media (max-width: 768px) {
+  .header-content {
+    flex-direction: column;
+    gap: var(--spacing-md);
+  }
+
+  .main-nav {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
 }
 </style>

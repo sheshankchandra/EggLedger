@@ -5,14 +5,12 @@
       <p class="welcome-description">Manage your orders and inventory efficiently</p>
 
       <div class="action-buttons">
-        <router-link to="/eggledger/accounts/login" class="btn btn-primary">
-          Sign In
-        </router-link>
-        <router-link to="/eggledger/accounts/signup" class="btn btn-secondary">
-          Create Account
-        </router-link>
+        <router-link to="/accounts/login" class="btn btn-primary"> Sign In </router-link>
+        <router-link to="/accounts/signup" class="btn btn-secondary"> Create Account </router-link>
       </div>
     </div>
+
+    <div class="background-pattern"></div>
   </div>
 </template>
 
@@ -28,12 +26,25 @@
   justify-content: center;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   padding: 2rem;
+  position: relative;
+}
+
+.background-pattern {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  z-index: 0;
 }
 
 .welcome-section {
   text-align: center;
   color: white;
   max-width: 600px;
+  position: relative;
+  z-index: 1;
 }
 
 .welcome-title {

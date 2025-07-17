@@ -33,15 +33,33 @@
           <form @submit.prevent="handleStock">
             <div class="form-group">
               <label class="form-label">Container Name</label>
-              <input v-model="stockForm.containerName" type="text" placeholder="e.g., Fresh Eggs" class="form-input" />
+              <input
+                v-model="stockForm.containerName"
+                type="text"
+                placeholder="e.g., Fresh Eggs"
+                class="form-input"
+              />
             </div>
             <div class="form-group">
               <label class="form-label">Quantity <span class="required">*</span></label>
-              <input v-model.number="stockForm.quantity" type="number" min="1" class="form-input" required />
+              <input
+                v-model.number="stockForm.quantity"
+                type="number"
+                min="1"
+                class="form-input"
+                required
+              />
             </div>
             <div class="form-group">
               <label class="form-label">Price per container <span class="required">*</span></label>
-              <input v-model.number="stockForm.amount" type="number" step="0.01" min="0" class="form-input" required />
+              <input
+                v-model.number="stockForm.amount"
+                type="number"
+                step="0.01"
+                min="0"
+                class="form-input"
+                required
+              />
             </div>
             <button type="submit" :disabled="loading" class="btn btn-success w-full">
               {{ loading ? 'Adding...' : 'Add Stock' }}
@@ -56,7 +74,13 @@
           <form @submit.prevent="handleConsume">
             <div class="form-group">
               <label class="form-label">Quantity <span class="required">*</span></label>
-              <input v-model.number="consumeForm.quantity" type="number" min="1" class="form-input" required />
+              <input
+                v-model.number="consumeForm.quantity"
+                type="number"
+                min="1"
+                class="form-input"
+                required
+              />
             </div>
             <button type="submit" :disabled="loading" class="btn btn-primary w-full">
               {{ loading ? 'Recording...' : 'Record Consumption' }}
@@ -70,7 +94,9 @@
     <div class="container-list">
       <h3>Containers in this Room</h3>
       <div v-if="containersLoading" class="text-secondary">Loading containers...</div>
-      <div v-else-if="containers.length === 0" class="text-secondary">No containers found. Add one above!</div>
+      <div v-else-if="containers.length === 0" class="text-secondary">
+        No containers found. Add one above!
+      </div>
       <ul v-else>
         <li v-for="container in containers" :key="container.containerId" class="container-item">
           <div class="container-info">
@@ -121,9 +147,13 @@
           <button @click="closeDeleteModal" class="close-btn">×</button>
         </div>
         <div class="modal-body">
-          <p>Are you sure you want to delete "<strong>{{ room.roomName }}</strong>"?</p>
+          <p>
+            Are you sure you want to delete "<strong>{{ room.roomName }}</strong
+            >"?
+          </p>
           <div class="alert alert-warning">
-            This action cannot be undone. All data associated with this room will be permanently deleted.
+            This action cannot be undone. All data associated with this room will be permanently
+            deleted.
           </div>
           <div class="room-stats-summary">
             <p><strong>This will permanently delete:</strong></p>
@@ -393,11 +423,14 @@ onUnmounted(() => {
 
 .header-top {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
   margin-bottom: var(--spacing-md);
   flex-wrap: wrap;
   gap: var(--spacing-md);
+}
+
+.header-top .btn {
+  width: auto;
+  flex-shrink: 0;
 }
 
 .dashboard-header h2 {

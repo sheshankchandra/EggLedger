@@ -8,33 +8,18 @@
 
       <!-- Mode Toggle Tabs -->
       <div class="mode-toggle">
-        <button
-          @click="setMode('login')"
-          :class="['mode-tab', { active: currentMode === 'login' }]"
-        >
+        <button @click="switchToLogin" :class="['mode-tab', { active: currentMode === 'login' }]">
           Sign In
         </button>
-        <button
-          @click="setMode('signup')"
-          :class="['mode-tab', { active: currentMode === 'signup' }]"
-        >
+        <button @click="switchToSignup" :class="['mode-tab', { active: currentMode === 'signup' }]">
           Sign Up
         </button>
       </div>
 
-      <!-- Form Components -->
       <div class="form-container">
         <Transition name="slide" mode="out-in">
-          <LoginForm
-            v-if="currentMode === 'login'"
-            @switch-mode="switchToSignup"
-            key="login"
-          />
-          <SignupForm
-            v-else
-            @switch-mode="switchToLogin"
-            key="signup"
-          />
+          <LoginForm v-if="currentMode === 'login'" />
+          <SignupForm v-else />
         </Transition>
       </div>
     </div>
@@ -45,7 +30,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, watchEffect } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import LoginForm from '@/components/auth/LoginForm.vue'
 import SignupForm from '@/components/auth/SignupForm.vue'
@@ -58,23 +43,18 @@ const router = useRouter()
 const currentMode = ref('login')
 
 // Methods
-const setMode = (mode) => {
-  currentMode.value = mode
-  // Update the URL without triggering navigation
-  const newPath = mode === 'login' ? '/eggledger/accounts/login' : '/eggledger/accounts/signup'
-  router.replace(newPath)
-}
-
 const switchToLogin = () => {
-  setMode('login')
+  currentMode.value = 'login'
+  router.push('/accounts/login')
 }
 
 const switchToSignup = () => {
-  setMode('signup')
+  currentMode.value = 'signup'
+  router.push('/accounts/signup')
 }
 
-// Initialize mode based on route
-onMounted(() => {
+// Initialize mode based on route and react to changes
+watchEffect(() => {
   if (route.path.includes('signup')) {
     currentMode.value = 'signup'
   } else {

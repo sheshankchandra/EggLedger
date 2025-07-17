@@ -50,3 +50,7 @@ npm run build
 ```sh
 npm run lint
 ```
+
+## Acknowledgements
+
+- Favicon and icon assets by [Freepik](https://www.freepik.com) from [Flaticon](https://www.flaticon.com/free-icons/egg)
