@@ -5,8 +5,10 @@
       <p>Manage your account settings and room memberships</p>
     </div>
 
-    <div v-if="loading" class="loading">Loading profile...</div>
-    <div v-if="error" class="error-message">{{ error }}</div>
+    <div v-if="loading" class="card text-center p-5">
+      <p class="text-secondary">Loading profile...</p>
+    </div>
+    <div v-if="error" class="alert alert-error">{{ error }}</div>
 
     <div v-if="user" class="profile-content">
       <!-- User Information -->
@@ -14,19 +16,19 @@
         <h3>Personal Information</h3>
         <div class="info-grid">
           <div class="info-item">
-            <label>Full Name</label>
+            <label class="form-label">Full Name</label>
             <span>{{ user.name }}</span>
           </div>
           <div class="info-item">
-            <label>Email</label>
+            <label class="form-label">Email</label>
             <span>{{ user.email }}</span>
           </div>
           <div class="info-item">
-            <label>User ID</label>
+            <label class="form-label">User ID</label>
             <span class="user-id">{{ user.id || user.userId }}</span>
           </div>
           <div class="info-item">
-            <label>Role</label>
+            <label class="form-label">Role</label>
             <span>{{ getRoleName(user.role) }}</span>
           </div>
         </div>
@@ -35,8 +37,8 @@
       <!-- Room Memberships -->
       <div class="profile-section">
         <h3>Room Memberships</h3>
-        <div v-if="authStore.getUserRooms.length === 0" class="no-rooms">
-          <p>You're not a member of any rooms yet.</p>
+        <div v-if="authStore.getUserRooms.length === 0" class="card text-center p-5">
+          <p class="text-secondary">You're not a member of any rooms yet.</p>
         </div>
         <div v-else class="rooms-list">
           <div v-for="room in authStore.getUserRooms" :key="room.roomId" class="room-item">
@@ -60,13 +62,17 @@
       <!-- My Containers -->
       <div class="profile-section">
         <h3>My Containers {{ selectedRoom ? `in ${selectedRoom.roomName}` : '' }}</h3>
-        <div v-if="!selectedRoom" class="no-room-selected">
-          <p>No room selected.</p>
+        <div v-if="!selectedRoom" class="card text-center p-5">
+          <p class="text-secondary mb-4">No room selected.</p>
           <router-link to="/" class="btn btn-primary">Select Room</router-link>
         </div>
-        <div v-else-if="loadingContainers" class="loading">Loading...</div>
-        <div v-else-if="userContainers.length === 0" class="no-containers">
-          <p>No containers found. Stock some eggs to create your first container!</p>
+        <div v-else-if="loadingContainers" class="card text-center p-5">
+          <p class="text-secondary">Loading...</p>
+        </div>
+        <div v-else-if="userContainers.length === 0" class="card text-center p-5">
+          <p class="text-secondary">
+            No containers found. Stock some eggs to create your first container!
+          </p>
         </div>
         <div v-else class="containers-list">
           <div
@@ -84,7 +90,7 @@
               <span class="stat-value">{{ formatDate(container.purchaseDateTime) }}</span>
             </div>
             <div class="container-actions">
-              <button @click="viewContainerDetails(container)" class="btn btn-details">
+              <button @click="viewContainerDetails(container)" class="btn btn-info btn-sm">
                 View Details
               </button>
             </div>
@@ -105,7 +111,6 @@
           <button @click="showChangePassword = true" class="btn btn-primary">
             Change Password
           </button>
-          <button @click="confirmLogout" class="btn btn-danger">Logout</button>
         </div>
       </div>
 
@@ -134,34 +139,36 @@
     </div>
 
     <!-- Change Password Modal -->
-    <div v-if="showChangePassword" class="modal-overlay">
+    <div v-if="showChangePassword" class="modal">
       <div class="modal-content">
         <div class="modal-header">
-          <h3>Change Password</h3>
+          <h3 class="modal-title">Change Password</h3>
           <button @click="showChangePassword = false" class="close-btn">×</button>
         </div>
-        <form @submit.prevent="handleChangePassword">
-          <div class="form-group">
-            <label>Current Password</label>
-            <input v-model="passwordForm.current" type="password" required />
-          </div>
-          <div class="form-group">
-            <label>New Password</label>
-            <input v-model="passwordForm.new" type="password" required />
-          </div>
-          <div class="form-group">
-            <label>Confirm New Password</label>
-            <input v-model="passwordForm.confirm" type="password" required />
-          </div>
-          <div class="modal-actions">
-            <button type="button" @click="showChangePassword = false" class="btn btn-secondary">
-              Cancel
-            </button>
-            <button type="submit" :disabled="changingPassword" class="btn btn-primary">
-              {{ changingPassword ? 'Changing...' : 'Change Password' }}
-            </button>
-          </div>
-        </form>
+        <div class="modal-body">
+          <form @submit.prevent="handleChangePassword">
+            <div class="form-group">
+              <label class="form-label">Current Password</label>
+              <input v-model="passwordForm.current" type="password" class="form-input" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label">New Password</label>
+              <input v-model="passwordForm.new" type="password" class="form-input" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Confirm New Password</label>
+              <input v-model="passwordForm.confirm" type="password" class="form-input" required />
+            </div>
+            <div class="modal-footer">
+              <button type="button" @click="showChangePassword = false" class="btn btn-secondary">
+                Cancel
+              </button>
+              <button type="submit" :disabled="changingPassword" class="btn btn-primary">
+                {{ changingPassword ? 'Changing...' : 'Change Password' }}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
 
@@ -306,12 +313,6 @@ const handleChangePassword = async () => {
   }
 }
 
-const confirmLogout = () => {
-  if (confirm('Are you sure you want to logout?')) {
-    authStore.logout()
-  }
-}
-
 // Navigate to container details with container information
 const viewContainerDetails = (container) => {
   try {
@@ -385,199 +386,159 @@ watch(selectedRoom, async (newRoom, oldRoom) => {
 
 <style scoped>
 .profile-container {
-  max-width: 800px;
+  max-width: var(--container-max-width);
   margin: 0 auto;
-  padding: 2rem;
+  padding: var(--spacing-xl);
 }
 
 .profile-header {
   text-align: center;
-  margin-bottom: 2rem;
+  margin-bottom: var(--spacing-xl);
 }
 
 .profile-header h2 {
-  margin: 0 0 0.5rem 0;
-  color: #333;
+  margin: 0 0 var(--spacing-sm) 0;
+  color: var(--text-primary);
 }
 
 .profile-header p {
-  color: #666;
+  color: var(--text-secondary);
   margin: 0;
-}
-
-.loading {
-  text-align: center;
-  padding: 2rem;
-  color: #666;
-}
-
-.error-message {
-  color: #f44336;
-  text-align: center;
-  padding: 1rem;
-  background: #ffebee;
-  border-radius: 4px;
-  margin-bottom: 1rem;
 }
 
 .profile-content {
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: var(--spacing-xl);
 }
 
 .profile-section {
-  background: white;
-  padding: 2rem;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background: var(--bg-primary);
+  padding: var(--spacing-xl);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
 }
 
 .profile-section h3 {
-  margin: 0 0 1.5rem 0;
-  color: #333;
-  border-bottom: 2px solid #f0f0f0;
-  padding-bottom: 0.5rem;
+  margin: 0 0 var(--spacing-lg) 0;
+  color: var(--text-primary);
+  border-bottom: 2px solid var(--border-light);
+  padding-bottom: var(--spacing-sm);
 }
 
 .info-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1rem;
+  gap: var(--spacing-md);
 }
 
 .info-item {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: var(--spacing-xs);
 }
 
 .info-item label {
-  font-weight: 600;
-  color: #555;
-  font-size: 0.9rem;
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
 }
 
 .info-item span {
-  color: #333;
-  font-size: 1rem;
+  color: var(--text-primary);
+  font-size: var(--font-size-base);
 }
 
 .user-id {
-  font-family: monospace;
-  background: #f5f5f5;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.9rem !important;
-}
-
-.no-rooms {
-  text-align: center;
-  padding: 2rem;
-  background: #f8f9fa;
-  border-radius: 8px;
-  color: #666;
+  font-family: var(--font-family-mono);
+  background: var(--bg-tertiary);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm) !important;
 }
 
 .rooms-list {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: var(--spacing-md);
 }
 
 .room-item {
-  background: #f8f9fa;
-  padding: 1.5rem;
-  border-radius: 8px;
-  border-left: 4px solid #4caf50;
+  background: var(--bg-tertiary);
+  padding: var(--spacing-lg);
+  border-radius: var(--radius-lg);
+  border-left: 4px solid var(--color-primary);
 }
 
 .room-info {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--spacing-sm);
 }
 
 .room-info h4 {
   margin: 0;
-  color: #333;
+  color: var(--text-primary);
 }
 
 .room-code {
-  background: #e3f2fd;
-  color: #1976d2;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  font-family: monospace;
-  font-size: 0.9rem;
+  background: var(--color-primary-light);
+  color: var(--color-secondary);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-md);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-sm);
 }
 
 .room-details {
   display: flex;
-  gap: 1rem;
-  margin-bottom: 0.5rem;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-sm);
   flex-wrap: wrap;
 }
 
 .room-stat {
-  background: white;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  color: #555;
+  background: var(--bg-primary);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
 }
 
 .room-meta {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 0.9rem;
-  color: #666;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
 }
 
 .admin-badge {
-  background: #ff9800;
-  color: white;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  font-weight: 600;
-}
-
-/* Container Styles */
-.no-room-selected {
-  text-align: center;
-  padding: 2rem;
-  background: #fff3cd;
-  border-radius: 8px;
-  color: #856404;
-}
-
-.no-containers {
-  text-align: center;
-  padding: 2rem;
-  background: #f8f9fa;
-  border-radius: 8px;
-  color: #666;
+  background: var(--color-warning);
+  color: var(--text-inverse);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
 }
 
 .containers-list {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: var(--spacing-md);
 }
 
 .container-item {
-  background: #f8f9fa;
-  padding: 1.5rem;
-  border-radius: 8px;
-  border-left: 4px solid #ff9800;
-  transition: all 0.2s ease;
+  background: var(--bg-tertiary);
+  padding: var(--spacing-lg);
+  border-radius: var(--radius-lg);
+  border-left: 4px solid var(--color-warning);
+  transition: all var(--transition-normal);
 }
 
 .container-item:hover {
-  background: #e9ecef;
+  background: var(--bg-secondary);
   transform: translateY(-1px);
 }
 
@@ -585,28 +546,28 @@ watch(selectedRoom, async (newRoom, oldRoom) => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
+  margin-bottom: var(--spacing-md);
 }
 
 .container-header h4 {
   margin: 0;
-  color: #333;
-  font-size: 1.1rem;
+  color: var(--text-primary);
+  font-size: var(--font-size-lg);
 }
 
 .container-stats {
   display: flex;
-  gap: 1rem;
-  margin-bottom: 1rem;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
   flex-wrap: wrap;
 }
 
 .stat-value {
-  background: white;
-  padding: 0.5rem;
-  border-radius: 4px;
-  font-size: 0.9rem;
-  color: #333;
+  background: var(--bg-primary);
+  padding: var(--spacing-sm);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
 }
 
 .container-actions {
@@ -614,189 +575,114 @@ watch(selectedRoom, async (newRoom, oldRoom) => {
   justify-content: flex-end;
 }
 
-.btn-details {
-  background: #17a2b8;
-  color: white;
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
-  text-decoration: none;
-  font-size: 0.9rem;
-  font-weight: 500;
-  transition: all 0.2s ease;
-}
-
-.btn-details:hover {
-  background: #138496;
-  text-decoration: none;
-  color: white;
-  transform: translateY(-1px);
-}
-
 .actions-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 1rem;
+  gap: var(--spacing-md);
 }
 
 .btn {
-  padding: 0.75rem 1rem;
+  padding: var(--spacing-md) var(--spacing-md);
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-md);
   cursor: pointer;
-  font-weight: 500;
-  transition: all 0.2s;
+  font-weight: var(--font-weight-medium);
+  transition: all var(--transition-normal);
 }
 
 .btn-primary {
-  background: #4caf50;
-  color: white;
+  background: var(--color-primary);
+  color: var(--text-inverse);
 }
 
 .btn-primary:hover {
-  background: #45a049;
+  background: var(--color-primary-dark);
 }
 
 .btn-secondary {
-  background: #6c757d;
-  color: white;
+  background: var(--color-secondary);
+  color: var(--text-inverse);
 }
 
 .btn-secondary:hover {
-  background: #545b62;
-}
-
-.btn-danger {
-  background: #f44336;
-  color: white;
-}
-
-.btn-danger:hover {
-  background: #d32f2f;
+  background: var(--color-secondary-dark);
 }
 
 .btn:disabled {
-  background: #ccc;
+  background: var(--color-gray-400);
   cursor: not-allowed;
 }
 
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 1rem;
+  gap: var(--spacing-md);
 }
 
 .stat-card {
-  background: #f8f9fa;
-  padding: 1.5rem;
-  border-radius: 8px;
+  background: var(--bg-tertiary);
+  padding: var(--spacing-lg);
+  border-radius: var(--radius-lg);
   text-align: center;
 }
 
 .stat-number {
-  font-size: 2rem;
-  font-weight: 700;
-  color: #4caf50;
-  margin-bottom: 0.5rem;
+  font-size: var(--font-size-4xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary);
+  margin-bottom: var(--spacing-sm);
 }
 
 .stat-label {
-  color: #666;
-  font-size: 0.9rem;
-}
-
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.modal-content {
-  background: white;
-  border-radius: 8px;
-  padding: 2rem;
-  width: 90%;
-  max-width: 400px;
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-}
-
-.modal-header h3 {
-  margin: 0;
-  color: #333;
-}
-
-.close-btn {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  cursor: pointer;
-  color: #666;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
 }
 
 .form-group {
-  margin-bottom: 1rem;
+  margin-bottom: var(--spacing-md);
 }
 
 .form-group label {
   display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 500;
-  color: #555;
+  margin-bottom: var(--spacing-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-muted);
 }
 
 .form-group input {
   width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  padding: var(--spacing-md);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
   box-sizing: border-box;
-}
-
-.modal-actions {
-  display: flex;
-  gap: 1rem;
-  justify-content: flex-end;
-  margin-top: 1.5rem;
 }
 
 .notification {
   position: fixed;
-  top: 20px;
-  right: 20px;
-  padding: 1rem 1.5rem;
-  border-radius: 6px;
-  color: white;
-  font-weight: 500;
+  top: var(--spacing-md);
+  right: var(--spacing-md);
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-radius: var(--radius-md);
+  color: var(--text-inverse);
+  font-weight: var(--font-weight-semibold);
   z-index: 1001;
 }
 
 .notification.success {
-  background: #4caf50;
+  background: var(--color-success);
 }
 
 .notification.error {
-  background: #f44336;
+  background: var(--color-danger);
 }
 
 @media (max-width: 768px) {
   .profile-container {
-    padding: 1rem;
+    padding: var(--spacing-md);
   }
 
   .profile-section {
-    padding: 1.5rem;
+    padding: var(--spacing-lg);
   }
 
   .info-grid {
@@ -814,23 +700,23 @@ watch(selectedRoom, async (newRoom, oldRoom) => {
   .room-info {
     flex-direction: column;
     align-items: flex-start;
-    gap: 0.5rem;
+    gap: var(--spacing-sm);
   }
 
   .room-details {
     flex-direction: column;
-    gap: 0.5rem;
+    gap: var(--spacing-sm);
   }
 
   .container-header {
     flex-direction: column;
     align-items: flex-start;
-    gap: 0.5rem;
+    gap: var(--spacing-sm);
   }
 
   .container-stats {
     flex-direction: column;
-    gap: 1rem;
+    gap: var(--spacing-md);
   }
 
   .container-actions {

@@ -8,7 +8,7 @@
 
     <!-- Dashboard Content -->
     <main class="main-content">
-      <DashboardComponent @room-selected="handleRoomSelected" @room-created="handleRoomCreated" />
+      <DashboardComponent @room-selected="handleRoomSelected"/>
     </main>
   </div>
 </template>
@@ -34,21 +34,17 @@ const handleRoomSelected = (room) => {
   router.push('/room')
 }
 
-const handleRoomCreated = (room) => {
-  sessionStorage.setItem('selectedRoomCode', room.roomCode)
-  router.push('/room')
-}
 </script>
 
 <style scoped>
 .dashboard-view {
   min-height: 100vh;
-  background: #f5f5f5;
+  background: var(--bg-secondary);
 }
 
 .main-content {
-  max-width: 1200px;
+  max-width: var(--container-max-width);
   margin: 0 auto;
-  padding: 2rem;
+  padding: var(--spacing-xl);
 }
 </style>

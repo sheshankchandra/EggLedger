@@ -1,23 +1,42 @@
 <template>
-  <div class="modal-overlay" @click.self="$emit('close')">
+  <div class="modal" @click.self="$emit('close')">
     <div class="modal-content">
-      <h3>Record Egg Consumption</h3>
-      <h4>From: {{ container.name }}</h4>
-      <form @submit.prevent="submitConsumption">
-        <div class="form-group">
-          <label for="quantity">How many did you eat?</label>
-          <input type="number" v-model.number="form.quantityConsumed" min="1" :max="container.currentQuantity" required />
-        </div>
-        <div class="form-group">
-          <label for="notes">Notes (optional)</label>
-          <input type="text" v-model="form.notes" placeholder="e.g., Omelette for breakfast" />
-        </div>
-        <p v-if="error" class="error-message">{{ error }}</p>
-        <div class="modal-actions">
-          <button type="button" @click="$emit('close')" class="btn-cancel">Cancel</button>
-          <button type="submit" :disabled="loading">{{ loading ? 'Saving...' : 'Record' }}</button>
-        </div>
-      </form>
+      <div class="modal-header">
+        <h3 class="modal-title">Record Egg Consumption</h3>
+        <button @click="$emit('close')" class="close-btn">×</button>
+      </div>
+      <div class="modal-body">
+        <h4 class="mb-3">From: {{ container.name }}</h4>
+        <form @submit.prevent="submitConsumption">
+          <div class="form-group">
+            <label for="quantity" class="form-label">How many did you eat?</label>
+            <input
+              type="number"
+              v-model.number="form.quantityConsumed"
+              min="1"
+              :max="container.currentQuantity"
+              class="form-input"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="notes" class="form-label">Notes (optional)</label>
+            <input
+              type="text"
+              v-model="form.notes"
+              placeholder="e.g., Omelette for breakfast"
+              class="form-input"
+            />
+          </div>
+          <div v-if="error" class="alert alert-error">{{ error }}</div>
+          <div class="modal-footer">
+            <button type="button" @click="$emit('close')" class="btn btn-secondary">Cancel</button>
+            <button type="submit" :disabled="loading" class="btn btn-primary">
+              {{ loading ? 'Saving...' : 'Record' }}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   </div>
 </template>
@@ -74,10 +93,4 @@ onUnmounted(() => {
 });
 </script>
 
-<style scoped>
-.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; }
-.modal-content { background: white; padding: 20px 30px; border-radius: 8px; width: 90%; max-width: 400px; }
-.form-group { margin-bottom: 15px; }
-.modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
-.btn-cancel { background-color: #6c757d; }
-</style>
+

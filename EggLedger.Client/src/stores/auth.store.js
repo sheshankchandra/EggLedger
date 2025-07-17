@@ -153,7 +153,7 @@ export const useAuthStore = defineStore('auth', {
       localStorage.removeItem('user')
       localStorage.removeItem('userRooms')
       authService.removeAuthToken()
-      router.push('/login')
+      router.push('/')
     },
   },
 })

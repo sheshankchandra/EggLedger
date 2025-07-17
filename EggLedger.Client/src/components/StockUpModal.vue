@@ -1,22 +1,40 @@
 <template>
-  <div class="modal-overlay" @click.self="$emit('close')">
+  <div class="modal" @click.self="$emit('close')">
     <div class="modal-content">
-      <h3>Stock Up: {{ container.name }}</h3>
-      <form @submit.prevent="submitStock">
-        <div class="form-group">
-          <label for="quantity">How many eggs are you adding?</label>
-          <input type="number" v-model.number="form.quantity" min="1" required />
-        </div>
-        <div class="form-group">
-          <label for="notes">Notes (optional)</label>
-          <input type="text" v-model="form.notes" placeholder="e.g., Bought from Costco" />
-        </div>
-        <p v-if="error" class="error-message">{{ error }}</p>
-        <div class="modal-actions">
-          <button type="button" @click="$emit('close')" class="btn-cancel">Cancel</button>
-          <button type="submit" :disabled="loading">{{ loading ? 'Saving...' : 'Add Stock' }}</button>
-        </div>
-      </form>
+      <div class="modal-header">
+        <h3 class="modal-title">Stock Up: {{ container.name }}</h3>
+        <button @click="$emit('close')" class="close-btn">×</button>
+      </div>
+      <div class="modal-body">
+        <form @submit.prevent="submitStock">
+          <div class="form-group">
+            <label for="quantity" class="form-label">How many eggs are you adding?</label>
+            <input
+              type="number"
+              v-model.number="form.quantity"
+              min="1"
+              class="form-input"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="notes" class="form-label">Notes (optional)</label>
+            <input
+              type="text"
+              v-model="form.notes"
+              placeholder="e.g., Bought from Costco"
+              class="form-input"
+            />
+          </div>
+          <div v-if="error" class="alert alert-error">{{ error }}</div>
+          <div class="modal-footer">
+            <button type="button" @click="$emit('close')" class="btn btn-secondary">Cancel</button>
+            <button type="submit" :disabled="loading" class="btn btn-success">
+              {{ loading ? 'Saving...' : 'Add Stock' }}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   </div>
 </template>
@@ -70,11 +88,4 @@ onUnmounted(() => {
 });
 </script>
 
-<style scoped>
-/* You can reuse the styles from ConsumptionModal.vue */
-.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; }
-.modal-content { background: white; padding: 20px 30px; border-radius: 8px; width: 90%; max-width: 400px; }
-.form-group { margin-bottom: 15px; }
-.modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
-.btn-cancel { background-color: #6c757d; }
-</style>
+
