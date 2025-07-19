@@ -19,7 +19,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.store'
 import NavigationHeader from '@/components/common/NavigationHeader.vue'
 import RoomIndicator from '@/components/room/RoomIndicator.vue'
-import DashboardComponent from '@/components/Dashboard/DashboardComponent.vue'
+import DashboardComponent from '@/components/dashboard/DashboardComponent.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -29,8 +29,8 @@ onMounted(async () => {
   await authStore.fetchUserRooms()
 })
 
-const handleRoomSelected = (room) => {
-  sessionStorage.setItem('selectedRoomCode', room.roomCode)
+const handleRoomSelected = (roomCode) => {
+  sessionStorage.setItem('selectedRoomCode', roomCode)
   router.push('/room')
 }
 </script>

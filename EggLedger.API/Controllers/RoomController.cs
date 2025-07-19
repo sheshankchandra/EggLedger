@@ -47,7 +47,7 @@ namespace EggLedger.API.Controllers
                 if (result.IsSuccess)
                 {
                     _logger.LogInformation("User successfully joined room with code: {RoomCode}", roomCode);
-                    return Ok(result.Value);
+                    return Ok(result);
                 }
 
                 _logger.LogWarning("Failed to join room. Errors: {Errors}", string.Join(", ", result.Errors.Select(e => e.Message)));

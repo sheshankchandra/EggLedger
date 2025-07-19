@@ -17,7 +17,7 @@
           v-for="room in authStore.getUserRooms"
           :key="room.roomId"
           class="room-card"
-          @click="selectRoom(room)"
+          @click="selectRoom(room.roomCode)"
         >
           <div class="room-header">
             <h4>{{ room.roomName }}</h4>
@@ -209,16 +209,7 @@ const handleCreateRoom = async () => {
 
     if (response.isSuccess) {
       showNotification('Room created successfully!', 'success')
-      await authStore.fetchUserRooms()
-
-      // Create room object for emit
-      const newRoom = {
-        roomCode: response.value,
-        roomName: createForm.roomName,
-        isPublic: createForm.isPublic,
-      }
-
-      emit('room-selected', newRoom)
+      selectRoom(response.value)
       showLobby.value = false
 
       // Reset form
@@ -259,15 +250,7 @@ const handleJoinRoom = async () => {
 
     if (response.isSuccess) {
       showNotification('Joined room successfully!', 'success')
-      await authStore.fetchUserRooms()
-
-      // Find the joined room
-      const joinedRoom = authStore.getUserRooms.find(
-        (room) => room.roomCode === Number(joinForm.roomCode),
-      )
-      if (joinedRoom) {
-        emit('room-selected', joinedRoom)
-      }
+      selectRoom(joinForm.roomCode)
 
       showLobby.value = false
       joinForm.roomCode = ''
