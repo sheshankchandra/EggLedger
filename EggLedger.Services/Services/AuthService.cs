@@ -273,7 +273,7 @@ namespace EggLedger.Services.Services
                 _context.RefreshTokens.Add(refreshToken);
                 await _context.SaveChangesAsync();
 
-                _logger.LogDebug("Refresh token generated for user {UserId}", user.UserId);
+                _logger.LogInformation("Refresh token generated for user {UserId}", user.UserId);
 
                 return refreshToken.Token;
             }
@@ -316,7 +316,8 @@ namespace EggLedger.Services.Services
                 if (token != null && !token.IsRevoked)
                 {
                     token.Revoked = DateTime.UtcNow;
-                    token.RevokedByIp = "TODO:CaptureIPAddress"; // You should capture the actual IP
+                    // TODO:CaptureIPAddress
+                    token.RevokedByIp = "Not Found";
                     await _context.SaveChangesAsync();
                     _logger.LogInformation("Refresh token revoked for user {UserId}", userId);
                 }

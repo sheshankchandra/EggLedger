@@ -8,7 +8,7 @@
 
     <!-- Dashboard Content -->
     <main class="main-content">
-      <DashboardComponent @room-selected="handleRoomSelected"/>
+      <DashboardComponent @room-selected="handleRoomSelected" />
     </main>
   </div>
 </template>
@@ -17,9 +17,9 @@
 import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.store'
-import NavigationHeader from '@/components/NavigationHeader.vue'
-import RoomIndicator from '@/components/RoomIndicator.vue'
-import DashboardComponent from '@/components/DashboardComponent.vue'
+import NavigationHeader from '@/components/common/NavigationHeader.vue'
+import RoomIndicator from '@/components/room/RoomIndicator.vue'
+import DashboardComponent from '@/components/Dashboard/DashboardComponent.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -33,7 +33,6 @@ const handleRoomSelected = (room) => {
   sessionStorage.setItem('selectedRoomCode', room.roomCode)
   router.push('/room')
 }
-
 </script>
 
 <style scoped>

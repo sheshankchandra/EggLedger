@@ -24,21 +24,21 @@ namespace EggLedger.Services.Services
 
             try
             {
-                var isAvailable = await databaseService.IsAvailableAsync();
+                var isAvailable = await databaseService.IsAvailableAsync(cancellationToken);
                 
                 if (isAvailable)
                 {
-                    _logger.LogInformation("✅ Database connection validated successfully");
+                    _logger.LogInformation("Database connection validated successfully");
                 }
                 else
                 {
-                    _logger.LogWarning("⚠️ Database is not available on startup. The application will continue, but database-dependent features may fail.");
+                    _logger.LogWarning("Database is not available on startup. The application will continue, but database-dependent features may fail.");
                     _logger.LogWarning("Please ensure PostgreSQL is running and the connection string is correct.");
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "❌ Failed to validate database connection on startup: {Message}", ex.Message);
+                _logger.LogError(ex, "Failed to validate database connection on startup: {Message}", ex.Message);
                 _logger.LogWarning("The application will continue, but database-dependent features will fail until the database is available.");
             }
         }

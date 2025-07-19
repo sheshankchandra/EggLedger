@@ -7,6 +7,7 @@ import router from '@/router'
 export const useAuthStore = defineStore('auth', {
   state: () => ({
     token: localStorage.getItem('token') || null,
+    refreshToken: localStorage.getItem('refreshToken') || null,
     user: JSON.parse(localStorage.getItem('user')) || null,
     userRooms: JSON.parse(localStorage.getItem('userRooms')) || [],
     abortControllers: {
@@ -42,8 +43,7 @@ export const useAuthStore = defineStore('auth', {
         const token = response.data.accessToken
         this.setToken(token)
         await this.fetchProfile()
-        await this.fetchUserRooms()
-        router.push('/')
+        router.push('/dashboard')
       } catch (error) {
         if (error.name === 'AbortError') return
         console.error('Login failed:', error)
@@ -57,8 +57,7 @@ export const useAuthStore = defineStore('auth', {
         const token = response.data.accessToken
         this.setToken(token)
         await this.fetchProfile()
-        await this.fetchUserRooms()
-        router.push('/')
+        router.push('/dashboard')
       } catch (error) {
         if (error.name === 'AbortError') return
         console.error('Registration failed:', error)
@@ -101,17 +100,22 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
-    handleGoogleLoginCallback(token) {
+    handleGoogleLoginCallback(token, refreshToken) {
       this.setToken(token)
+      this.setRefreshToken(refreshToken)
       this.fetchProfile().then(async () => {
-        await this.fetchUserRooms()
-        router.push('/')
+        router.push('/dashboard')
       })
     },
 
     setToken(token) {
       this.token = token
       localStorage.setItem('token', token)
+    },
+
+    setRefreshToken(refreshToken) {
+      this.refreshToken = refreshToken
+      localStorage.setItem('refreshToken', refreshToken)
     },
 
     setUser(user) {
@@ -132,12 +136,13 @@ export const useAuthStore = defineStore('auth', {
             controller.abort()
           }
         })
-        await authService.logout()
+        await authService.logout(this.refreshToken)
       } catch (error) {
         console.error('Logout API call failed:', error)
       }
 
       this.token = null
+      this.refreshToken = null
       this.user = null
       this.userRooms = []
       this.abortControllers = {
@@ -150,6 +155,7 @@ export const useAuthStore = defineStore('auth', {
         rooms: false,
       }
       localStorage.removeItem('token')
+      localStorage.removeItem('refreshToken')
       localStorage.removeItem('user')
       localStorage.removeItem('userRooms')
       authService.removeAuthToken()

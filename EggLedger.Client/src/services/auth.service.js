@@ -18,8 +18,8 @@ export const authService = {
   },
 
   // POST /egg-ledger-api/auth/logout
-  logout() {
-    return apiClient.post('/egg-ledger-api/auth/logout')
+  logout(refreshToken) {
+    return apiClient.post('/egg-ledger-api/auth/logout', refreshToken)
   },
 
   // GET /egg-ledger-api/auth/google-login

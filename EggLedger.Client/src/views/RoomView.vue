@@ -26,9 +26,9 @@
 import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.store'
-import NavigationHeader from '@/components/NavigationHeader.vue'
-import RoomIndicator from '@/components/RoomIndicator.vue'
-import RoomComponent from '@/components/RoomComponent.vue'
+import NavigationHeader from '@/components/common/NavigationHeader.vue'
+import RoomIndicator from '@/components/room/RoomIndicator.vue'
+import RoomComponent from '@/components/room/RoomComponent.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()

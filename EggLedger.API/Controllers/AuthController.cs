@@ -135,9 +135,10 @@ public class AuthController : ControllerBase
 
             // The user is successfully logged in, and we have a token.
             var token = loginResult.Value.AccessToken;
+            var refreshToken = loginResult.Value.RefreshToken;
 
             // Redirect to your Vue app's callback component, passing the token
-            var frontendCallbackUrl = $"http://localhost:5173/auth/callback?token={token}";
+            var frontendCallbackUrl = $"http://localhost:5173/auth/callback?token={token}&refreshToken={refreshToken}";
 
             return Redirect(frontendCallbackUrl);
         }

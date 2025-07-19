@@ -1,12 +1,12 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import AccountsView from '../views/AccountsView.vue'
 import HomeView from '../views/HomeView.vue'
+import AccountsView from '../views/AccountsView.vue'
 import DashboardView from '../views/DashboardView.vue'
 import RoomView from '../views/RoomView.vue'
 import ProfileView from '../views/ProfileView.vue'
 import GoogleCallbackView from '../views/GoogleCallbackView.vue'
 import ContainerDetailView from '../views/ContainerDetailView.vue'
-import NotFoundView from '../components/NotFoundComponent.vue'
+import NotFoundView from '../components/common/NotFoundComponent.vue'
 import { useAuthStore } from '@/stores/auth.store'
 
 const routes = [

@@ -16,9 +16,9 @@
 <script setup>
 import { onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth.store'
-import NavigationHeader from '@/components/NavigationHeader.vue'
-import RoomIndicator from '@/components/RoomIndicator.vue'
-import ProfileComponent from '@/components/ProfileComponent.vue'
+import NavigationHeader from '@/components/common/NavigationHeader.vue'
+import RoomIndicator from '@/components/room/RoomIndicator.vue'
+import ProfileComponent from '@/components/profile/ProfileComponent.vue'
 
 const authStore = useAuthStore()
 

@@ -15,10 +15,11 @@ onMounted(() => {
 
   // Extract the token from the URL query parameters
   const token = route.query.token
+  const refreshToken = route.query.refreshToken
 
-  if (token) {
+  if (token && refreshToken) {
     // Use the store action to handle the token
-    authStore.handleGoogleLoginCallback(token)
+    authStore.handleGoogleLoginCallback(token, refreshToken)
   } else {
     // Handle error - maybe redirect to login with an error message
     console.error('Google login failed: No token provided.')

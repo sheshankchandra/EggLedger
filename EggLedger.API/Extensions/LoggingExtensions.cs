@@ -32,8 +32,8 @@ public static class LoggingExtensions
 
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
-            // Use LocalApplicationData on Windows (e.g., C:\Users\[username]\AppData\Local\EggLedger)
-            logPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "EggLedger");
+            // Use LocalApplicationData on Windows (e.g., C:\Users\[username]\AppData\Local\EggLedger\Logs)
+            logPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "EggLedger", "Logs");
         }
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
         {

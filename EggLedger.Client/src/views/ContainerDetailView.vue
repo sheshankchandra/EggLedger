@@ -115,8 +115,8 @@
 <script setup>
 import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import NavigationHeader from '@/components/NavigationHeader.vue'
-import RoomIndicator from '@/components/RoomIndicator.vue'
+import NavigationHeader from '@/components/common/NavigationHeader.vue'
+import RoomIndicator from '@/components/room/RoomIndicator.vue'
 import { orderService } from '@/services/order.service'
 
 const props = defineProps({
