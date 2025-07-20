@@ -134,6 +134,7 @@ namespace EggLedger.Services.Services
             try
             {
                 var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
+                var isNewUser = false;
 
                 if (user == null)
                 {
@@ -156,11 +157,19 @@ namespace EggLedger.Services.Services
                     _context.Users.Add(user);
                     await _context.SaveChangesAsync();
 
+                    isNewUser = true;
                     _logger.LogInformation("Successfully created new OAuth user: {UserId}, Email: {Email}, Provider: {Provider}", user.UserId, email, provider);
                 }
 
                 _logger.LogInformation("User '{Email}' successfully logged in via {Provider}.", email, provider);
-                return await CreateTokenResponse(user);
+                var tokenResponse = await CreateTokenResponse(user);
+                
+                if (isNewUser)
+                {
+                    tokenResponse.Value.IsNewRegistration = true;
+                }
+                
+                return tokenResponse;
             }
             catch (Exception ex)
             {

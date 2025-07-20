@@ -19,7 +19,10 @@ onMounted(() => {
 
   if (token && refreshToken) {
     // Use the store action to handle the token
-    authStore.handleGoogleLoginCallback(token, refreshToken)
+    console.info('Found the token and refresh token in the URL.')
+    const isNewRegistration = route.query.isNewRegistration === 'True'
+    console.info('Is new registration:', isNewRegistration)
+    authStore.handleGoogleLoginCallback(token, refreshToken, isNewRegistration)
   } else {
     // Handle error - maybe redirect to login with an error message
     console.error('Google login failed: No token provided.')

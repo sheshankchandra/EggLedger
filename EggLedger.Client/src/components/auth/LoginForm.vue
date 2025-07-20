@@ -102,9 +102,9 @@ const handleLogin = async () => {
       password: password.value,
     })
 
-    router.push('/')
+    router.push('/dashboard')
   } catch (err) {
-    error.value = err.message || 'Login failed. Please try again.'
+    error.value = err.response.data.join(' ') || 'Login failed. Please try again.'
     console.error(err)
   } finally {
     loading.value = false
@@ -116,7 +116,7 @@ const handleGoogleLogin = async () => {
   try {
     await authService.googleLogin()
   } catch (err) {
-    error.value = err.message || 'Google login failed. Please try again.'
+    error.value = err.response.data.join(' ') || 'Google login failed. Please try again.'
   } finally {
     loading.value = false
   }

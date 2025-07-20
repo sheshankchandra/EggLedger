@@ -1,8 +1,7 @@
 <template>
   <div class="room-selection-container">
     <div class="header">
-      <h2 v-if="isNewUser">Hey, {{ authStore.getUser?.name || 'User' }}! 👋</h2>
-      <h2 v-else>Welcome back, {{ authStore.getUser?.name || 'User' }}! 👋</h2>
+      <h2>Welcome back, {{ authStore.getUser?.name || 'User' }}!</h2>
       <p>Choose a room to enter or create/join a new one.</p>
     </div>
 
@@ -149,14 +148,12 @@ const emit = defineEmits(['room-selected'])
 const authStore = useAuthStore()
 const showLobby = ref(false)
 const loading = ref(false)
-const isNewUser = ref(false)
 
 let abortController = new AbortController()
 
 // Fetch user rooms when component mounts
 onMounted(async () => {
   await authStore.fetchUserRooms()
-  isNewUser.value = authStore.getIsNewUser
 })
 
 const createForm = reactive({
@@ -173,7 +170,6 @@ const notification = reactive({
   type: 'success',
 })
 
-// emit the selected room to the main component
 const selectRoom = (room) => {
   emit('room-selected', room)
 }
@@ -213,7 +209,6 @@ const handleCreateRoom = async () => {
 
     if (response.isSuccess) {
       showNotification('Room created successfully!', 'success')
-      // emit the selected room to the main component
       selectRoom(response.value)
       showLobby.value = false
 
@@ -255,7 +250,6 @@ const handleJoinRoom = async () => {
 
     if (response.isSuccess) {
       showNotification('Joined room successfully!', 'success')
-      // emit the selected room to the main component
       selectRoom(joinForm.roomCode)
 
       showLobby.value = false

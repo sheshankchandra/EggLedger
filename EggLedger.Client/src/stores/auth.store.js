@@ -10,6 +10,7 @@ export const useAuthStore = defineStore('auth', {
     refreshToken: localStorage.getItem('refreshToken') || null,
     user: JSON.parse(localStorage.getItem('user')) || null,
     userRooms: JSON.parse(localStorage.getItem('userRooms')) || [],
+    isNewUser: false,
     abortControllers: {
       profile: null,
       rooms: null,
@@ -27,6 +28,7 @@ export const useAuthStore = defineStore('auth', {
     hasRooms: (state) => state.userRooms && state.userRooms.length > 0,
     isLoadingRooms: (state) => state.loading.rooms,
     isLoadingProfile: (state) => state.loading.profile,
+    getIsNewUser: (state) => state.isNewUser,
   },
   actions: {
     createAbortController(type = 'general') {
@@ -55,6 +57,7 @@ export const useAuthStore = defineStore('auth', {
       try {
         const response = await authService.register(userData)
         const token = response.data.accessToken
+        this.isNewUser = true
         this.setToken(token)
         await this.fetchProfile()
         router.push('/dashboard')
@@ -100,9 +103,10 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
-    handleGoogleLoginCallback(token, refreshToken) {
+    handleGoogleLoginCallback(token, refreshToken, isNewRegistration = false) {
       this.setToken(token)
       this.setRefreshToken(refreshToken)
+      this.isNewUser = isNewRegistration
       this.fetchProfile().then(async () => {
         router.push('/dashboard')
       })

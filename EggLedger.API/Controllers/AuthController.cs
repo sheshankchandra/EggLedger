@@ -1,7 +1,6 @@
 ﻿using EggLedger.DTO.Auth;
 using EggLedger.DTO.User;
 using EggLedger.Services.Interfaces;
-using EggLedger.Services.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authorization;
@@ -10,8 +9,9 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
 using System.Security.Claims;
-using System.Threading;
 using System.Threading.Tasks;
+using EggLedger.Models.Options;
+using Microsoft.Extensions.Configuration;
 
 namespace EggLedger.API.Controllers;
 
@@ -21,11 +21,13 @@ public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
     private readonly ILogger<AuthController> _logger;
+    private readonly IConfiguration _configuration;
 
-    public AuthController(IAuthService authService, ILogger<AuthController> logger)
+    public AuthController(IAuthService authService, ILogger<AuthController> logger, IConfiguration configuration)
     {
         _authService = authService;
         _logger = logger;
+        _configuration = configuration;
     }
 
     // POST: /egg-ledger-api/auth/register
@@ -81,7 +83,8 @@ public class AuthController : ControllerBase
         try
         {
             _logger.LogInformation("Google OAuth login initiated");
-            var properties = new AuthenticationProperties { RedirectUri = "/egg-ledger-api/auth/google-callback" };
+            var callbackUrl = Url.Action("GoogleCallback", "Auth", null, Request.Scheme);
+            var properties = new AuthenticationProperties { RedirectUri = callbackUrl };
             return Challenge(properties, GoogleDefaults.AuthenticationScheme);
         }
         catch (Exception ex)
@@ -98,6 +101,17 @@ public class AuthController : ControllerBase
     {
         try
         {
+            var corsOptions = _configuration.GetSection(CorsOptions.SectionName).Get<CorsOptions>() ?? new CorsOptions();
+            var allowedOrigins = corsOptions.AllowedOrigins;
+            if (!allowedOrigins.Any())
+            {
+                _logger.LogWarning("No allowed origins configured for CORS");
+                return BadRequest("CORS configuration is missing allowed origins.");
+            }
+            // Try to get the Origin header from the request and Validate the origin
+            var requestOrigin = Request.Headers["Origin"].FirstOrDefault() ?? allowedOrigins.FirstOrDefault();
+            var redirectOrigin = allowedOrigins.Contains(requestOrigin) ? requestOrigin : allowedOrigins.FirstOrDefault();
+
             _logger.LogInformation("Processing Google OAuth callback");
             
             var authenticateResult = await HttpContext.AuthenticateAsync(GoogleDefaults.AuthenticationScheme);
@@ -127,7 +141,7 @@ public class AuthController : ControllerBase
             {
                 _logger.LogError("OAuth login failed for email: {Email}", email);
                 // Redirect to the frontend login page with an error message
-                var errorFrontendUrl = "http://localhost:5173/login?error=provider-login-failed";
+                var errorFrontendUrl = $"{redirectOrigin}/login?error=provider-login-failed";
                 return Redirect(errorFrontendUrl);
             }
 
@@ -136,9 +150,10 @@ public class AuthController : ControllerBase
             // The user is successfully logged in, and we have a token.
             var token = loginResult.Value.AccessToken;
             var refreshToken = loginResult.Value.RefreshToken;
+            var isNewRegistration = loginResult.Value.IsNewRegistration;
 
             // Redirect to your Vue app's callback component, passing the token
-            var frontendCallbackUrl = $"http://localhost:5173/auth/callback?token={token}&refreshToken={refreshToken}";
+            var frontendCallbackUrl = $"{redirectOrigin}/auth/callback?token={token}&refreshToken={refreshToken}&isNewRegistration={isNewRegistration}";
 
             return Redirect(frontendCallbackUrl);
         }

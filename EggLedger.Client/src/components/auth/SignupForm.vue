@@ -138,7 +138,7 @@ const handleRegister = async () => {
       router.push('/accounts/login')
     }, 2000)
   } catch (err) {
-    error.value = err.message || 'Registration failed. Please try again.'
+    error.value = err.response.data.join(' ') || 'Registration failed. Please try again.'
   } finally {
     loading.value = false
   }
@@ -149,7 +149,7 @@ const handleGoogleRegister = async () => {
   try {
     await authService.googleLogin()
   } catch (err) {
-    error.value = err.message || 'Google registration failed. Please try again.'
+    error.value = err.response.data.join(' ') || 'Google registration failed. Please try again.'
   } finally {
     loading.value = false
   }
