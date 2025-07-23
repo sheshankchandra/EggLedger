@@ -43,16 +43,16 @@ namespace EggLedger.API.Helpers.Auth.Handlers
             }
 
             var isMember = await _context.UserRooms
-                .AnyAsync(ur => ur.UserId == userId && ur.Room.RoomCode == roomCode);
+                .AnyAsync(ur => ur.UserId == userId && ur.Room.Code == roomCode);
 
             if (isMember)
             {
-                _logger.LogInformation("User '{UserId}' is a member of room '{RoomCode}'.", userId, roomCode);
+                _logger.LogInformation("User '{Id}' is a member of room '{Code}'.", userId, roomCode);
                 context.Succeed(requirement);
             }
             else
             {
-                _logger.LogWarning("Authorization failed: User '{UserId}' is not a member of room '{RoomCode}'.", userId, roomCode);
+                _logger.LogWarning("Authorization failed: User '{Id}' is not a member of room '{Code}'.", userId, roomCode);
             }
         }
     }

@@ -38,7 +38,7 @@ namespace EggLedger.API.Controllers
 
                 if (result is { IsSuccess: true, Value: not null })
                 {
-                    _logger.LogInformation("Successfully created Stocked order: {OrderName}", result.Value);
+                    _logger.LogInformation("Successfully created Stocked order: {Name}", result.Value);
                     return Ok(result.Value);
                 }
 
@@ -47,12 +47,12 @@ namespace EggLedger.API.Controllers
             }
             catch (OperationCanceledException)
             {
-                _logger.LogInformation("Request was canceled by the client for CreateStockOrder, roomCode: {RoomCode}", roomCode);
+                _logger.LogInformation("Request was canceled by the client for CreateStockOrder, roomCode: {Code}", roomCode);
                 return StatusCode(499, "Client closed request.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unhandled exception in CreateStockOrder for roomCode: {RoomCode}", roomCode);
+                _logger.LogError(ex, "Unhandled exception in CreateStockOrder for roomCode: {Code}", roomCode);
                 return StatusCode(500, "An unexpected error occurred.");
             }
         }
@@ -70,7 +70,7 @@ namespace EggLedger.API.Controllers
 
                 if (result is { IsSuccess: true, Value: not null })
                 {
-                    _logger.LogInformation("Successfully created Consumed order: {OrderName}", result.Value);
+                    _logger.LogInformation("Successfully created Consumed order: {Name}", result.Value);
                     return Ok(result.Value);
                 }
 
@@ -85,12 +85,12 @@ namespace EggLedger.API.Controllers
             }
             catch (OperationCanceledException)
             {
-                _logger.LogInformation("Request was canceled by the client for CreateConsumeOrder, roomCode: {RoomCode}", roomCode);
+                _logger.LogInformation("Request was canceled by the client for CreateConsumeOrder, roomCode: {Code}", roomCode);
                 return StatusCode(499, "Client closed request.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unhandled exception in CreateConsumeOrder for roomCode: {RoomCode}", roomCode);
+                _logger.LogError(ex, "Unhandled exception in CreateConsumeOrder for roomCode: {Code}", roomCode);
                 return StatusCode(500, "An unexpected error occurred.");
             }
         }
@@ -101,27 +101,27 @@ namespace EggLedger.API.Controllers
         {
             try
             {
-                _logger.LogInformation("Received request to retrieve order information. Order ID : '{OrderId}'", orderId);
+                _logger.LogInformation("Received request to retrieve order information. Order ID : '{Id}'", orderId);
 
                 var result = await _orderService.GetOrderByIdAsync(orderId, cancellationToken);
 
                 if (result is { IsSuccess: true, Value: not null })
                 {
-                    _logger.LogInformation("Successfully retrieved order information. Order ID : '{OrderId}'", orderId);
+                    _logger.LogInformation("Successfully retrieved order information. Order ID : '{Id}'", orderId);
                     return Ok(result.Value);
                 }
 
-                _logger.LogError("Failed to retrieve order information. Order ID : '{OrderId}'", orderId);
+                _logger.LogError("Failed to retrieve order information. Order ID : '{Id}'", orderId);
                 return NotFound(result.Errors.Select(e => e.Message));
             }
             catch (OperationCanceledException)
             {
-                _logger.LogInformation("Request was canceled by the client for GetOrder, roomCode: {RoomCode}, orderId: {OrderId}", roomCode, orderId);
+                _logger.LogInformation("Request was canceled by the client for GetOrder, roomCode: {Code}, orderId: {Id}", roomCode, orderId);
                 return StatusCode(499, "Client closed request.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unhandled exception in GetOrder for roomCode: {RoomCode}, orderId: {OrderId}", roomCode, orderId);
+                _logger.LogError(ex, "Unhandled exception in GetOrder for roomCode: {Code}, orderId: {Id}", roomCode, orderId);
                 return StatusCode(500, "An unexpected error occurred.");
             }
         }
@@ -132,13 +132,13 @@ namespace EggLedger.API.Controllers
         {
             try
             {
-                _logger.LogInformation("Received request to retrieve a User '{UserId}' Order information.", requestUserId);
+                _logger.LogInformation("Received request to retrieve a User '{Id}' Order information.", requestUserId);
 
                 var result = await _orderService.GetOrdersByUserAsync(requestUserId, cancellationToken);
 
                 if (result is { IsSuccess: true, Value: not null })
                 {
-                    _logger.LogInformation("Successfully retrieved a User '{UserId}' Order information.", requestUserId);
+                    _logger.LogInformation("Successfully retrieved a User '{Id}' Order information.", requestUserId);
                     return Ok(result.Value);
                 }
 
@@ -146,12 +146,12 @@ namespace EggLedger.API.Controllers
             }
             catch (OperationCanceledException)
             {
-                _logger.LogInformation("Request was canceled by the client for GetOrdersByUser, roomCode: {RoomCode}, userId: {UserId}", roomCode, requestUserId);
+                _logger.LogInformation("Request was canceled by the client for GetOrdersByUser, roomCode: {Code}, userId: {Id}", roomCode, requestUserId);
                 return StatusCode(499, "Client closed request.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unhandled exception in GetOrdersByUser for roomCode: {RoomCode}, userId: {UserId}", roomCode, requestUserId);
+                _logger.LogError(ex, "Unhandled exception in GetOrdersByUser for roomCode: {Code}, userId: {Id}", roomCode, requestUserId);
                 return StatusCode(500, "An unexpected error occurred.");
             }
         }
@@ -162,13 +162,13 @@ namespace EggLedger.API.Controllers
         {
             try
             {
-                _logger.LogInformation("Received request to retrieve a Containers '{ContainerId}' Order information.", containerId);
+                _logger.LogInformation("Received request to retrieve a Containers '{Id}' Order information.", containerId);
 
                 var result = await _orderService.GetOrdersByContainerAsync(containerId, cancellationToken);
 
                 if (result is { IsSuccess: true, Value: not null })
                 {
-                    _logger.LogInformation("Successfully retrieve a Containers '{ContainerId}' Order information.", containerId);
+                    _logger.LogInformation("Successfully retrieve a Containers '{Id}' Order information.", containerId);
                     return Ok(result.Value);
                 }
 
@@ -176,12 +176,12 @@ namespace EggLedger.API.Controllers
             }
             catch (OperationCanceledException)
             {
-                _logger.LogInformation("Request was canceled by the client for GetOrdersByContainer, roomCode: {RoomCode}, containerId: {ContainerId}", roomCode, containerId);
+                _logger.LogInformation("Request was canceled by the client for GetOrdersByContainer, roomCode: {Code}, containerId: {Id}", roomCode, containerId);
                 return StatusCode(499, "Client closed request.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unhandled exception in GetOrdersByContainer for roomCode: {RoomCode}, containerId: {ContainerId}", roomCode, containerId);
+                _logger.LogError(ex, "Unhandled exception in GetOrdersByContainer for roomCode: {Code}, containerId: {Id}", roomCode, containerId);
                 return StatusCode(500, "An unexpected error occurred.");
             }
         }

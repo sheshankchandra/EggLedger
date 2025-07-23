@@ -49,7 +49,7 @@ namespace EggLedger.Services.Services
 
                 var user = new User
                 {
-                    UserId = Guid.NewGuid(),
+                    Id = Guid.NewGuid(),
                     FirstName = dto.FirstName,
                     LastName = dto.LastName,
                     Email = dto.Email,
@@ -62,7 +62,7 @@ namespace EggLedger.Services.Services
                 var userPassword = new UserPassword()
                 {
                     Id = Guid.NewGuid(),
-                    UserId = user.UserId,
+                    UserId = user.Id,
                     PasswordHash = hashedPassword
                 };
 
@@ -70,7 +70,7 @@ namespace EggLedger.Services.Services
                 _context.UserPasswords.Add(userPassword);
                 await _context.SaveChangesAsync();
 
-                _logger.LogInformation("User created successfully: {UserId}, Email: {Email}", user.UserId, user.Email);
+                _logger.LogInformation("User created successfully: {Id}, Email: {Email}", user.Id, user.Email);
 
                 return await CreateTokenResponse(user);
             }
@@ -94,7 +94,7 @@ namespace EggLedger.Services.Services
                 }
 
                 var userPassword = await _context.UserPasswords
-                    .FirstOrDefaultAsync(up => up.UserId == user.UserId);
+                    .FirstOrDefaultAsync(up => up.UserId == user.Id);
 
                 if (userPassword == null)
                 {
@@ -147,7 +147,7 @@ namespace EggLedger.Services.Services
 
                     user = new User
                     {
-                        UserId = Guid.NewGuid(),
+                        Id = Guid.NewGuid(),
                         Email = email,
                         FirstName = firstName,
                         LastName = lastName,
@@ -158,7 +158,7 @@ namespace EggLedger.Services.Services
                     await _context.SaveChangesAsync();
 
                     isNewUser = true;
-                    _logger.LogInformation("Successfully created new OAuth user: {UserId}, Email: {Email}, Provider: {Provider}", user.UserId, email, provider);
+                    _logger.LogInformation("Successfully created new OAuth user: {Id}, Email: {Email}, Provider: {Provider}", user.Id, email, provider);
                 }
 
                 _logger.LogInformation("User '{Email}' successfully logged in via {Provider}.", email, provider);
@@ -182,26 +182,26 @@ namespace EggLedger.Services.Services
         {
             try
             {
-                _logger.LogInformation("Processing refresh token request for user {UserId}", request.UserId);
+                _logger.LogInformation("Processing refresh token request for user {Id}", request.UserId);
                 
                 var user = await ValidateRefreshTokenAsync(request.UserId, request.RefreshToken);
                 if (user is null)
                 {
-                    _logger.LogWarning("Invalid or expired refresh token for user {UserId}", request.UserId);
+                    _logger.LogWarning("Invalid or expired refresh token for user {Id}", request.UserId);
                     return Result.Fail("Invalid or Expired Refresh Token");
                 }
 
                 // Revoke the old refresh token
                 await RevokeRefreshTokenAsync(request.UserId, request.RefreshToken);
 
-                _logger.LogInformation("Refresh token successfully processed for user {UserId}", request.UserId);
+                _logger.LogInformation("Refresh token successfully processed for user {Id}", request.UserId);
 
                 // Create new token pair
                 return await CreateTokenResponse(user);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unexpected error occurred in RefreshTokensAsync for userId {UserId}", request.UserId);
+                _logger.LogError(ex, "Unexpected error occurred in RefreshTokensAsync for userId {Id}", request.UserId);
                 return Result.Fail("An unexpected error occurred. Please try again later.");
             }
         }
@@ -220,7 +220,7 @@ namespace EggLedger.Services.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred in CreateTokenResponse for userId {UserId}", user?.UserId);
+                _logger.LogError(ex, "Error occurred in CreateTokenResponse for userId {Id}", user?.Id);
                 return Result.Fail("An error occurred while creating token response.");
             }
         }
@@ -229,15 +229,15 @@ namespace EggLedger.Services.Services
         {
             var claims = new List<Claim>
             {
-                new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
                 new Claim(ClaimTypes.Email, user.Email),
                 new Claim(ClaimTypes.Name, user.Name), // Add the user's full name as a claim
                 new Claim(ClaimTypes.Role, user.Role.ToString())
             };
 
-            // Add RoomId's to the claims
+            // Add Id's to the claims
             var roomIds = _context.UserRooms
-                .Where(ur => ur.UserId == user.UserId)
+                .Where(ur => ur.UserId == user.Id)
                 .Select(ur => ur.RoomId)
                 .ToList();
             claims.AddRange(roomIds.Select(roomId => new Claim("Room", roomId.ToString())));
@@ -275,20 +275,20 @@ namespace EggLedger.Services.Services
                     Token = GenerateRefreshToken(),
                     Expires = DateTime.UtcNow.AddDays(7),
                     CreatedByIp = "TODO:CaptureIPAddress",
-                    UserId = user.UserId,
+                    UserId = user.Id,
                     Created = DateTime.UtcNow
                 };
 
                 _context.RefreshTokens.Add(refreshToken);
                 await _context.SaveChangesAsync();
 
-                _logger.LogInformation("Refresh token generated for user {UserId}", user.UserId);
+                _logger.LogInformation("Refresh token generated for user {Id}", user.Id);
 
                 return refreshToken.Token;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred in GenerateAndSaveRefreshTokenAsync for userId {UserId}", user.UserId);
+                _logger.LogError(ex, "Error occurred in GenerateAndSaveRefreshTokenAsync for userId {Id}", user.Id);
                 throw;
             }
         }
@@ -299,7 +299,7 @@ namespace EggLedger.Services.Services
             {
                 var user = await _context.Users
                     .Include(u => u.RefreshTokens)
-                    .FirstOrDefaultAsync(u => u.UserId == userId);
+                    .FirstOrDefaultAsync(u => u.Id == userId);
 
                 if (user is null) return null;
 
@@ -310,7 +310,7 @@ namespace EggLedger.Services.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred in ValidateRefreshTokenAsync for userId {UserId}", userId);
+                _logger.LogError(ex, "Error occurred in ValidateRefreshTokenAsync for userId {Id}", userId);
                 return null;
             }
         }
@@ -328,20 +328,20 @@ namespace EggLedger.Services.Services
                     // TODO:CaptureIPAddress
                     token.RevokedByIp = "Not Found";
                     await _context.SaveChangesAsync();
-                    _logger.LogInformation("Refresh token revoked for user {UserId}", userId);
+                    _logger.LogInformation("Refresh token revoked for user {Id}", userId);
                 }
                 else if (token != null && token.IsRevoked)
                 {
-                    _logger.LogWarning("Attempted to revoke already revoked token for user {UserId}", userId);
+                    _logger.LogWarning("Attempted to revoke already revoked token for user {Id}", userId);
                 }
                 else
                 {
-                    _logger.LogWarning("Attempted to revoke non-existent token for user {UserId}", userId);
+                    _logger.LogWarning("Attempted to revoke non-existent token for user {Id}", userId);
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred in RevokeRefreshTokenAsync for userId {UserId}", userId);
+                _logger.LogError(ex, "Error occurred in RevokeRefreshTokenAsync for userId {Id}", userId);
                 throw;
             }
         }
@@ -363,16 +363,16 @@ namespace EggLedger.Services.Services
                 if (tokens.Any())
                 {
                     await _context.SaveChangesAsync();
-                    _logger.LogInformation("Revoked {Count} refresh tokens for user {UserId}", tokens.Count, userId);
+                    _logger.LogInformation("Revoked {Count} refresh tokens for user {Id}", tokens.Count, userId);
                 }
                 else
                 {
-                    _logger.LogInformation("No active refresh tokens found to revoke for user {UserId}", userId);
+                    _logger.LogInformation("No active refresh tokens found to revoke for user {Id}", userId);
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred in RevokeAllUserRefreshTokensAsync for userId {UserId}", userId);
+                _logger.LogError(ex, "Error occurred in RevokeAllUserRefreshTokensAsync for userId {Id}", userId);
                 throw;
             }
         }
@@ -404,12 +404,12 @@ namespace EggLedger.Services.Services
             try
             {
                 await RevokeRefreshTokenAsync(userId, refreshToken);
-                _logger.LogInformation("User {UserId} successfully logged out", userId);
+                _logger.LogInformation("User {Id} successfully logged out", userId);
                 return Result.Ok();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred while logging out user {UserId}", userId);
+                _logger.LogError(ex, "Error occurred while logging out user {Id}", userId);
                 return Result.Fail("Logout failed");
             }
         }

@@ -29,7 +29,7 @@ namespace EggLedger.Services.Services
                 var users = await _context.Users.AsNoTracking()
                     .Select(u => new UserSummaryDto
                     {
-                        UserId = u.UserId,
+                        UserId = u.Id,
                         Name = u.Name,
                         Email = u.Email,
                         Role = u.Role
@@ -54,13 +54,13 @@ namespace EggLedger.Services.Services
         {
             try
             {
-                _logger.LogDebug("Retrieving user with ID: {UserId}", id);
+                _logger.LogDebug("Retrieving user with ID: {Id}", id);
                 
                 var user = await _context.Users.AsNoTracking()
-                    .Where(u => u.UserId == id)
+                    .Where(u => u.Id == id)
                     .Select(u => new UserSummaryDto
                     {
-                        UserId = u.UserId,
+                        UserId = u.Id,
                         Name = u.Name,
                         Email = u.Email,
                         Role = u.Role
@@ -69,19 +69,19 @@ namespace EggLedger.Services.Services
 
                 if (user == null)
                 {
-                    _logger.LogWarning("User not found with ID: {UserId}", id);
+                    _logger.LogWarning("User not found with ID: {Id}", id);
                     return Result.Fail("User not found");
                 }
                 return Result.Ok(user);
             }
             catch (OperationCanceledException ex)
             {
-                _logger.LogInformation(ex, "GetUserByIdAsync was canceled for userId {UserId}", id);
+                _logger.LogInformation(ex, "GetUserByIdAsync was canceled for userId {Id}", id);
                 return Result.Fail("Operation was canceled.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred in GetUserByIdAsync for userId {UserId}", id);
+                _logger.LogError(ex, "Error occurred in GetUserByIdAsync for userId {Id}", id);
                 return Result.Fail("An error occurred while retrieving the user.");
             }
         }
@@ -93,7 +93,7 @@ namespace EggLedger.Services.Services
                 var user = await _context.Users.FindAsync(new object[] { id }, cancellationToken);
                 if (user == null)
                 {
-                    _logger.LogWarning("Attempted to update non-existent user: {UserId}", id);
+                    _logger.LogWarning("Attempted to update non-existent user: {Id}", id);
                     return Result.Fail("User not found");
                 }
 
@@ -104,9 +104,9 @@ namespace EggLedger.Services.Services
                 if (dto.LastName != null) user.LastName = dto.LastName;
                 if (dto.Email != null && dto.Email != user.Email)
                 {
-                    if (await _context.Users.AnyAsync(u => u.Email == dto.Email && u.UserId != id, cancellationToken))
+                    if (await _context.Users.AnyAsync(u => u.Email == dto.Email && u.Id != id, cancellationToken))
                     {
-                        _logger.LogWarning("Attempted to update user {UserId} with existing email: {Email}", id, dto.Email);
+                        _logger.LogWarning("Attempted to update user {Id} with existing email: {Email}", id, dto.Email);
                         return Result.Fail("Email already exists");
                     }
                     user.Email = dto.Email;
@@ -138,14 +138,14 @@ namespace EggLedger.Services.Services
                 
                 if (dto.Role.HasValue) user.Role = dto.Role.Value;
 
-                await _context.SaveChangesAsync(cancellationToken);
+                await _context.SaveChangesAsync();
 
-                _logger.LogInformation("User updated successfully: {UserId}" + (emailChanged ? ", Email changed from {OldEmail} to {NewEmail}" : ""), 
-                    user.UserId, emailChanged ? originalEmail : null, emailChanged ? user.Email : null);
+                _logger.LogInformation("User updated successfully: {Id}" + (emailChanged ? ", Email changed from {OldEmail} to {NewEmail}" : ""), 
+                    user.Id, emailChanged ? originalEmail : null, emailChanged ? user.Email : null);
 
                 return Result.Ok(new UserSummaryDto
                 {
-                    UserId = user.UserId,
+                    UserId = user.Id,
                     Name = user.Name,
                     Email = user.Email,
                     Role = user.Role
@@ -153,12 +153,12 @@ namespace EggLedger.Services.Services
             }
             catch (OperationCanceledException ex)
             {
-                _logger.LogInformation(ex, "UpdateUserAsync was canceled for userId {UserId}", id);
+                _logger.LogInformation(ex, "UpdateUserAsync was canceled for userId {Id}", id);
                 return Result.Fail("Operation was canceled.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred in UpdateUserAsync for userId {UserId}", id);
+                _logger.LogError(ex, "Error occurred in UpdateUserAsync for userId {Id}", id);
                 return Result.Fail("An error occurred while updating the user.");
             }
         }
@@ -170,26 +170,26 @@ namespace EggLedger.Services.Services
                 var user = await _context.Users.FindAsync(new object[] { id }, cancellationToken);
                 if (user == null)
                 {
-                    _logger.LogWarning("Attempted to delete non-existent user: {UserId}", id);
+                    _logger.LogWarning("Attempted to delete non-existent user: {Id}", id);
                     return Result.Fail("User not found");
                 }
 
                 var userEmail = user.Email;
                 _context.Users.Remove(user);
-                await _context.SaveChangesAsync(cancellationToken);
+                await _context.SaveChangesAsync();
 
-                _logger.LogInformation("User deleted successfully: {UserId}, Email: {Email}", id, userEmail);
+                _logger.LogInformation("User deleted successfully: {Id}, Email: {Email}", id, userEmail);
 
                 return Result.Ok();
             }
             catch (OperationCanceledException ex)
             {
-                _logger.LogInformation(ex, "DeleteUserAsync was canceled for userId {UserId}", id);
+                _logger.LogInformation(ex, "DeleteUserAsync was canceled for userId {Id}", id);
                 return Result.Fail("Operation was canceled.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred in DeleteUserAsync for userId {UserId}", id);
+                _logger.LogError(ex, "Error occurred in DeleteUserAsync for userId {Id}", id);
                 return Result.Fail("An error occurred while deleting the user.");
             }
         }

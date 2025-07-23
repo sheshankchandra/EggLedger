@@ -24,7 +24,7 @@ namespace EggLedger.Data.Migrations
 
             modelBuilder.Entity("EggLedger.Models.Models.Container", b =>
                 {
-                    b.Property<Guid>("ContainerId")
+                    b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
                     b.Property<decimal>("Amount")
@@ -38,11 +38,6 @@ namespace EggLedger.Data.Migrations
 
                     b.Property<DateTime?>("CompletedDateTime")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("ContainerName")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -65,6 +60,11 @@ namespace EggLedger.Data.Migrations
                     b.Property<Guid?>("ModifiedBy")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
                     b.Property<DateTime>("PurchaseDateTime")
                         .HasColumnType("timestamp with time zone");
 
@@ -80,7 +80,7 @@ namespace EggLedger.Data.Migrations
                     b.Property<int>("TotalQuantity")
                         .HasColumnType("integer");
 
-                    b.HasKey("ContainerId");
+                    b.HasKey("Id");
 
                     b.HasIndex("BuyerId");
 
@@ -91,7 +91,7 @@ namespace EggLedger.Data.Migrations
 
             modelBuilder.Entity("EggLedger.Models.Models.Order", b =>
                 {
-                    b.Property<Guid>("OrderId")
+                    b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
                     b.Property<decimal>("Amount")
@@ -100,24 +100,24 @@ namespace EggLedger.Data.Migrations
                     b.Property<DateTime>("Datestamp")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("OrderName")
+                    b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
-                    b.Property<int>("OrderStatus")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("OrderType")
-                        .HasColumnType("integer");
-
                     b.Property<int>("Quantity")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Type")
                         .HasColumnType("integer");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
 
-                    b.HasKey("OrderId");
+                    b.HasKey("Id");
 
                     b.HasIndex("UserId");
 
@@ -126,7 +126,7 @@ namespace EggLedger.Data.Migrations
 
             modelBuilder.Entity("EggLedger.Models.Models.OrderDetail", b =>
                 {
-                    b.Property<Guid>("OrderDetailId")
+                    b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
                     b.Property<decimal>("Amount")
@@ -135,19 +135,16 @@ namespace EggLedger.Data.Migrations
                     b.Property<Guid>("ContainerId")
                         .HasColumnType("uuid");
 
-                    b.Property<int>("DetailQuantity")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("OrderDetailStatus")
-                        .HasColumnType("integer");
-
                     b.Property<Guid>("OrderId")
                         .HasColumnType("uuid");
 
-                    b.Property<decimal>("Price")
-                        .HasColumnType("decimal(18,2)");
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer");
 
-                    b.HasKey("OrderDetailId");
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
 
                     b.HasIndex("ContainerId");
 
@@ -199,11 +196,14 @@ namespace EggLedger.Data.Migrations
 
             modelBuilder.Entity("EggLedger.Models.Models.Room", b =>
                 {
-                    b.Property<Guid>("RoomId")
+                    b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
                     b.Property<string>("AuditNotes")
                         .HasColumnType("text");
+
+                    b.Property<int>("Code")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -229,10 +229,7 @@ namespace EggLedger.Data.Migrations
                     b.Property<Guid?>("ModifiedBy")
                         .HasColumnType("uuid");
 
-                    b.Property<int>("RoomCode")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("RoomName")
+                    b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
@@ -240,9 +237,9 @@ namespace EggLedger.Data.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
-                    b.HasKey("RoomId");
+                    b.HasKey("Id");
 
-                    b.HasIndex("RoomCode")
+                    b.HasIndex("Code")
                         .IsUnique();
 
                     b.ToTable("Rooms");
@@ -250,7 +247,7 @@ namespace EggLedger.Data.Migrations
 
             modelBuilder.Entity("EggLedger.Models.Models.Transaction", b =>
                 {
-                    b.Property<Guid>("TransactionId")
+                    b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
                     b.Property<int>("Amount")
@@ -274,7 +271,7 @@ namespace EggLedger.Data.Migrations
                     b.Property<Guid?>("UserId")
                         .HasColumnType("uuid");
 
-                    b.HasKey("TransactionId");
+                    b.HasKey("Id");
 
                     b.HasIndex("OrderId");
 
@@ -289,7 +286,7 @@ namespace EggLedger.Data.Migrations
 
             modelBuilder.Entity("EggLedger.Models.Models.User", b =>
                 {
-                    b.Property<Guid>("UserId")
+                    b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
                     b.Property<string>("Email")
@@ -303,6 +300,7 @@ namespace EggLedger.Data.Migrations
                         .HasColumnType("character varying(100)");
 
                     b.Property<string>("LastName")
+                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
@@ -313,7 +311,7 @@ namespace EggLedger.Data.Migrations
                     b.Property<int>("Role")
                         .HasColumnType("integer");
 
-                    b.HasKey("UserId");
+                    b.HasKey("Id");
 
                     b.HasIndex("Email")
                         .IsUnique();

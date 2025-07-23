@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" modified="2025-07-24T00:00:00.000Z" agent="GitHub Copilot" version="21.6.1" type="device">
+<diagram id="C5RBs43oDa-KdzZeNtuy" name="Database Schema">
+<mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+<root>
+<mxCell id="WIyWlLk6GJQsqaUBKTNV-0"/>
+<mxCell id="WIyWlLk6GJQsqaUBKTNV-1" parent="WIyWlLk6GJQsqaUBKTNV-0"/>
+
+<!-- User Entity -->
+<mxCell id="entity_user" value="User" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=1;marginBottom=0;rounded=0;shadow=0;strokeWidth=1;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+    <mxGeometry x="40" y="40" width="200" height="160" as="geometry"/>
+</mxCell>
+<mxCell id="user_fields" value="+ Id: Guid (PK)&#xa;+ FirstName: string&#xa;+ LastName: string&#xa;+ Email: string (UK)&#xa;+ Role: int&#xa;+ Provider: string" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="entity_user">
+    <mxGeometry y="26" width="200" height="114" as="geometry"/>
+</mxCell>
+
+<!-- UserPassword Entity -->
+<mxCell id="entity_userpassword" value="UserPassword" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=1;marginBottom=0;rounded=0;shadow=0;strokeWidth=1;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+    <mxGeometry x="320" y="40" width="200" height="100" as="geometry"/>
+</mxCell>
+<mxCell id="userpassword_fields" value="+ Id: Guid (PK)&#xa;+ UserId: Guid (FK)&#xa;+ PasswordHash: string" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="entity_userpassword">
+    <mxGeometry y="26" width="200" height="74" as="geometry"/>
+</mxCell>
+
+<!-- Room Entity -->
+<mxCell id="entity_room" value="Room" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=1;marginBottom=0;rounded=0;shadow=0;strokeWidth=1;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+    <mxGeometry x="40" y="240" width="200" height="140" as="geometry"/>
+</mxCell>
+<mxCell id="room_fields" value="+ Id: Guid (PK)&#xa;+ Name: string&#xa;+ Code: string (UK)&#xa;+ IsPublic: bool&#xa;+ CreatedAt: DateTime" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="entity_room">
+    <mxGeometry y="26" width="200" height="114" as="geometry"/>
+</mxCell>
+
+<!-- UserRoom Entity -->
+<mxCell id="entity_userroom" value="UserRoom" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=1;marginBottom=0;rounded=0;shadow=0;strokeWidth=1;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+    <mxGeometry x="320" y="240" width="200" height="140" as="geometry"/>
+</mxCell>
+<mxCell id="userroom_fields" value="+ Id: Guid (PK)&#xa;+ UserId: Guid (FK)&#xa;+ RoomId: Guid (FK)&#xa;+ IsAdmin: bool&#xa;+ JoinedAt: DateTime" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="entity_userroom">
+    <mxGeometry y="26" width="200" height="114" as="geometry"/>
+</mxCell>
+
+<!-- Container Entity -->
+<mxCell id="entity_container" value="Container" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=1;marginBottom=0;rounded=0;shadow=0;strokeWidth=1;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+    <mxGeometry x="40" y="420" width="200" height="180" as="geometry"/>
+</mxCell>
+<mxCell id="container_fields" value="+ Id: Guid (PK)&#xa;+ Name: string&#xa;+ PurchaseDateTime: DateTime&#xa;+ TotalQuantity: int&#xa;+ RemainingQuantity: int&#xa;+ Amount: decimal&#xa;+ BuyerId: Guid (FK)&#xa;+ RoomId: Guid (FK)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="entity_container">
+    <mxGeometry y="26" width="200" height="154" as="geometry"/>
+</mxCell>
+
+<!-- Order Entity -->
+<mxCell id="entity_order" value="Order" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=1;marginBottom=0;rounded=0;shadow=0;strokeWidth=1;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+    <mxGeometry x="320" y="420" width="200" height="180" as="geometry"/>
+</mxCell>
+<mxCell id="order_fields" value="+ Id: Guid (PK)&#xa;+ Name: string&#xa;+ Datestamp: DateTime&#xa;+ Quantity: int&#xa;+ Amount: decimal&#xa;+ Type: int&#xa;+ Status: int&#xa;+ UserId: Guid (FK)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="entity_order">
+    <mxGeometry y="26" width="200" height="154" as="geometry"/>
+</mxCell>
+
+<!-- OrderDetail Entity -->
+<mxCell id="entity_orderdetail" value="OrderDetail" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=1;marginBottom=0;rounded=0;shadow=0;strokeWidth=1;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+    <mxGeometry x="600" y="420" width="200" height="140" as="geometry"/>
+</mxCell>
+<mxCell id="orderdetail_fields" value="+ Id: Guid (PK)&#xa;+ Quantity: int&#xa;+ Amount: decimal&#xa;+ Status: int&#xa;+ OrderId: Guid (FK)&#xa;+ ContainerId: Guid (FK)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="entity_orderdetail">
+    <mxGeometry y="26" width="200" height="114" as="geometry"/>
+</mxCell>
+
+<!-- Transaction Entity -->
+<mxCell id="entity_transaction" value="Transaction" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=1;marginBottom=0;rounded=0;shadow=0;strokeWidth=1;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+    <mxGeometry x="600" y="240" width="200" height="160" as="geometry"/>
+</mxCell>
+<mxCell id="transaction_fields" value="+ Id: Guid (PK)&#xa;+ Datestamp: DateTime&#xa;+ Amount: decimal&#xa;+ Status: int&#xa;+ OrderId: Guid (FK)&#xa;+ PayerId: Guid (FK)&#xa;+ ReceiverId: Guid (FK)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="entity_transaction">
+    <mxGeometry y="26" width="200" height="134" as="geometry"/>
+</mxCell>
+
+<!-- Relationships -->
+<!-- User - UserPassword (1:1) -->
+<mxCell id="rel_user_userpassword" value="" style="endArrow=none;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1" source="user_fields" target="userpassword_fields">
+    <mxGeometry relative="1" as="geometry"/>
+</mxCell>
+
+<!-- User - UserRoom (1:N) -->
+<mxCell id="rel_user_userroom" value="" style="endArrow=none;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1" source="user_fields" target="userroom_fields">
+    <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+            <mxPoint x="280" y="123"/>
+            <mxPoint x="280" y="323"/>
+        </Array>
+    </mxGeometry>
+</mxCell>
+
+<!-- Room - UserRoom (1:N) -->
+<mxCell id="rel_room_userroom" value="" style="endArrow=none;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1" source="room_fields" target="userroom_fields">
+    <mxGeometry relative="1" as="geometry"/>
+</mxCell>
+
+<!-- Room - Container (1:N) -->
+<mxCell id="rel_room_container" value="" style="endArrow=none;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1" source="entity_room" target="entity_container">
+    <mxGeometry relative="1" as="geometry"/>
+</mxCell>
+
+<!-- Container - OrderDetail (1:N) -->
+<mxCell id="rel_container_orderdetail" value="" style="endArrow=none;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1" source="container_fields" target="orderdetail_fields">
+    <mxGeometry relative="1" as="geometry"/>
+</mxCell>
+
+<!-- Order - OrderDetail (1:N) -->
+<mxCell id="rel_order_orderdetail" value="" style="endArrow=none;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1" source="order_fields" target="orderdetail_fields">
+    <mxGeometry relative="1" as="geometry"/>
+</mxCell>
+
+<!-- Order - Transaction (1:N) -->
+<mxCell id="rel_order_transaction" value="" style="endArrow=none;html=1;rounded=0;exitX=1;exitY=0.25;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1" source="order_fields" target="transaction_fields">
+    <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+            <mxPoint x="560" y="485"/>
+            <mxPoint x="560" y="333"/>
+        </Array>
+    </mxGeometry>
+</mxCell>
+
+<!-- Legend -->
+<mxCell id="legend" value="Legend" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=1;marginBottom=0;rounded=0;shadow=0;strokeWidth=1;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+    <mxGeometry x="600" y="40" width="200" height="100" as="geometry"/>
+</mxCell>
+<mxCell id="legend_content" value="PK = Primary Key&#xa;FK = Foreign Key&#xa;UK = Unique Key&#xa;1:N = One-to-Many Relationship&#xa;1:1 = One-to-One Relationship" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="legend">
+    <mxGeometry y="26" width="200" height="74" as="geometry"/>
+</mxCell>
+
+</root>
+</mxGraphModel>
+</diagram>
+</mxfile>

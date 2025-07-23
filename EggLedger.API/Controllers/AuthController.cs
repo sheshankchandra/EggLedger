@@ -170,21 +170,21 @@ public class AuthController : ControllerBase
     {
         try
         {
-            _logger.LogInformation("Refresh token request received for user {UserId}", request.UserId);
+            _logger.LogInformation("Refresh token request received for user {Id}", request.UserId);
             
             var tokenResponse = await _authService.RefreshTokensAsync(request);
             if (tokenResponse.IsFailed || string.IsNullOrEmpty(tokenResponse.Value.AccessToken) || string.IsNullOrEmpty(tokenResponse.Value.RefreshToken))
             {
-                _logger.LogWarning("Refresh token failed for user {UserId}", request.UserId);
+                _logger.LogWarning("Refresh token failed for user {Id}", request.UserId);
                 return Unauthorized("Invalid refresh token.");
             }
 
-            _logger.LogInformation("Refresh token successful for user {UserId}", request.UserId);
+            _logger.LogInformation("Refresh token successful for user {Id}", request.UserId);
             return Ok(tokenResponse.Value);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unhandled exception in RefreshToken for userId: {UserId}", request.UserId);
+            _logger.LogError(ex, "Unhandled exception in RefreshToken for userId: {Id}", request.UserId);
             return StatusCode(500, "An unexpected error occurred.");
         }
     }

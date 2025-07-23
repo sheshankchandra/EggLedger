@@ -27,69 +27,68 @@ namespace EggLedger.Services.Services
         {
             try
             {
-                var user = await _context.Users.FirstOrDefaultAsync(u => u.UserId == userId, cancellationToken);
-                var userRoom = await _context.UserRooms
-                    .FirstOrDefaultAsync(u => u.UserId == userId && u.Room.RoomCode == roomCode, cancellationToken);
+                User user = await _context.Users.FirstAsync(u => u.Id == userId, cancellationToken);
+                UserRoom userRoom = await _context.UserRooms.FirstAsync(u => u.UserId == userId && u.Room.Code == roomCode, cancellationToken);
 
-                var orderNameResult = await _helperService.GenerateOrderName(user ?? throw new InvalidOperationException(), 1, cancellationToken);
+                Result<string> orderNameResult = await _helperService.GenerateOrderName(user ?? throw new InvalidOperationException(), 1, cancellationToken);
                 if (orderNameResult.IsFailed)
                 {
-                    _logger.LogWarning("Unable to generate the order name for user: {UserId}", userId);
+                    _logger.LogWarning("Unable to generate the order name for user: {Id}", userId);
                     return Result.Fail("Failed generating an order name");
                 }
 
-                _logger.LogInformation("Creating container {ContainerName} with quantity {Quantity} and price {Amount}", dto.ContainerName, dto.Quantity, dto.Amount);
+                _logger.LogInformation("Creating container {Name} with quantity {Quantity} and price {Amount}", dto.ContainerName, dto.Quantity, dto.Amount);
 
-                var order = new Order
+                Order order = new Order
                 {
-                    OrderId = Guid.NewGuid(),
-                    OrderName = orderNameResult.Value,
+                    Id = Guid.NewGuid(),
+                    Name = orderNameResult.Value,
                     Datestamp = DateTime.UtcNow,
-                    OrderType = OrderType.Stocking,
+                    Type = OrderType.Stocking,
                     Quantity = dto.Quantity,
-                    UserId = user.UserId,
+                    UserId = user.Id,
                     Amount = dto.Amount,
-                    OrderStatus = OrderStatus.Entered
+                    Status = OrderStatus.Entered
                 };
 
-                Debug.Assert(userRoom != null, nameof(userRoom) + " != null");
-                var orderDetail = new OrderDetail
+                Container container = new Container
                 {
-                    OrderDetailId = Guid.NewGuid(),
-                    OrderId = order.OrderId,
-                    DetailQuantity = dto.Quantity,
-                    Price = Math.Round(dto.Amount / dto.Quantity, 2),
-                    OrderDetailStatus = OrderDetailStatus.Entered,
-                    Container = new Container
-                    {
-                        ContainerId = Guid.NewGuid(),
-                        ContainerName = string.IsNullOrEmpty(dto.ContainerName) ? $"{user.FirstName} {DateTime.UtcNow:yyyyMMddHHmmss}" : dto.ContainerName,
-                        PurchaseDateTime = DateTime.UtcNow,
-                        BuyerId = userId,
-                        TotalQuantity = dto.Quantity,
-                        RemainingQuantity = dto.Quantity,
-                        Amount = dto.Amount,
-                        RoomId = (Guid)userRoom.RoomId
-                    }
+                    Id = Guid.NewGuid(),
+                    Name = string.IsNullOrEmpty(dto.ContainerName) ? $"{user.FirstName} {DateTime.UtcNow:yyyyMMddHHmmss}" : dto.ContainerName,
+                    PurchaseDateTime = DateTime.UtcNow,
+                    BuyerId = userId,
+                    TotalQuantity = dto.Quantity,
+                    RemainingQuantity = dto.Quantity,
+                    Amount = dto.Amount,
+                    RoomId = (Guid)userRoom!.RoomId
+                };
+
+                OrderDetail orderDetail = new OrderDetail
+                {
+                    Id = Guid.NewGuid(),
+                    OrderId = order.Id,
+                    ContainerId = container.Id,
+                    Quantity = dto.Quantity,
+                    Amount = dto.Amount,
+                    Status = OrderDetailStatus.Entered
                 };
 
                 order.OrderDetails.Add(orderDetail);
-
                 _context.Orders.Add(order);
-                await _context.SaveChangesAsync(cancellationToken);
+                await _context.SaveChangesAsync();
 
-                _logger.LogInformation("Stock order created: {OrderId}", order.OrderId);
+                _logger.LogInformation("Stock order created: {Id}", order.Id);
 
-                return Result.Ok(order.OrderName);
+                return Result.Ok(order.Name);
             }
             catch (OperationCanceledException ex)
             {
-                _logger.LogInformation(ex, "CreateStockOrderAsync was canceled for userId {UserId}, roomCode {RoomCode}", userId, roomCode);
+                _logger.LogInformation(ex, "CreateStockOrderAsync was canceled for userId {Id}, roomCode {Code}", userId, roomCode);
                 return Result.Fail("Operation was canceled.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred in CreateStockOrderAsync for userId {UserId}, roomCode {RoomCode}", userId, roomCode);
+                _logger.LogError(ex, "Error occurred in CreateStockOrderAsync for userId {Id}, roomCode {Code}", userId, roomCode);
                 return Result.Fail("An error occurred while creating the stock order.");
             }
         }
@@ -98,40 +97,38 @@ namespace EggLedger.Services.Services
         {
             try
             {
-                var user = await _context.Users
-                    .FirstOrDefaultAsync(u => u.UserId == userId, cancellationToken);
-                var userRoom = await _context.UserRooms
-                    .FirstOrDefaultAsync(ur => ur.UserId == userId && ur.Room.RoomCode == roomCode, cancellationToken);
+                User user = await _context.Users.FirstAsync(u => u.Id == userId, cancellationToken);
+                UserRoom userRoom = await _context.UserRooms.FirstAsync(ur => ur.UserId == userId && ur.Room.Code == roomCode, cancellationToken);
 
-                var orderNameResult = await _helperService.GenerateOrderName(user!, 2, cancellationToken);
+                Result<string> orderNameResult = await _helperService.GenerateOrderName(user!, 2, cancellationToken);
                 if (orderNameResult.IsFailed)
                 {
-                    _logger.LogWarning("Unable to generate the order name for user: {UserId}", userId);
+                    _logger.LogWarning("Unable to generate the order name for user: {Id}", userId);
                     return Result.Fail("Failed generating an order name");
                 }
 
-                var order = new Order
+                Order order = new Order
                 {
-                    OrderId = Guid.NewGuid(),
-                    OrderName = orderNameResult.Value,
+                    Id = Guid.NewGuid(),
+                    Name = orderNameResult.Value,
                     Datestamp = DateTime.UtcNow,
-                    OrderType = OrderType.Consuming,
+                    Type = OrderType.Consuming,
                     Quantity = dto.Quantity,
                     UserId = userId,
-                    Amount = 0,
-                    OrderStatus = OrderStatus.Entered
+                    Amount = 0, //Update later based on consumed containers
+                    Status = OrderStatus.Entered
                 };
 
                 int remainingPick = dto.Quantity;
 
                 // Only select containers with available stock, ordered by purchase date
-                var availableContainers = await _context.Containers
+                List<Container> availableContainers = await _context.Containers
                     .Where(c => c.RemainingQuantity > 0)
-                    .Where(c => c.RoomId == userRoom!.RoomId)
+                    .Where(c => c.RoomId == userRoom.RoomId)
                     .OrderBy(c => c.PurchaseDateTime)
                     .ToListAsync(cancellationToken);
 
-                foreach (var container in availableContainers)
+                foreach (Container container in availableContainers)
                 {
                     if (remainingPick <= 0)
                         break;
@@ -140,13 +137,12 @@ namespace EggLedger.Services.Services
 
                     order.OrderDetails.Add(new OrderDetail
                     {
-                        OrderDetailId = Guid.NewGuid(),
-                        OrderId = order.OrderId,
-                        ContainerId = container.ContainerId,
-                        DetailQuantity = taken,
-                        Price = container.Price,
+                        Id = Guid.NewGuid(),
+                        OrderId = order.Id,
+                        ContainerId = container.Id,
+                        Quantity = taken,
                         Amount = container.Price * taken,
-                        OrderDetailStatus = OrderDetailStatus.Entered
+                        Status = OrderDetailStatus.Entered
                     });
 
                     container.RemainingQuantity -= taken;
@@ -156,31 +152,32 @@ namespace EggLedger.Services.Services
                 if (remainingPick > 0)
                 {
                     _logger.LogWarning("Not enough eggs in stock to fulfill this consumption. Needed: {Needed}, Remaining: {Remaining}", dto.Quantity, remainingPick);
+                    return Result.Fail($"Not enough eggs in stock to fulfill this consumption. Needed: {dto.Quantity}, Remaining: {remainingPick}");
                 }
 
                 if (remainingPick < 0)
                 {
                     _logger.LogError("More than required eggs are consumed. Needed : {Needed}, Consumed: {Consumed}", dto.Quantity, dto.Quantity - remainingPick);
-                    return Result.Fail("More than required eggs are consumed.");
+                    return Result.Fail($"More than required eggs are consumed. Needed: {dto.Quantity}, Consumed: {dto.Quantity - remainingPick}");
                 }
 
-                order.Amount = order.OrderDetails.Sum(d => d.Price * d.DetailQuantity);
+                order.Amount = order.OrderDetails.Sum(d => d.Amount);
 
                 _context.Orders.Add(order);
-                await _context.SaveChangesAsync(cancellationToken);
+                await _context.SaveChangesAsync();
 
-                _logger.LogInformation("Consume order created: {OrderId}", order.OrderId);
+                _logger.LogInformation("Consume order created: {Id}", order.Id);
 
-                return Result.Ok(order.OrderName);
+                return Result.Ok(order.Name);
             }
             catch (OperationCanceledException ex)
             {
-                _logger.LogInformation(ex, "CreateConsumeOrderAsync was canceled for userId {UserId}, roomCode {RoomCode}", userId, roomCode);
+                _logger.LogInformation(ex, "CreateConsumeOrderAsync was canceled for userId {Id}, roomCode {Code}", userId, roomCode);
                 return Result.Fail("Operation was canceled.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred in CreateConsumeOrderAsync for userId {UserId}, roomCode {RoomCode}", userId, roomCode);
+                _logger.LogError(ex, "Error occurred in CreateConsumeOrderAsync for userId {Id}, roomCode {Code}", userId, roomCode);
                 return Result.Fail("An error occurred while creating the consume order.");
             }
         }
@@ -192,7 +189,7 @@ namespace EggLedger.Services.Services
                 var order = await _context.Orders
                     .Include(o => o.OrderDetails)
                     .ThenInclude(od => od.Container)
-                    .FirstOrDefaultAsync(o => o.OrderId == orderId, cancellationToken);
+                    .FirstOrDefaultAsync(o => o.Id == orderId, cancellationToken);
 
                 if (order == null)
                     return Result.Fail("Order not found");
@@ -202,12 +199,12 @@ namespace EggLedger.Services.Services
             }
             catch (OperationCanceledException ex)
             {
-                _logger.LogInformation(ex, "GetOrderByIdAsync was canceled for orderId {OrderId}", orderId);
+                _logger.LogInformation(ex, "GetOrderByIdAsync was canceled for orderId {Id}", orderId);
                 return Result.Fail("Operation was canceled.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred in GetOrderByIdAsync for orderId {OrderId}", orderId);
+                _logger.LogError(ex, "Error occurred in GetOrderByIdAsync for orderId {Id}", orderId);
                 return Result.Fail("An error occurred while retrieving the order.");
             }
         }
@@ -216,7 +213,7 @@ namespace EggLedger.Services.Services
         {
             try
             {
-                var user = await _context.Users.FirstOrDefaultAsync(u => u.UserId == userId, cancellationToken);
+                var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
 
                 if (user == null)
                 {
@@ -234,12 +231,12 @@ namespace EggLedger.Services.Services
             }
             catch (OperationCanceledException ex)
             {
-                _logger.LogInformation(ex, "GetOrdersByUserAsync was canceled for userId {UserId}", userId);
+                _logger.LogInformation(ex, "GetOrdersByUserAsync was canceled for userId {Id}", userId);
                 return Result.Fail("Operation was canceled.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred in GetOrdersByUserAsync for userId {UserId}", userId);
+                _logger.LogError(ex, "Error occurred in GetOrdersByUserAsync for userId {Id}", userId);
                 return Result.Fail("An error occurred while retrieving orders for the user.");
             }
         }
@@ -259,12 +256,12 @@ namespace EggLedger.Services.Services
             }
             catch (OperationCanceledException ex)
             {
-                _logger.LogInformation(ex, "GetOrdersByContainerAsync was canceled for containerId {ContainerId}", containerId);
+                _logger.LogInformation(ex, "GetOrdersByContainerAsync was canceled for containerId {Id}", containerId);
                 return Result.Fail("Operation was canceled.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred in GetOrdersByContainerAsync for containerId {ContainerId}", containerId);
+                _logger.LogError(ex, "Error occurred in GetOrdersByContainerAsync for containerId {Id}", containerId);
                 return Result.Fail("An error occurred while retrieving orders for the container.");
             }
         }
@@ -274,21 +271,21 @@ namespace EggLedger.Services.Services
         {
             return new OrderDto
             {
-                OrderId = order.OrderId,
-                OrderName = order.OrderName,
+                OrderId = order.Id,
+                OrderName = order.Name,
                 Datestamp = order.Datestamp,
-                OrderType = order.OrderType,
+                OrderType = order.Type,
                 Quantity = order.Quantity,
                 Amount = order.Amount,
                 UserId = order.UserId,
-                OrderStatus = order.OrderStatus,
+                OrderStatus = order.Status,
                 OrderDetails = order.OrderDetails.Select(od => new OrderDetailDto
                 {
-                    OrderDetailId = od.OrderDetailId,
+                    OrderDetailId = od.Id,
                     ContainerId = od.ContainerId,
-                    DetailQuantity = od.DetailQuantity,
+                    DetailQuantity = od.Quantity,
                     Price = od.Price,
-                    OrderDetailStatus = od.OrderDetailStatus
+                    OrderDetailStatus = od.Status
                 }).ToList()
             };
         }

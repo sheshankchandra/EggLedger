@@ -4,9 +4,13 @@ namespace EggLedger.Models.Models
 {
     public class Room : AuditableEntity
     {
-        public required Guid RoomId { get; set; }
-        public required string RoomName { get; set; }
-        public required int RoomCode { get; set; }
+        public Room()
+        {
+        }
+
+        public required Guid Id { get; set; }
+        public required string Name { get; set; }
+        public required int Code { get; set; }
         public required bool IsPublic { get; set; }
         
         /// <summary>
@@ -14,9 +18,7 @@ namespace EggLedger.Models.Models
         /// </summary>
         public RoomStatus Status { get; set; } = RoomStatus.Active;
 
-        // Navigation properties
-        public virtual ICollection<UserRoom> UserRooms { get; set; } = new List<UserRoom>();
-        public virtual ICollection<Container> Containers { get; set; } = new List<Container>();
+        // get-only properties
 
         /// <summary>
         /// Checks if the room is currently active and accessible
@@ -27,5 +29,9 @@ namespace EggLedger.Models.Models
         /// Checks if the room is archived (soft deleted)
         /// </summary>
         public bool IsArchived => Status == RoomStatus.Archived;
+
+        // Navigation properties
+        public virtual ICollection<UserRoom> UserRooms { get; set; } = new List<UserRoom>();
+        public virtual ICollection<Container> Containers { get; set; } = new List<Container>();
     }
 }

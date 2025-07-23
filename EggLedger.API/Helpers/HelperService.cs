@@ -31,7 +31,7 @@ namespace EggLedger.API.Helpers
                 string orderPrefix = (i == 1 ? "SO" : "CO");
 
                 int userOrdersCount = await _context.Orders
-                    .Where(o => o.UserId == user.UserId)
+                    .Where(o => o.UserId == user.Id)
                     .CountAsync(cancellationToken);
 
                 if (userOrdersCount != 0)
@@ -45,12 +45,12 @@ namespace EggLedger.API.Helpers
             }
             catch (OperationCanceledException ex)
             {
-                _logger.LogInformation(ex, "GenerateOrderName was canceled for userId {UserId}", user.UserId);
+                _logger.LogInformation(ex, "GenerateOrderName was canceled for userId {Id}", user.Id);
                 return Result.Fail("Operation was canceled.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred in GenerateOrderName for userId {UserId}", user.UserId);
+                _logger.LogError(ex, "Error occurred in GenerateOrderName for userId {Id}", user.Id);
                 return Result.Fail("An error occurred while generating order name.");
             }
         }
@@ -64,7 +64,7 @@ namespace EggLedger.API.Helpers
                 string containerPrefix = "CNT";
 
                 int userContainersCount = await _context.Containers
-                    .Where(o => o.BuyerId == user.UserId)
+                    .Where(o => o.BuyerId == user.Id)
                     .CountAsync(cancellationToken);
 
                 if (userContainersCount != 0)
@@ -78,12 +78,12 @@ namespace EggLedger.API.Helpers
             }
             catch (OperationCanceledException ex)
             {
-                _logger.LogInformation(ex, "GenerateContainerName was canceled for userId {UserId}", user.UserId);
+                _logger.LogInformation(ex, "GenerateContainerName was canceled for userId {Id}", user.Id);
                 return Result.Fail("Operation was canceled.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred in GenerateContainerName for userId {UserId}", user.UserId);
+                _logger.LogError(ex, "Error occurred in GenerateContainerName for userId {Id}", user.Id);
                 return Result.Fail("An error occurred while generating container name.");
             }
         }
@@ -92,7 +92,7 @@ namespace EggLedger.API.Helpers
         {
             int roomCode = new Random().Next(100000, 1000000);
 
-            while (_context.Rooms.Any(c => c.RoomCode == roomCode))
+            while (_context.Rooms.Any(c => c.Code == roomCode))
             {
                 roomCode = new Random().Next(100000, 1000000);
             }

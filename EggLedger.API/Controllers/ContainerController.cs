@@ -40,12 +40,12 @@ namespace EggLedger.API.Controllers
             }
             catch (OperationCanceledException)
             {
-                _logger.LogInformation("Request was canceled by the client for GetAllContainers, roomCode: {RoomCode}", roomCode);
+                _logger.LogInformation("Request was canceled by the client for GetAllContainers, roomCode: {Code}", roomCode);
                 return StatusCode(499, "Client closed request.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unhandled exception in GetAllContainers for roomCode: {RoomCode}", roomCode);
+                _logger.LogError(ex, "Unhandled exception in GetAllContainers for roomCode: {Code}", roomCode);
                 return StatusCode(500, "An unexpected error occurred.");
             }
         }
@@ -68,12 +68,12 @@ namespace EggLedger.API.Controllers
             }
             catch (OperationCanceledException)
             {
-                _logger.LogInformation("Request was canceled by the client for GetContainer, roomCode: {RoomCode}, id: {Id}", roomCode, id);
+                _logger.LogInformation("Request was canceled by the client for GetContainer, roomCode: {Code}, id: {Id}", roomCode, id);
                 return StatusCode(499, "Client closed request.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unhandled exception in GetContainer for roomCode: {RoomCode}, id: {Id}", roomCode, id);
+                _logger.LogError(ex, "Unhandled exception in GetContainer for roomCode: {Code}, id: {Id}", roomCode, id);
                 return StatusCode(500, "An unexpected error occurred.");
             }
         }
@@ -93,12 +93,12 @@ namespace EggLedger.API.Controllers
             }
             catch (OperationCanceledException)
             {
-                _logger.LogInformation("Request was canceled by the client for CreateContainer, roomCode: {RoomCode}", roomCode);
+                _logger.LogInformation("Request was canceled by the client for CreateContainer, roomCode: {Code}", roomCode);
                 return StatusCode(499, "Client closed request.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unhandled exception in CreateContainer for roomCode: {RoomCode}", roomCode);
+                _logger.LogError(ex, "Unhandled exception in CreateContainer for roomCode: {Code}", roomCode);
                 return StatusCode(500, "An unexpected error occurred.");
             }
         }
@@ -121,12 +121,12 @@ namespace EggLedger.API.Controllers
             }
             catch (OperationCanceledException)
             {
-                _logger.LogInformation("Request was canceled by the client for UpdateContainer, roomCode: {RoomCode}, id: {Id}", roomCode, id);
+                _logger.LogInformation("Request was canceled by the client for UpdateContainer, roomCode: {Code}, id: {Id}", roomCode, id);
                 return StatusCode(499, "Client closed request.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unhandled exception in UpdateContainer for roomCode: {RoomCode}, id: {Id}", roomCode, id);
+                _logger.LogError(ex, "Unhandled exception in UpdateContainer for roomCode: {Code}, id: {Id}", roomCode, id);
                 return StatusCode(500, "An unexpected error occurred.");
             }
         }
@@ -149,12 +149,12 @@ namespace EggLedger.API.Controllers
             }
             catch (OperationCanceledException)
             {
-                _logger.LogInformation("Request was canceled by the client for ArchiveContainer, roomCode: {RoomCode}, id: {Id}", roomCode, id);
+                _logger.LogInformation("Request was canceled by the client for ArchiveContainer, roomCode: {Code}, id: {Id}", roomCode, id);
                 return StatusCode(499, "Client closed request.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unhandled exception in ArchiveContainer for roomCode: {RoomCode}, id: {Id}", roomCode, id);
+                _logger.LogError(ex, "Unhandled exception in ArchiveContainer for roomCode: {Code}, id: {Id}", roomCode, id);
                 return StatusCode(500, "An unexpected error occurred.");
             }
         }
@@ -177,12 +177,12 @@ namespace EggLedger.API.Controllers
             }
             catch (OperationCanceledException)
             {
-                _logger.LogInformation("Request was canceled by the client for SuspendContainer, roomCode: {RoomCode}, id: {Id}", roomCode, id);
+                _logger.LogInformation("Request was canceled by the client for SuspendContainer, roomCode: {Code}, id: {Id}", roomCode, id);
                 return StatusCode(499, "Client closed request.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unhandled exception in SuspendContainer for roomCode: {RoomCode}, id: {Id}", roomCode, id);
+                _logger.LogError(ex, "Unhandled exception in SuspendContainer for roomCode: {Code}, id: {Id}", roomCode, id);
                 return StatusCode(500, "An unexpected error occurred.");
             }
         }
@@ -202,12 +202,12 @@ namespace EggLedger.API.Controllers
             }
             catch (OperationCanceledException)
             {
-                _logger.LogInformation("Request was canceled by the client for SearchContainers, roomCode: {RoomCode}, name: {Name}", roomCode, name);
+                _logger.LogInformation("Request was canceled by the client for SearchContainers, roomCode: {Code}, name: {Name}", roomCode, name);
                 return StatusCode(499, "Client closed request.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unhandled exception in SearchContainers for roomCode: {RoomCode}, name: {Name}", roomCode, name);
+                _logger.LogError(ex, "Unhandled exception in SearchContainers for roomCode: {Code}, name: {Name}", roomCode, name);
                 return StatusCode(500, "An unexpected error occurred.");
             }
         }
@@ -235,12 +235,12 @@ namespace EggLedger.API.Controllers
             }
             catch (OperationCanceledException)
             {
-                _logger.LogInformation("Request was canceled by the client for GetMyContainers, roomCode: {RoomCode}", roomCode);
+                _logger.LogInformation("Request was canceled by the client for GetMyContainers, roomCode: {Code}", roomCode);
                 return StatusCode(499, "Client closed request.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unhandled exception in GetMyContainers for roomCode: {RoomCode}", roomCode);
+                _logger.LogError(ex, "Unhandled exception in GetMyContainers for roomCode: {Code}", roomCode);
                 return StatusCode(500, "An unexpected error occurred.");
             }
         }
@@ -260,12 +260,12 @@ namespace EggLedger.API.Controllers
             }
             catch (OperationCanceledException)
             {
-                _logger.LogInformation("Request was canceled by the client for GetPagedContainers, roomCode: {RoomCode}, page: {Page}, pageSize: {PageSize}", roomCode, page, pageSize);
+                _logger.LogInformation("Request was canceled by the client for GetPagedContainers, roomCode: {Code}, page: {Page}, pageSize: {PageSize}", roomCode, page, pageSize);
                 return StatusCode(499, "Client closed request.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unhandled exception in GetPagedContainers for roomCode: {RoomCode}, page: {Page}, pageSize: {PageSize}", roomCode, page, pageSize);
+                _logger.LogError(ex, "Unhandled exception in GetPagedContainers for roomCode: {Code}, page: {Page}, pageSize: {PageSize}", roomCode, page, pageSize);
                 return StatusCode(500, "An unexpected error occurred.");
             }
         }

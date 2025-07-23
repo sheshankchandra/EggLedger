@@ -8,8 +8,12 @@ namespace EggLedger.Models.Models
 {
     public class UserPassword
     {
-        public Guid Id { get; set; }
-        public Guid UserId { get; set; }
+        public UserPassword()
+        {
+        }
+
+        public required Guid Id { get; set; }
+        public required Guid UserId { get; set; }
         public required string PasswordHash { get; set; }
 
         // Navigation properties

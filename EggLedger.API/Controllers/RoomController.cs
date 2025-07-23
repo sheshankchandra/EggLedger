@@ -46,7 +46,7 @@ namespace EggLedger.API.Controllers
 
                 if (result.IsSuccess)
                 {
-                    _logger.LogInformation("User successfully joined room with code: {RoomCode}", roomCode);
+                    _logger.LogInformation("User successfully joined room with code: {Code}", roomCode);
                     return Ok(result);
                 }
 
@@ -55,12 +55,12 @@ namespace EggLedger.API.Controllers
             }
             catch (OperationCanceledException)
             {
-                _logger.LogInformation("Request was canceled by the client for JoinRoom, roomCode: {RoomCode}", roomCode);
+                _logger.LogInformation("Request was canceled by the client for JoinRoom, roomCode: {Code}", roomCode);
                 return StatusCode(499, "Client closed request.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unhandled exception in JoinRoom for roomCode: {RoomCode}", roomCode);
+                _logger.LogError(ex, "Unhandled exception in JoinRoom for roomCode: {Code}", roomCode);
                 return StatusCode(500, "An unexpected error occurred.");
             }
         }
@@ -84,7 +84,7 @@ namespace EggLedger.API.Controllers
 
                 if (result.IsSuccess)
                 {
-                    _logger.LogInformation("Successfully created the Room : {RoomCode}", result.Value);
+                    _logger.LogInformation("Successfully created the Room : {Code}", result.Value);
                     return Ok(result);
                 }
 
@@ -116,12 +116,12 @@ namespace EggLedger.API.Controllers
             }
             catch (OperationCanceledException)
             {
-                _logger.LogInformation("Request was canceled by the client for GetRoomByCode, roomCode: {RoomCode}", roomCode);
+                _logger.LogInformation("Request was canceled by the client for GetRoomByCode, roomCode: {Code}", roomCode);
                 return StatusCode(499, "Client closed request.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unhandled exception in GetRoomByCode for roomCode: {RoomCode}", roomCode);
+                _logger.LogError(ex, "Unhandled exception in GetRoomByCode for roomCode: {Code}", roomCode);
                 return StatusCode(500, "An unexpected error occurred.");
             }
         }
@@ -139,12 +139,12 @@ namespace EggLedger.API.Controllers
             }
             catch (OperationCanceledException)
             {
-                _logger.LogInformation("Request was canceled by the client for GetAllRoomUsers, roomCode: {RoomCode}", roomCode);
+                _logger.LogInformation("Request was canceled by the client for GetAllRoomUsers, roomCode: {Code}", roomCode);
                 return StatusCode(499, "Client closed request.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unhandled exception in GetAllRoomUsers for roomCode: {RoomCode}", roomCode);
+                _logger.LogError(ex, "Unhandled exception in GetAllRoomUsers for roomCode: {Code}", roomCode);
                 return StatusCode(500, "An unexpected error occurred.");
             }
         }
@@ -208,12 +208,12 @@ namespace EggLedger.API.Controllers
         {
             try
             {
-                _logger.LogInformation("Received request to delete room with code: {RoomCode}", roomCode);
+                _logger.LogInformation("Received request to delete room with code: {Code}", roomCode);
                 
                 var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
                 if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
                 {
-                    _logger.LogWarning("Delete room request denied - Invalid user identity for room code: {RoomCode}", roomCode);
+                    _logger.LogWarning("Delete room request denied - Invalid user identity for room code: {Code}", roomCode);
                     return Unauthorized("Invalid user identity");
                 }
 
@@ -221,21 +221,21 @@ namespace EggLedger.API.Controllers
                 
                 if (result.IsSuccess)
                 {
-                    _logger.LogInformation("Successfully deleted room with code: {RoomCode} by user: {UserId}", roomCode, userId);
+                    _logger.LogInformation("Successfully deleted room with code: {Code} by user: {Id}", roomCode, userId);
                     return Ok(result.Value);
                 }
                 
-                _logger.LogWarning("Failed to delete room with code: {RoomCode}. Errors: {Errors}", roomCode, string.Join(", ", result.Errors.Select(e => e.Message)));
+                _logger.LogWarning("Failed to delete room with code: {Code}. Errors: {Errors}", roomCode, string.Join(", ", result.Errors.Select(e => e.Message)));
                 return BadRequest(result.Errors.Select(e => e.Message));
             }
             catch (OperationCanceledException)
             {
-                _logger.LogInformation("Request was canceled by the client for DeleteRoom, roomCode: {RoomCode}", roomCode);
+                _logger.LogInformation("Request was canceled by the client for DeleteRoom, roomCode: {Code}", roomCode);
                 return StatusCode(499, "Client closed request.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unhandled exception in DeleteRoom for roomCode: {RoomCode}", roomCode);
+                _logger.LogError(ex, "Unhandled exception in DeleteRoom for roomCode: {Code}", roomCode);
                 return StatusCode(500, "An unexpected error occurred.");
             }
         }
