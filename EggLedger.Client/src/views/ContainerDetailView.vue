@@ -80,7 +80,7 @@
                       {{ getOrderTypeSign(order.orderType) }}{{ getContainerQuantity(order) }} eggs
                     </span>
                     <span v-if="order.amount > 0" class="amount"
-                      >₹{{ order.amount.toFixed(2) }}</span
+                      >₹{{ getContainerAmount(order)  }}</span
                     >
                   </div>
                 </div>
@@ -225,6 +225,17 @@ const getContainerQuantity = (order) => {
     (d) => d.containerId === (containerInfo.value?.containerId || props.containerId),
   )
   return containerDetail ? containerDetail.detailQuantity : 0
+}
+
+const getContainerAmount = (order) => {
+  if (!order.orderDetails || order.orderDetails.length === 0) {
+    return order.quantity || 0
+  }
+
+  const containerDetail = order.orderDetails.find(
+    (d) => d.containerId === (containerInfo.value?.containerId || props.containerId),
+  )
+  return containerDetail ? containerDetail.detailQuantity * containerDetail.price : 0
 }
 
 const getOrderStatusDisplay = (orderStatus) => {

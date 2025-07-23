@@ -57,7 +57,8 @@ namespace EggLedger.Services.Services
                 {
                     OrderDetailId = Guid.NewGuid(),
                     OrderId = order.OrderId,
-                    DetailQuantity = 0,
+                    DetailQuantity = dto.Quantity,
+                    Price = Math.Round(dto.Amount / dto.Quantity, 2),
                     OrderDetailStatus = OrderDetailStatus.Entered,
                     Container = new Container
                     {
