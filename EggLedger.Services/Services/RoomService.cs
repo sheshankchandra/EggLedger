@@ -410,5 +410,111 @@ namespace EggLedger.Services.Services
             }
         }
 
+        public async Task<Result<string>> EditRoomNameAsync(Guid userId, Guid roomId, string newRoomName, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                var userRoom = await _context.UserRooms
+                    .Include(ur => ur.Room)
+                    .Where(ur => ur.RoomId == roomId && ur.UserId == userId && ur.Room.Status == RoomStatus.Active)
+                    .FirstOrDefaultAsync(cancellationToken);
+
+                if (userRoom == null)
+                {
+                    _logger.LogError("Active room '{RoomId}' not found or user '{UserId}' is not in that room", roomId, userId);
+                    return Result.Fail("Room not found or user is not in that room");
+                }
+
+                if (!userRoom.IsAdmin)
+                {
+                    _logger.LogWarning("User '{UserId}' is not admin of room '{RoomId}'", userId, roomId);
+                    return Result.Fail("Only room admin can edit the room name");
+                }
+
+                var room = userRoom.Room;
+
+                if (string.Equals(room.RoomName, newRoomName, StringComparison.Ordinal))
+                {
+                    _logger.LogInformation("Room '{RoomId}' already has the name '{RoomName}'", roomId, newRoomName);
+                    return Result.Ok("Room name is already set to the specified value");
+                }
+
+                room.RoomName = newRoomName;
+                room.ModifiedAt = DateTime.UtcNow;
+                room.ModifiedBy = userId;
+
+                await _context.SaveChangesAsync(cancellationToken);
+
+                _logger.LogInformation("Room name updated for Room '{RoomId}' to '{RoomName}' by User '{UserId}'", roomId, newRoomName, userId);
+
+                return Result.Ok("Room name updated successfully");
+            }
+            catch (OperationCanceledException ex)
+            {
+                _logger.LogInformation(ex, "EditRoomNameAsync was canceled for roomId {RoomId}", roomId);
+                return Result.Fail("Operation was canceled.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while editing room name for RoomId {RoomId}", roomId);
+                return Result.Fail("Unexpected error occurred while editing the room name");
+            }
+        }
+
+        public async Task<Result<string>> RemoveRoomMemberAsync(Guid adminUserId, Guid roomId, Guid memberUserId, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                var adminUserRoom = await _context.UserRooms
+                    .Include(ur => ur.Room)
+                    .Where(ur => ur.RoomId == roomId && ur.UserId == adminUserId && ur.Room.Status == RoomStatus.Active)
+                    .FirstOrDefaultAsync(cancellationToken);
+
+                if (adminUserRoom == null)
+                {
+                    _logger.LogError("Active room '{RoomId}' not found or admin user '{UserId}' is not in that room", roomId, adminUserId);
+                    return Result.Fail("Room not found or admin user is not in that room");
+                }
+
+                if (!adminUserRoom.IsAdmin)
+                {
+                    _logger.LogWarning("User '{UserId}' is not admin of room '{RoomId}'", adminUserId, roomId);
+                    return Result.Fail("Only room admin can remove members");
+                }
+
+                if (adminUserId == memberUserId)
+                {
+                    _logger.LogWarning("Admin '{UserId}' attempted to remove themselves from room '{RoomId}'", adminUserId, roomId);
+                    return Result.Fail("Admin cannot remove themselves from the room");
+                }
+
+                var memberUserRoom = await _context.UserRooms
+                    .Where(ur => ur.RoomId == roomId && ur.UserId == memberUserId)
+                    .FirstOrDefaultAsync(cancellationToken);
+
+                if (memberUserRoom == null)
+                {
+                    _logger.LogWarning("User '{MemberUserId}' not found in room '{RoomId}'", memberUserId, roomId);
+                    return Result.Fail("Member not found in the room");
+                }
+
+                _context.UserRooms.Remove(memberUserRoom);
+                await _context.SaveChangesAsync(cancellationToken);
+
+                _logger.LogInformation("User '{MemberUserId}' removed from room '{RoomId}' by admin '{AdminUserId}'", memberUserId, roomId, adminUserId);
+
+                return Result.Ok("Member removed from the room successfully");
+            }
+            catch (OperationCanceledException ex)
+            {
+                _logger.LogInformation(ex, "RemoveRoomMemberAsync was canceled for roomId {RoomId}", roomId);
+                return Result.Fail("Operation was canceled.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while removing member from room '{RoomId}'", roomId);
+                return Result.Fail("Unexpected error occurred while removing the member from the room");
+            }
+        }
     }
 }

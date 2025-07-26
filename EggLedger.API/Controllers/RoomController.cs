@@ -239,5 +239,77 @@ namespace EggLedger.API.Controllers
                 return StatusCode(500, "An unexpected error occurred.");
             }
         }
+
+        // POST: egg-ledger-api/room/edit-name/{roomCode}
+        [Authorize(Policy = "RoomAdmin")]
+        [HttpPost("edit-name/{roomCode:int}")]
+        public async Task<IActionResult> EditRoomName([FromBody] EditRoomNameDto dto, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+                {
+                    return Unauthorized("Invalid user identity");
+                }
+
+                var result = await _roomService.EditRoomNameAsync(userId, dto.RoomId, dto.NewRoomName, cancellationToken);
+
+                if (result.IsSuccess)
+                {
+                    _logger.LogInformation("Room name updated for RoomId: {RoomId} by User: {UserId}", dto.RoomId, userId);
+                    return Ok(result.Value);
+                }
+
+                _logger.LogWarning("Failed to edit room name. Errors: {Errors}", string.Join(", ", result.Errors.Select(e => e.Message)));
+                return BadRequest(result.Errors.Select(e => e.Message));
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogInformation("Request was canceled by the client for EditRoomName, RoomId: {RoomId}", dto.RoomId);
+                return StatusCode(499, "Client closed request.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unhandled exception in EditRoomName for RoomId: {RoomId}", dto.RoomId);
+                return StatusCode(500, "An unexpected error occurred.");
+            }
+        }
+
+        // POST: egg-ledger-api/room/remove-member/{roomCode}
+        [Authorize(Policy = "RoomAdmin")]
+        [HttpPost("remove-member/{roomCode:int}")]
+        public async Task<IActionResult> RemoveRoomMember([FromBody] RemoveRoomMemberDto dto, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var adminUserIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (string.IsNullOrEmpty(adminUserIdClaim) || !Guid.TryParse(adminUserIdClaim, out var adminUserId))
+                {
+                    return Unauthorized("Invalid user identity");
+                }
+
+                var result = await _roomService.RemoveRoomMemberAsync(adminUserId, dto.RoomId, dto.MemberUserId, cancellationToken);
+
+                if (result.IsSuccess)
+                {
+                    _logger.LogInformation("Member {MemberUserId} removed from RoomId: {RoomId} by Admin: {AdminUserId}", dto.MemberUserId, dto.RoomId, adminUserId);
+                    return Ok(result.Value);
+                }
+
+                _logger.LogWarning("Failed to remove room member. Errors: {Errors}", string.Join(", ", result.Errors.Select(e => e.Message)));
+                return BadRequest(result.Errors.Select(e => e.Message));
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogInformation("Request was canceled by the client for RemoveRoomMember, RoomId: {RoomId}", dto.RoomId);
+                return StatusCode(499, "Client closed request.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unhandled exception in RemoveRoomMember for RoomId: {RoomId}", dto.RoomId);
+                return StatusCode(500, "An unexpected error occurred.");
+            }
+        }
     }
 }
