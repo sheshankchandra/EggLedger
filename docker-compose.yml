@@ -32,9 +32,10 @@ services:
     volumes:
       - postgres_data:/var/lib/pgadmin/data
     ports:
-      - "5050:5050"
+      - "5050:80"
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     networks:
       - eggledger-network
     restart: unless-stopped

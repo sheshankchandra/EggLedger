@@ -5,9 +5,10 @@ var username = builder.AddParameter("postgres-username", "eggledger");
 var password = builder.AddParameter("postgres-password", "eggledger123", secret: true);
 
 var postgres = builder.AddPostgres("postgres-server", username, password, 5432)
-    .WithImage("postgres:15-alpine");
-    // Uncomment the following line to use a custom Postgres image
-    //.WithVolume("eggledger_aspire_db", "/var/lib/postgresql/data");
+    .WithImage("postgres:15-alpine")
+    .WithPgAdmin(pgAdmin => pgAdmin.WithHostPort(5050));
+// Uncomment the following line to use a custom Postgres image
+//.WithVolume("eggledger_aspire_db", "/var/lib/postgresql/data");
 
 var database = postgres.AddDatabase("eggledgerDB");
 
