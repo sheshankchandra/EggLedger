@@ -311,5 +311,41 @@ namespace EggLedger.API.Controllers
                 return StatusCode(500, "An unexpected error occurred.");
             }
         }
+
+        // POST: egg-ledger-api/room/edit-status/{roomCode}
+        [Authorize(Policy = "RoomAdmin")]
+        [HttpPost("edit-status/{roomCode:int}")]
+        public async Task<IActionResult> EditRoomStatus([FromBody] EditRoomStatusDto dto, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+                {
+                    return Unauthorized("Invalid user identity");
+                }
+
+                var result = await _roomService.EditRoomStatusAsync(userId, dto.RoomId, dto.NewStatus, cancellationToken);
+
+                if (result.IsSuccess)
+                {
+                    _logger.LogInformation("Room status updated for RoomId: {RoomId} by User: {UserId}", dto.RoomId, userId);
+                    return Ok(result.Value);
+                }
+
+                _logger.LogWarning("Failed to edit room status. Errors: {Errors}", string.Join(", ", result.Errors.Select(e => e.Message)));
+                return BadRequest(result.Errors.Select(e => e.Message));
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogInformation("Request was canceled by the client for EditRoomStatus, RoomId: {RoomId}", dto.RoomId);
+                return StatusCode(499, "Client closed request.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unhandled exception in EditRoomStatus for RoomId: {RoomId}", dto.RoomId);
+                return StatusCode(500, "An unexpected error occurred.");
+            }
+        }
     }
 }

@@ -516,5 +516,50 @@ namespace EggLedger.Services.Services
                 return Result.Fail("Unexpected error occurred while removing the member from the room");
             }
         }
+
+        public async Task<Result<string>> EditRoomStatusAsync(Guid userId, Guid roomId, RoomStatus newStatus, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                var userRoom = await _context.UserRooms
+                    .Include(ur => ur.Room)
+                    .Where(ur => ur.RoomId == roomId && ur.UserId == userId && ur.Room.Status == RoomStatus.Active)
+                    .FirstOrDefaultAsync(cancellationToken);
+
+                if (userRoom == null)
+                {
+                    _logger.LogError("Active room '{RoomId}' not found or user '{UserId}' is not in that room", roomId, userId);
+                    return Result.Fail("Room not found or user is not in that room");
+                }
+
+                var room = userRoom.Room;
+
+                if (room.Status == newStatus)
+                {
+                    _logger.LogInformation("Room '{RoomId}' already has status '{Status}'", roomId, newStatus);
+                    return Result.Ok("Room status is already set to the specified value");
+                }
+
+                room.Status = newStatus;
+                room.ModifiedAt = DateTime.UtcNow;
+                room.ModifiedBy = userId;
+
+                await _context.SaveChangesAsync(cancellationToken);
+
+                _logger.LogInformation("Room status updated for Room '{RoomId}' to '{Status}' by User '{UserId}'", roomId, newStatus, userId);
+
+                return Result.Ok("Room status updated successfully");
+            }
+            catch (OperationCanceledException ex)
+            {
+                _logger.LogInformation(ex, "EditRoomStatusAsync was canceled for roomId {RoomId}", roomId);
+                return Result.Fail("Operation was canceled.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while editing room status for RoomId {RoomId}", roomId);
+                return Result.Fail("Unexpected error occurred while editing the room status");
+            }
+        }
     }
 }
