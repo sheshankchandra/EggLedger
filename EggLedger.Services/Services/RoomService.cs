@@ -532,12 +532,6 @@ namespace EggLedger.Services.Services
                     return Result.Fail("Room not found or user is not in that room");
                 }
 
-                if (!userRoom.IsAdmin)
-                {
-                    _logger.LogWarning("User '{UserId}' is not admin of room '{RoomId}'", userId, roomId);
-                    return Result.Fail("Only room admin can change room status");
-                }
-
                 var room = userRoom.Room;
 
                 if (room.Status == newStatus)
