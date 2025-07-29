@@ -27,5 +27,8 @@
     "prettier": "3.5.3",
     "vite": "^6.0.0",
     "vite-plugin-vue-devtools": "^7.7.7"
+  },
+  "volta": {
+    "node": "24.4.1"
   }
 }
