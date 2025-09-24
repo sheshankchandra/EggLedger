@@ -72,6 +72,7 @@
                 </div>
                 <div class="order-date">{{ formatDateTime(order.datestamp) }}</div>
               </div>
+
               <div class="order-details">
                 <div class="order-info">
                   <div class="order-name">{{ order.orderName }}</div>
@@ -80,7 +81,7 @@
                       {{ getOrderTypeSign(order.orderType) }}{{ getContainerQuantity(order) }} eggs
                     </span>
                     <span v-if="order.amount > 0" class="amount"
-                      >₹{{ order.amount.toFixed(2) }}</span
+                      >₹{{ getContainerAmount(order).toFixed(2) }}</span
                     >
                   </div>
                 </div>
@@ -88,6 +89,7 @@
                   Status: {{ getOrderStatusDisplay(order.orderStatus) }}
                 </div>
               </div>
+
               <div
                 v-if="order.orderDetails && order.orderDetails.length > 0"
                 class="order-detail-info"
@@ -104,6 +106,7 @@
                   </span>
                 </div>
               </div>
+
             </div>
           </div>
         </div>
@@ -186,9 +189,9 @@ const fetchContainerOrders = async () => {
 const getOrderTypeDisplay = (orderType) => {
   switch (orderType) {
     case 1:
-      return '📦 Stock Added'
+      return 'Stock Added'
     case 2:
-      return '🍳 Consumed'
+      return 'Consumed'
     default:
       return 'Unknown'
   }
@@ -225,6 +228,17 @@ const getContainerQuantity = (order) => {
     (d) => d.containerId === (containerInfo.value?.containerId || props.containerId),
   )
   return containerDetail ? containerDetail.detailQuantity : 0
+}
+
+const getContainerAmount = (order) => {
+  if (!order.orderDetails || order.orderDetails.length === 0) {
+    return order.amount || 0
+  }
+
+  const containerDetail = order.orderDetails.find(
+    (d) => d.containerId === (containerInfo.value?.containerId || props.containerId),
+  )
+  return containerDetail ? containerDetail.price *  containerDetail.detailQuantity : 0
 }
 
 const getOrderStatusDisplay = (orderStatus) => {

@@ -12,6 +12,8 @@ public static class LoggingExtensions
 {
     public static IHostApplicationBuilder AddApplicationLogging(this IHostApplicationBuilder builder)
     {
+        System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
+
         // Set the EGGLEDGER_LOG_PATH environment variable based on OS
         SetLogPathEnvironmentVariable();
 

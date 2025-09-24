@@ -9,14 +9,14 @@ namespace EggLedger.Models.Models
         {
         }
 
-        public Guid OrderId { get; set; }
+        public required Guid OrderId { get; set; }
         public required string OrderName { get; set; }
-        public DateTime Datestamp { get; set; }
-        public OrderType OrderType { get; set; }
-        public int Quantity { get; set; }
-        public Guid UserId { get; set; }
-        public decimal Amount { get; set; }
-        public OrderStatus OrderStatus { get; set; }
+        public required DateTime Datestamp { get; set; }
+        public required OrderType OrderType { get; set; }
+        public required int Quantity { get; set; }
+        public required Guid UserId { get; set; }
+        public required decimal Amount { get; set; }
+        public required OrderStatus OrderStatus { get; set; }
 
 
         public User User { get; set; } = null!;

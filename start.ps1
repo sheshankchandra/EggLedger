@@ -38,5 +38,5 @@ Write-Host "To stop: docker-compose down" -ForegroundColor Yellow
 Write-Host "To rebuild: docker-compose build --no-cache" -ForegroundColor Yellow
 Write-Host "To reset database: docker-compose down -v" -ForegroundColor Yellow
 Write-Host ""
-Write-Host "💡 TIP: To persist data between restarts, comment out 'docker-compose down -v' above" -ForegroundColor Magenta
-Write-Host "💡 TIP: Use 'docker-compose down' (without -v) to stop but keep data" -ForegroundColor Magenta
+Write-Host "TIP: To persist data between restarts, comment out 'docker-compose down -v' above" -ForegroundColor Magenta
+Write-Host "TIP: Use 'docker-compose down' (without -v) to stop but keep data" -ForegroundColor Magenta

@@ -89,12 +89,6 @@ namespace EggLedger.Data
 
                 // Property configurations
                 entity.Property(e => e.DetailQuantity).IsRequired();
-                entity.Property(e => e.Price)
-                      .IsRequired()
-                      .HasColumnType("decimal(18,2)");
-                entity.Property(e => e.Amount)
-                      .IsRequired()
-                      .HasColumnType("decimal(18,2)");
                 entity.Property(e => e.OrderDetailStatus).IsRequired();
 
                 // Relationships (Foreign Keys)

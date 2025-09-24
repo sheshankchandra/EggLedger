@@ -31,6 +31,11 @@ namespace EggLedger.Services.Services
                 var userRoom = await _context.UserRooms
                     .FirstOrDefaultAsync(u => u.UserId == userId && u.Room.RoomCode == roomCode, cancellationToken);
 
+                if (userRoom == null)
+                {
+                    throw new ArgumentException("User Room cannot be null.", nameof(userRoom));
+                }
+
                 var orderNameResult = await _helperService.GenerateOrderName(user ?? throw new InvalidOperationException(), 1, cancellationToken);
                 if (orderNameResult.IsFailed)
                 {
@@ -52,28 +57,32 @@ namespace EggLedger.Services.Services
                     OrderStatus = OrderStatus.Entered
                 };
 
-                Debug.Assert(userRoom != null, nameof(userRoom) + " != null");
+                var container = new Container
+                {
+                    ContainerId = Guid.NewGuid(),
+                    ContainerName = string.IsNullOrEmpty(dto.ContainerName) ?
+                        $"{user.FirstName} {DateTime.UtcNow:yyyyMMddHHmmss}" :
+                        dto.ContainerName,
+                    PurchaseDateTime = DateTime.UtcNow,
+                    BuyerId = userId,
+                    TotalQuantity = dto.Quantity,
+                    RemainingQuantity = dto.Quantity,
+                    Amount = dto.Amount,
+                    RoomId = userRoom.RoomId,
+                };
+
                 var orderDetail = new OrderDetail
                 {
                     OrderDetailId = Guid.NewGuid(),
                     OrderId = order.OrderId,
-                    DetailQuantity = 0,
-                    OrderDetailStatus = OrderDetailStatus.Entered,
-                    Container = new Container
-                    {
-                        ContainerId = Guid.NewGuid(),
-                        ContainerName = string.IsNullOrEmpty(dto.ContainerName) ? $"{user.FirstName} {DateTime.UtcNow:yyyyMMddHHmmss}" : dto.ContainerName,
-                        PurchaseDateTime = DateTime.UtcNow,
-                        BuyerId = userId,
-                        TotalQuantity = dto.Quantity,
-                        RemainingQuantity = dto.Quantity,
-                        Amount = dto.Amount,
-                        RoomId = (Guid)userRoom.RoomId
-                    }
+                    ContainerId = container.ContainerId,
+                    DetailQuantity = dto.Quantity,
+                    OrderDetailStatus = OrderDetailStatus.Entered
                 };
 
                 order.OrderDetails.Add(orderDetail);
 
+                _context.Containers.Add(container); // Ensure container is added before saving
                 _context.Orders.Add(order);
                 await _context.SaveChangesAsync(cancellationToken);
 
@@ -143,9 +152,8 @@ namespace EggLedger.Services.Services
                         OrderId = order.OrderId,
                         ContainerId = container.ContainerId,
                         DetailQuantity = taken,
-                        Price = container.Price,
-                        Amount = container.Price * taken,
-                        OrderDetailStatus = OrderDetailStatus.Entered
+                        OrderDetailStatus = OrderDetailStatus.Entered,
+                        Container = container
                     });
 
                     container.RemainingQuantity -= taken;
@@ -154,7 +162,8 @@ namespace EggLedger.Services.Services
 
                 if (remainingPick > 0)
                 {
-                    _logger.LogWarning("Not enough eggs in stock to fulfill this consumption. Needed: {Needed}, Remaining: {Remaining}", dto.Quantity, remainingPick);
+                    _logger.LogError("Not enough eggs in stock to fulfill this consumption. Needed: {Needed}, Remaining: {Remaining}", dto.Quantity, remainingPick);
+                    return Result.Fail("Not enough eggs in stock to fulfill this consumption.");
                 }
 
                 if (remainingPick < 0)
@@ -163,7 +172,7 @@ namespace EggLedger.Services.Services
                     return Result.Fail("More than required eggs are consumed.");
                 }
 
-                order.Amount = order.OrderDetails.Sum(d => d.Price * d.DetailQuantity);
+                order.Amount = order.OrderDetails.Sum(d => d.Amount);
 
                 _context.Orders.Add(order);
                 await _context.SaveChangesAsync(cancellationToken);
@@ -286,7 +295,7 @@ namespace EggLedger.Services.Services
                     OrderDetailId = od.OrderDetailId,
                     ContainerId = od.ContainerId,
                     DetailQuantity = od.DetailQuantity,
-                    Price = od.Price,
+                    Price = od.Container.Price,
                     OrderDetailStatus = od.OrderDetailStatus
                 }).ToList()
             };
