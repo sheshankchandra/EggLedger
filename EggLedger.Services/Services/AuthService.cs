@@ -207,6 +207,31 @@ public class AuthService : IAuthService
         }
     }
 
+    public async Task<Result<TokenResponseDto>> RefreshTokensAsync(string refreshToken)
+    {
+        try
+        {
+            var user = await ValidateRefreshTokenAsync(refreshToken);
+            if (user is null)
+            {
+                _logger.LogWarning("Invalid or expired refresh token presented");
+                return Result.Fail("Invalid or Expired Refresh Token");
+            }
+
+            // Rotate: revoke the old refresh token, then issue a fresh pair
+            await RevokeRefreshTokenAsync(refreshToken);
+
+            _logger.LogInformation("Refresh token successfully rotated for user {UserId}", user.UserId);
+
+            return await CreateTokenResponse(user);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error occurred in RefreshTokensAsync (cookie flow)");
+            return Result.Fail("An unexpected error occurred. Please try again later.");
+        }
+    }
+
     public async Task<Result<TokenResponseDto>> CreateTokenResponse(User? user)
     {
         try
@@ -316,6 +341,23 @@ public class AuthService : IAuthService
         }
     }
 
+    public async Task<User?> ValidateRefreshTokenAsync(string refreshToken)
+    {
+        try
+        {
+            var token = await _context.RefreshTokens
+                .Include(t => t.User)
+                .FirstOrDefaultAsync(t => t.Token == refreshToken && t.Revoked == null && t.Expires > DateTime.UtcNow);
+
+            return token?.User;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred in ValidateRefreshTokenAsync (token lookup)");
+            return null;
+        }
+    }
+
     public async Task RevokeRefreshTokenAsync(Guid userId, string refreshToken)
     {
         try
@@ -343,6 +385,28 @@ public class AuthService : IAuthService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error occurred in RevokeRefreshTokenAsync for userId {UserId}", userId);
+            throw;
+        }
+    }
+
+    public async Task RevokeRefreshTokenAsync(string refreshToken)
+    {
+        try
+        {
+            var token = await _context.RefreshTokens
+                .FirstOrDefaultAsync(t => t.Token == refreshToken);
+
+            if (token != null && !token.IsRevoked)
+            {
+                token.Revoked = DateTime.UtcNow;
+                token.RevokedByIp = "Not Found";
+                await _context.SaveChangesAsync();
+                _logger.LogInformation("Refresh token revoked for user {UserId}", token.UserId);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred in RevokeRefreshTokenAsync (token lookup)");
             throw;
         }
     }
