@@ -61,7 +61,7 @@
     <!-- Utilities / tooling -->
     <PackageVersion Include="FluentResults" Version="4.0.0" />
     <PackageVersion Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.22.1" />
-    <PackageVersion Include="MSTest.TestAdapter" Version="3.9.3" />
+    <PackageVersion Include="MSTest.TestAdapter" Version="4.3.3" />
   </ItemGroup>
 
 </Project>
