@@ -3,19 +3,24 @@ version: 2
 updates:
   # ---- .NET (NuGet) ----
   # With Central Package Management, Dependabot updates the versions in
-  # Directory.Packages.props at the repo root.
+  # Directory.Packages.props at the repo root. Everything edits that one file,
+  # so we group hard: fewer PRs = far fewer merge conflicts between them.
   - package-ecosystem: nuget
     directory: "/"
     schedule:
       interval: weekly
     open-pull-requests-limit: 10
     groups:
-      # Batch low-risk patch/minor bumps into a single PR to cut noise;
-      # major bumps still come as individual PRs so they get real review.
+      # Low-risk bumps: one green, auto-mergeable PR.
       dotnet-minor-and-patch:
         update-types:
           - minor
           - patch
+      # All majors in ONE PR (not 15). Reviewed/migrated deliberately, but only
+      # a single branch ever conflicts with master instead of a dozen.
+      dotnet-major:
+        update-types:
+          - major
 
   # ---- Frontend (npm) ----
   - package-ecosystem: npm
@@ -28,11 +33,18 @@ updates:
         update-types:
           - minor
           - patch
+      npm-major:
+        update-types:
+          - major
 
   # ---- GitHub Actions ----
-  # Keeps the actions used in workflows (checkout, setup-dotnet, codeql, ...)
-  # current and pinned.
+  # Group every action into a single PR; they all touch the same workflow files,
+  # so individual PRs would conflict with each other.
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
       interval: weekly
+    groups:
+      github-actions:
+        patterns:
+          - "*"
