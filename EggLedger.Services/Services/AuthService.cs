@@ -1,4 +1,5 @@
-﻿using System.IdentityModel.Tokens.Jwt;
+﻿using System.Globalization;
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
@@ -232,7 +233,7 @@ public class AuthService : IAuthService
             new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),
             new Claim(ClaimTypes.Email, user.Email),
             new Claim(ClaimTypes.Name, user.Name), // Add the user's full name as a claim
-            new Claim(ClaimTypes.Role, user.Role.ToString())
+            new Claim(ClaimTypes.Role, user.Role.ToString(CultureInfo.InvariantCulture))
         };
 
         // Add RoomId's to the claims
@@ -360,7 +361,7 @@ public class AuthService : IAuthService
                 token.RevokedByIp = "TODO:CaptureIPAddress";
             }
 
-            if (tokens.Any())
+            if (tokens.Count > 0)
             {
                 await _context.SaveChangesAsync();
                 _logger.LogInformation("Revoked {Count} refresh tokens for user {UserId}", tokens.Count, userId);
@@ -385,7 +386,7 @@ public class AuthService : IAuthService
                 .Where(t => t.Expires <= DateTime.UtcNow)
                 .ToListAsync();
 
-            if (expiredTokens.Any())
+            if (expiredTokens.Count > 0)
             {
                 _context.RefreshTokens.RemoveRange(expiredTokens);
                 await _context.SaveChangesAsync();

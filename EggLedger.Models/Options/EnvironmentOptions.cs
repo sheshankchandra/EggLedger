@@ -1,11 +1,14 @@
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics.CodeAnalysis;
 
 namespace EggLedger.Models.Options;
 
 public class EnvironmentOptions
 {
     public const string SectionName = "Environment";
-    
+
+    [SuppressMessage("Naming", "CA1707:Identifiers should not contain underscores",
+        Justification = "Property name intentionally matches the EGGLEDGER_LOG_PATH configuration/environment key.")]
     public LogPathOptions EGGLEDGER_LOG_PATH { get; set; } = new();
 }
 

@@ -13,6 +13,12 @@ public class GlobalExceptionHandlingMiddleware
     private readonly RequestDelegate _next;
     private readonly ILogger<GlobalExceptionHandlingMiddleware> _logger;
 
+    // Cached to avoid allocating a new options instance on every response (CA1869).
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    };
+
     public GlobalExceptionHandlingMiddleware(RequestDelegate next, ILogger<GlobalExceptionHandlingMiddleware> logger)
     {
         _next = next;
@@ -119,15 +125,12 @@ public class GlobalExceptionHandlingMiddleware
                 break;
         }
 
-        var jsonResponse = JsonSerializer.Serialize(response, new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-        });
+        var jsonResponse = JsonSerializer.Serialize(response, JsonOptions);
 
         await context.Response.WriteAsync(jsonResponse);
     }
 
-    private string GetErrorDetails(Exception exception)
+    private static string GetErrorDetails(Exception exception)
     {
         return exception switch
         {

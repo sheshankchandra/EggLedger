@@ -33,7 +33,7 @@ public class OrderService : IOrderService
 
             if (userRoom == null)
             {
-                throw new ArgumentException("User Room cannot be null.", nameof(userRoom));
+                throw new ArgumentException("User is not a member of the specified room.", nameof(roomCode));
             }
 
             var orderNameResult = await _helperService.GenerateOrderName(user ?? throw new InvalidOperationException(), 1, cancellationToken);

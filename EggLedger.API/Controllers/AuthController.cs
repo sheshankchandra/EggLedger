@@ -103,7 +103,7 @@ public class AuthController : ControllerBase
         {
             var corsOptions = _configuration.GetSection(CorsOptions.SectionName).Get<CorsOptions>() ?? new CorsOptions();
             var allowedOrigins = corsOptions.AllowedOrigins;
-            if (!allowedOrigins.Any())
+            if (allowedOrigins.Length == 0)
             {
                 _logger.LogWarning("No allowed origins configured for CORS");
                 return BadRequest("CORS configuration is missing allowed origins.");
