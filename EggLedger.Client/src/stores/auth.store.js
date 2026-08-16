@@ -6,8 +6,9 @@ import router from '@/router'
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
-    token: localStorage.getItem('token') || null,
-    refreshToken: localStorage.getItem('refreshToken') || null,
+    // Access token lives ONLY in memory (never localStorage) to limit XSS blast radius.
+    // The refresh token is an HttpOnly cookie the browser manages; JS never sees it.
+    token: null,
     user: JSON.parse(localStorage.getItem('user')) || null,
     userRooms: JSON.parse(localStorage.getItem('userRooms')) || [],
     isNewUser: false,
@@ -42,8 +43,7 @@ export const useAuthStore = defineStore('auth', {
     async login(credentials) {
       try {
         const response = await authService.login(credentials)
-        const token = response.data.accessToken
-        this.setToken(token)
+        this.setToken(response.data.accessToken)
         await this.fetchProfile()
         router.push('/dashboard')
       } catch (error) {
@@ -56,15 +56,36 @@ export const useAuthStore = defineStore('auth', {
     async register(userData) {
       try {
         const response = await authService.register(userData)
-        const token = response.data.accessToken
         this.isNewUser = true
-        this.setToken(token)
+        this.setToken(response.data.accessToken)
         await this.fetchProfile()
         router.push('/dashboard')
       } catch (error) {
         if (error.name === 'AbortError') return
         console.error('Registration failed:', error)
         throw error
+      }
+    },
+
+    // Exchange the HttpOnly refresh cookie for a fresh in-memory access token.
+    // Returns the new token on success, or null if the session can no longer be refreshed.
+    async refreshSession() {
+      try {
+        const response = await authService.refresh()
+        const token = response.data.accessToken
+        this.setToken(token)
+        return token
+      } catch {
+        this.token = null
+        return null
+      }
+    },
+
+    // Called once on app startup to silently restore a session from the refresh cookie.
+    async initializeAuth() {
+      const token = await this.refreshSession()
+      if (token) {
+        await this.fetchProfile()
       }
     },
 
@@ -103,23 +124,21 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
-    handleGoogleLoginCallback(token, refreshToken, isNewRegistration = false) {
-      this.setToken(token)
-      this.setRefreshToken(refreshToken)
+    // After the OAuth redirect the refresh cookie is already set by the API.
+    // Trade it for an access token, load the profile, then route.
+    async handleGoogleLoginCallback(isNewRegistration = false) {
       this.isNewUser = isNewRegistration
-      this.fetchProfile().then(async () => {
+      const token = await this.refreshSession()
+      if (token) {
+        await this.fetchProfile()
         router.push('/dashboard')
-      })
+      } else {
+        router.push('/accounts/login')
+      }
     },
 
     setToken(token) {
       this.token = token
-      localStorage.setItem('token', token)
-    },
-
-    setRefreshToken(refreshToken) {
-      this.refreshToken = refreshToken
-      localStorage.setItem('refreshToken', refreshToken)
     },
 
     setUser(user) {
@@ -140,13 +159,12 @@ export const useAuthStore = defineStore('auth', {
             controller.abort()
           }
         })
-        await authService.logout(this.refreshToken)
+        await authService.logout()
       } catch (error) {
         console.error('Logout API call failed:', error)
       }
 
       this.token = null
-      this.refreshToken = null
       this.user = null
       this.userRooms = []
       this.abortControllers = {
@@ -158,11 +176,8 @@ export const useAuthStore = defineStore('auth', {
         profile: false,
         rooms: false,
       }
-      localStorage.removeItem('token')
-      localStorage.removeItem('refreshToken')
       localStorage.removeItem('user')
       localStorage.removeItem('userRooms')
-      authService.removeAuthToken()
       router.push('/')
     },
   },

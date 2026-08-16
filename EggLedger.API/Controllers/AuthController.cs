@@ -9,6 +9,7 @@ using EggLedger.Services.Interfaces;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -19,6 +20,10 @@ namespace EggLedger.API.Controllers;
 [ApiController]
 public class AuthController : ControllerBase
 {
+    private const string RefreshCookieName = "eggledger_refresh_token";
+    private const string RefreshCookiePath = "/egg-ledger-api/auth";
+    private static readonly TimeSpan RefreshCookieLifetime = TimeSpan.FromDays(7);
+
     private readonly IAuthService _authService;
     private readonly ILogger<AuthController> _logger;
     private readonly IConfiguration _configuration;
@@ -30,6 +35,33 @@ public class AuthController : ControllerBase
         _configuration = configuration;
     }
 
+    // Builds the flags for the refresh-token cookie.
+    // HttpOnly  -> JavaScript (and therefore XSS) can never read it.
+    // Secure    -> only sent over HTTPS. The API runs HTTPS in dev (Aspire) and prod, so always on.
+    // SameSite  -> None because the SPA (Static Web Apps) and API (Container Apps) live on different domains.
+    // Path      -> scoped to /auth so the cookie rides along only with refresh/logout, not every API call.
+    private static CookieOptions BuildRefreshCookieOptions(DateTimeOffset expires) => new()
+    {
+        HttpOnly = true,
+        Secure = true,
+        SameSite = SameSiteMode.None,
+        Path = RefreshCookiePath,
+        Expires = expires,
+        IsEssential = true
+    };
+
+    private void SetRefreshTokenCookie(string refreshToken)
+    {
+        var expires = DateTimeOffset.UtcNow.Add(RefreshCookieLifetime);
+        Response.Cookies.Append(RefreshCookieName, refreshToken, BuildRefreshCookieOptions(expires));
+    }
+
+    private void ClearRefreshTokenCookie()
+    {
+        // Delete must use the same Path/flags the cookie was written with, or the browser keeps it.
+        Response.Cookies.Append(RefreshCookieName, string.Empty, BuildRefreshCookieOptions(DateTimeOffset.UnixEpoch));
+    }
+
     // POST: /egg-ledger-api/auth/register
     [HttpPost("register")]
     [AllowAnonymous]
@@ -39,7 +71,10 @@ public class AuthController : ControllerBase
         {
             var result = await _authService.CreateUserAsync(dto);
             if (result.IsSuccess)
-                return Ok(result.Value);
+            {
+                SetRefreshTokenCookie(result.Value.RefreshToken);
+                return Ok(new { accessToken = result.Value.AccessToken, isNewRegistration = result.Value.IsNewRegistration });
+            }
             return BadRequest(result.Errors.Select(e => e.Message));
         }
         catch (Exception ex)
@@ -62,7 +97,8 @@ public class AuthController : ControllerBase
             if (result.IsSuccess)
             {
                 _logger.LogInformation("Successful login for email: {Email}", dto.Email);
-                return Ok(result.Value);
+                SetRefreshTokenCookie(result.Value.RefreshToken);
+                return Ok(new { accessToken = result.Value.AccessToken });
             }
             
             _logger.LogWarning("Failed login attempt for email: {Email}", dto.Email);
@@ -147,13 +183,14 @@ public class AuthController : ControllerBase
 
             _logger.LogInformation("OAuth login successful for email: {Email}, redirecting to frontend", email);
 
-            // The user is successfully logged in, and we have a token.
-            var token = loginResult.Value.AccessToken;
-            var refreshToken = loginResult.Value.RefreshToken;
+            // Store the refresh token in an HttpOnly cookie instead of the URL.
+            // The SPA never sees the refresh token; it calls /auth/refresh to obtain an in-memory access token.
+            SetRefreshTokenCookie(loginResult.Value.RefreshToken);
+
             var isNewRegistration = loginResult.Value.IsNewRegistration;
 
-            // Redirect to your Vue app's callback component, passing the token
-            var frontendCallbackUrl = $"{redirectOrigin}/auth/callback?token={token}&refreshToken={refreshToken}&isNewRegistration={isNewRegistration}";
+            // Redirect to the Vue callback route with NO tokens in the URL (only a non-sensitive flag).
+            var frontendCallbackUrl = $"{redirectOrigin}/auth/callback?isNewRegistration={isNewRegistration}";
 
             return Redirect(frontendCallbackUrl);
         }
@@ -164,27 +201,35 @@ public class AuthController : ControllerBase
         }
     }
 
-    // POST /egg-ledger-api/auth/refresh-token
-    [HttpPost("refresh-token")]
-    public async Task<ActionResult<TokenResponseDto>> RefreshToken(RefreshTokenRequestDto request)
+    // POST /egg-ledger-api/auth/refresh
+    [HttpPost("refresh")]
+    [AllowAnonymous]
+    public async Task<IActionResult> RefreshToken()
     {
         try
         {
-            _logger.LogInformation("Refresh token request received for user {UserId}", request.UserId);
-            
-            var tokenResponse = await _authService.RefreshTokensAsync(request);
+            var refreshToken = Request.Cookies[RefreshCookieName];
+            if (string.IsNullOrEmpty(refreshToken))
+            {
+                _logger.LogInformation("Refresh request with no refresh-token cookie");
+                return Unauthorized("No refresh token.");
+            }
+
+            var tokenResponse = await _authService.RefreshTokensAsync(refreshToken);
             if (tokenResponse.IsFailed || string.IsNullOrEmpty(tokenResponse.Value.AccessToken) || string.IsNullOrEmpty(tokenResponse.Value.RefreshToken))
             {
-                _logger.LogWarning("Refresh token failed for user {UserId}", request.UserId);
+                _logger.LogWarning("Refresh token rejected");
+                ClearRefreshTokenCookie();
                 return Unauthorized("Invalid refresh token.");
             }
 
-            _logger.LogInformation("Refresh token successful for user {UserId}", request.UserId);
-            return Ok(tokenResponse.Value);
+            // Rotation: replace the cookie with the newly issued refresh token.
+            SetRefreshTokenCookie(tokenResponse.Value.RefreshToken);
+            return Ok(new { accessToken = tokenResponse.Value.AccessToken });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unhandled exception in RefreshToken for userId: {UserId}", request.UserId);
+            _logger.LogError(ex, "Unhandled exception in RefreshToken");
             return StatusCode(500, "An unexpected error occurred.");
         }
     }
@@ -192,22 +237,22 @@ public class AuthController : ControllerBase
     // POST /egg-ledger-api/auth/logout
     [HttpPost("logout")]
     [Authorize]
-    public async Task<IActionResult> Logout([FromBody] string refreshToken)
+    public async Task<IActionResult> Logout()
     {
         try
         {
             _logger.LogInformation("Received request to logout a user.");
 
             var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new InvalidOperationException());
-            var result = await _authService.LogoutAsync(userId, refreshToken);
-            if (result.IsSuccess)
+            var refreshToken = Request.Cookies[RefreshCookieName];
+            if (!string.IsNullOrEmpty(refreshToken))
             {
-                _logger.LogInformation("Successful logout for user: {userId}", userId);
-                return Ok(new { message = "Logged out successfully" });
+                await _authService.LogoutAsync(userId, refreshToken);
             }
-            
-            _logger.LogError("Failed logout attempt for user: {userId}", userId);
-            return BadRequest(result.Errors.Select(e => e.Message));
+
+            ClearRefreshTokenCookie();
+            _logger.LogInformation("Successful logout for user: {UserId}", userId);
+            return Ok(new { message = "Logged out successfully" });
         }
         catch (Exception ex)
         {
