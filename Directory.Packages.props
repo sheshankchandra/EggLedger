@@ -45,7 +45,7 @@
 
     <!-- Resilience / service discovery -->
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="9.10.0" />
-    <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="9.5.2" />
+    <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="10.9.0" />
 
     <!-- Logging -->
     <PackageVersion Include="log4net" Version="3.3.2" />
