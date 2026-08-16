@@ -44,7 +44,7 @@
     <PackageVersion Include="Swashbuckle.AspNetCore" Version="9.0.6" />
 
     <!-- Resilience / service discovery -->
-    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="9.10.0" />
+    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.9.0" />
     <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="9.5.2" />
 
     <!-- Logging -->
