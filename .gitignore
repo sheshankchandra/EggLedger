@@ -160,10 +160,12 @@ _NCrunch_*
 .*crunch*.local.xml
 nCrunchTemp_*
 
-# Configuration files with sensitive data
-appsettings.json
-appsettings.*.json
-!appsettings.json.example
+# App configuration.
+# Commit non-secret config (appsettings.json, appsettings.Production.json).
+# Secrets live in .NET User Secrets (dev) and environment variables / Key Vault (prod).
+# Keep local dev-override files out of git in case they hold machine-specific values or secrets.
+appsettings.Development.json
+appsettings.*.local.json
 
 # MightyMoose
 *.mm.*
