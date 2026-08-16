@@ -13,36 +13,21 @@ export const authService = {
   },
 
   // POST /egg-ledger-api/auth/refresh
-  refreshToken(refreshToken) {
-    return apiClient.post('/egg-ledger-api/auth/refresh', { refreshToken })
+  // The refresh token travels in an HttpOnly cookie, so there is no body to send.
+  refresh() {
+    return apiClient.post('/egg-ledger-api/auth/refresh')
   },
 
   // POST /egg-ledger-api/auth/logout
-  logout(refreshToken) {
-    return apiClient.post('/egg-ledger-api/auth/logout', refreshToken)
+  // Server revokes the refresh token (read from the cookie) and clears the cookie.
+  logout() {
+    return apiClient.post('/egg-ledger-api/auth/logout')
   },
 
   // GET /egg-ledger-api/auth/google-login
   googleLogin() {
     const baseURL = import.meta.env.VITE_API_BASE_URL || window.location.origin
     window.location.href = `${baseURL}/egg-ledger-api/auth/google-login`
-  },
-
-  // Helper method to store token
-  setAuthToken(token) {
-    localStorage.setItem('authToken', token)
-    apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`
-  },
-
-  // Helper method to remove token
-  removeAuthToken() {
-    localStorage.removeItem('authToken')
-    delete apiClient.defaults.headers.common['Authorization']
-  },
-
-  // Helper method to get stored token
-  getAuthToken() {
-    return localStorage.getItem('authToken')
   },
 }
 
