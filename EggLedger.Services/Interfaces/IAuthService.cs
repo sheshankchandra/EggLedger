@@ -11,12 +11,15 @@ public interface IAuthService
     Task<Result<TokenResponseDto>> LoginAsync(LoginDto dto);
     Task<Result<TokenResponseDto>> LoginWithProviderAsync(string email, string name, string provider);
     Task<Result<TokenResponseDto>> RefreshTokensAsync(RefreshTokenRequestDto request);
+    Task<Result<TokenResponseDto>> RefreshTokensAsync(string refreshToken);
     Task<Result<TokenResponseDto>> CreateTokenResponse(User? user);
     string GenerateJwtToken(User user);
     string GenerateRefreshToken();
     Task<string> GenerateAndSaveRefreshTokenAsync(User user);
     Task<User?> ValidateRefreshTokenAsync(Guid userId, string refreshToken);
+    Task<User?> ValidateRefreshTokenAsync(string refreshToken);
     Task RevokeRefreshTokenAsync(Guid userId, string refreshToken);
+    Task RevokeRefreshTokenAsync(string refreshToken);
     Task RevokeAllUserRefreshTokensAsync(Guid userId);
     Task CleanupExpiredRefreshTokensAsync();
     Task<Result> LogoutAsync(Guid userId, string refreshToken);
