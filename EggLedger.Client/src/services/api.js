@@ -7,6 +7,10 @@ const apiClient = axios.create({
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
+    // Anti-CSRF: a custom header the API requires on cookie-authenticated
+    // endpoints. Browsers force a CORS preflight for it, so a cross-site page
+    // cannot forge these requests.
+    'X-EggLedger-CSRF': '1',
   },
 })
 
