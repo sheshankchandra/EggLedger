@@ -1,8 +1,7 @@
-﻿namespace EggLedger.DTO.Room
+﻿namespace EggLedger.DTO.Room;
+
+public class CreateRoomDto
 {
-    public class CreateRoomDto
-    {
-        public required string RoomName { get; set; }
-        public bool IsOpen { get; set; }
-    }
+    public required string RoomName { get; set; }
+    public bool IsOpen { get; set; }
 }

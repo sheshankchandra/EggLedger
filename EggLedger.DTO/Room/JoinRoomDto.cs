@@ -1,8 +1,7 @@
-﻿namespace EggLedger.DTO.Room
+﻿namespace EggLedger.DTO.Room;
+
+public class JoinRoomDto
 {
-    public class JoinRoomDto
-    {
-        public Guid UserId { get; set; }
-        public int RoomCode { get; set; }
-    }
+    public Guid UserId { get; set; }
+    public int RoomCode { get; set; }
 }

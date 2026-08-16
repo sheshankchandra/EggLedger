@@ -1,9 +1,8 @@
-﻿namespace EggLedger.DTO.Auth
+﻿namespace EggLedger.DTO.Auth;
+
+public class TokenResponseDto
 {
-    public class TokenResponseDto
-    {
-        public required string AccessToken { get; set; }
-        public required string RefreshToken { get; set; }
-        public bool IsNewRegistration { get; set; }
-    }
+    public required string AccessToken { get; set; }
+    public required string RefreshToken { get; set; }
+    public bool IsNewRegistration { get; set; }
 }

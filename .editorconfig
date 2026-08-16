@@ -1,0 +1,62 @@
+root = true
+
+# ============================================================================
+# EggLedger .editorconfig
+# Shared code style for all editors + `dotnet format` + build analyzers.
+# ============================================================================
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+
+[*.{cs,csx}]
+indent_size = 4
+max_line_length = 120
+
+# --- Modern C# conventions -------------------------------------------------
+
+# Require file-scoped namespaces (one less level of indentation). C# 10+.
+csharp_style_namespace_declarations = file_scoped:warning
+
+# using directives outside the namespace, System first.
+csharp_using_directive_placement = outside_namespace:warning
+dotnet_sort_system_directives_first = true
+dotnet_separate_import_directive_groups = false
+
+# Prefer 'var' when the type is apparent, explicit otherwise.
+csharp_style_var_for_built_in_types = false:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
+csharp_style_var_elsewhere = false:suggestion
+
+# Expression-bodied members, pattern matching, modern niceties.
+csharp_style_expression_bodied_methods = when_on_single_line:suggestion
+csharp_style_prefer_pattern_matching = true:suggestion
+csharp_prefer_braces = true:suggestion
+
+# Namespaces/types/members: require accessibility modifiers.
+dotnet_style_require_accessibility_modifiers = for_non_interface_members:warning
+
+# --- Analyzer severity tuning ----------------------------------------------
+# We enable analyzers (Directory.Build.props) but tune high-noise, low-value
+# rules DOWN to suggestions so real issues stand out. Revisit once the code
+# base is clean, then consider TreatWarningsAsErrors.
+
+# CA1848: use LoggerMessage delegates — good for hot paths, overkill for a
+# small app. Keep as a suggestion, not a build warning.
+dotnet_diagnostic.CA1848.severity = suggestion
+# CA1873: expensive log argument eval — related; keep as suggestion.
+dotnet_diagnostic.CA1873.severity = suggestion
+# CA2007: ConfigureAwait(false) — not needed in ASP.NET Core apps.
+dotnet_diagnostic.CA2007.severity = none
+
+[*.{js,ts,vue,json,jsonc,css,html}]
+indent_size = 2
+
+[*.{yml,yaml}]
+indent_size = 2
+
+[*.{csproj,props,targets}]
+indent_size = 2

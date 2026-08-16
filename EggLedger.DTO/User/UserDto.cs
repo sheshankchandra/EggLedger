@@ -1,6 +1,5 @@
-﻿namespace EggLedger.DTO.User
+﻿namespace EggLedger.DTO.User;
+
+internal class UserDto
 {
-    internal class UserDto
-    {
-    }
 }
