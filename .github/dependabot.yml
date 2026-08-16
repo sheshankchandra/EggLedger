@@ -1,0 +1,38 @@
+version: 2
+
+updates:
+  # ---- .NET (NuGet) ----
+  # With Central Package Management, Dependabot updates the versions in
+  # Directory.Packages.props at the repo root.
+  - package-ecosystem: nuget
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    groups:
+      # Batch low-risk patch/minor bumps into a single PR to cut noise;
+      # major bumps still come as individual PRs so they get real review.
+      dotnet-minor-and-patch:
+        update-types:
+          - minor
+          - patch
+
+  # ---- Frontend (npm) ----
+  - package-ecosystem: npm
+    directory: "/EggLedger.Client"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    groups:
+      npm-minor-and-patch:
+        update-types:
+          - minor
+          - patch
+
+  # ---- GitHub Actions ----
+  # Keeps the actions used in workflows (checkout, setup-dotnet, codeql, ...)
+  # current and pinned.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
