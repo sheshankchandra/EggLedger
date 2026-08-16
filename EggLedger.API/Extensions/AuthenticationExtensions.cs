@@ -1,14 +1,14 @@
 using System;
 using System.Text;
+using EggLedger.API.Helpers.Auth.Handlers;
+using EggLedger.API.Helpers.Auth.Requirements;
+using EggLedger.Models.Options;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
-using EggLedger.Models.Options;
-using EggLedger.API.Helpers.Auth.Handlers;
-using EggLedger.API.Helpers.Auth.Requirements;
 
 namespace EggLedger.API.Extensions;
 

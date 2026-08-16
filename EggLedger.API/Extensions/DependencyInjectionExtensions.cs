@@ -1,7 +1,7 @@
-using Microsoft.Extensions.DependencyInjection;
+using EggLedger.API.Helpers;
 using EggLedger.Services.Interfaces;
 using EggLedger.Services.Services;
-using EggLedger.API.Helpers;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace EggLedger.API.Extensions;
 

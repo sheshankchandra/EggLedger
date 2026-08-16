@@ -1,0 +1,39 @@
+# Normalize line endings so they are deterministic across OSes / contributors.
+# Without this file, Windows checkouts get CRLF and tooling like `dotnet format`
+# produces noisy line-ending-only diffs.
+
+# Default: treat as text, store as LF in the repo, auto-convert on checkout.
+* text=auto eol=lf
+
+# Source & config -> LF
+*.cs        text eol=lf
+*.csproj    text eol=lf
+*.props     text eol=lf
+*.targets   text eol=lf
+*.json      text eol=lf
+*.js        text eol=lf
+*.ts        text eol=lf
+*.vue       text eol=lf
+*.css       text eol=lf
+*.html      text eol=lf
+*.md        text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
+*.sh        text eol=lf
+
+# Windows-only scripts must stay CRLF.
+*.ps1       text eol=crlf
+*.cmd       text eol=crlf
+*.bat       text eol=crlf
+
+# The Visual Studio solution file is conventionally CRLF.
+*.sln       text eol=crlf
+
+# Binary assets: never touch.
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.gif       binary
+*.ico       binary
+*.woff      binary
+*.woff2     binary

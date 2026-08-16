@@ -1,7 +1,6 @@
-﻿namespace EggLedger.DTO.Order
+﻿namespace EggLedger.DTO.Order;
+
+public class ConsumeOrderDto
 {
-    public class ConsumeOrderDto
-    {
-        public int Quantity { get; set; }
-    }
+    public int Quantity { get; set; }
 }

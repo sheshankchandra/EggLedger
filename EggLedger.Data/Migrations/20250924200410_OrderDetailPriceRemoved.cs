@@ -2,39 +2,38 @@
 
 #nullable disable
 
-namespace EggLedger.Data.Migrations
+namespace EggLedger.Data.Migrations;
+
+/// <inheritdoc />
+public partial class OrderDetailPriceRemoved : Migration
 {
     /// <inheritdoc />
-    public partial class OrderDetailPriceRemoved : Migration
+    protected override void Up(MigrationBuilder migrationBuilder)
     {
-        /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.DropColumn(
-                name: "Amount",
-                table: "OrderDetails");
+        migrationBuilder.DropColumn(
+            name: "Amount",
+            table: "OrderDetails");
 
-            migrationBuilder.DropColumn(
-                name: "Price",
-                table: "OrderDetails");
-        }
+        migrationBuilder.DropColumn(
+            name: "Price",
+            table: "OrderDetails");
+    }
 
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.AddColumn<decimal>(
-                name: "Amount",
-                table: "OrderDetails",
-                type: "numeric(18,2)",
-                nullable: false,
-                defaultValue: 0m);
+    /// <inheritdoc />
+    protected override void Down(MigrationBuilder migrationBuilder)
+    {
+        migrationBuilder.AddColumn<decimal>(
+            name: "Amount",
+            table: "OrderDetails",
+            type: "numeric(18,2)",
+            nullable: false,
+            defaultValue: 0m);
 
-            migrationBuilder.AddColumn<decimal>(
-                name: "Price",
-                table: "OrderDetails",
-                type: "numeric(18,2)",
-                nullable: false,
-                defaultValue: 0m);
-        }
+        migrationBuilder.AddColumn<decimal>(
+            name: "Price",
+            table: "OrderDetails",
+            type: "numeric(18,2)",
+            nullable: false,
+            defaultValue: 0m);
     }
 }

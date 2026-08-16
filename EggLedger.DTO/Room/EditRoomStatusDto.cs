@@ -1,10 +1,9 @@
 ﻿using EggLedger.Models.Enums;
 
-namespace EggLedger.DTO.Room
+namespace EggLedger.DTO.Room;
+
+public class EditRoomStatusDto
 {
-    public class EditRoomStatusDto
-    {
-        public required Guid RoomId { get; set; }
-        public required RoomStatus NewStatus { get; set; }
-    }
+    public required Guid RoomId { get; set; }
+    public required RoomStatus NewStatus { get; set; }
 }

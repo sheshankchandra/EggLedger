@@ -1,7 +1,7 @@
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Options;
 using EggLedger.Models.Options;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace EggLedger.API.Extensions;
 

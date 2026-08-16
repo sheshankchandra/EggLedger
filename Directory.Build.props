@@ -1,0 +1,19 @@
+<Project>
+
+  <!--
+    Directory.Build.props is imported automatically by every project under this
+    folder. Shared build settings live here ONCE instead of being copy-pasted
+    (and drifting) across each .csproj.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+
+    <!-- Turn on the built-in .NET code-quality + style analyzers. -->
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+  </PropertyGroup>
+
+</Project>

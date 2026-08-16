@@ -1,0 +1,48 @@
+# CodeQL static security analysis.
+# Scans first-party code for security vulnerabilities and posts results to the
+# repository's Security > Code scanning tab.
+name: CodeQL
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  schedule:
+    # Weekly full scan (Mondays 07:00 UTC) catches newly published query rules
+    # even when no code changed.
+    - cron: "0 7 * * 1"
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    permissions:
+      # Required to upload scan results.
+      security-events: write
+      contents: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # build-mode "none" = buildless analysis; no compile needed in the
+          # scanner, which keeps this simple and fast for both languages.
+          - language: csharp
+            build-mode: none
+          - language: javascript-typescript
+            build-mode: none
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"

@@ -1,0 +1,73 @@
+# Continuous Integration
+# Runs on every push to master and every pull request targeting master.
+# Two independent jobs run in parallel: the .NET backend and the Vue frontend.
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+# Least-privilege: this workflow only needs to read the repo.
+permissions:
+  contents: read
+
+# If you push again while a run is in progress for the same ref, cancel the
+# stale run instead of wasting CI minutes.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: .NET build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore -c Release
+
+      # Informational for now (does not fail the build). It surfaces the same
+      # vulnerability report we run locally. Once the dev-only Aspire
+      # transitives are resolved, flip this to a blocking check.
+      - name: Security - list vulnerable packages
+        continue-on-error: true
+        run: dotnet list package --vulnerable --include-transitive
+
+  frontend:
+    name: Vue build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: EggLedger.Client
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: EggLedger.Client/package-lock.json
+
+      # `npm ci` installs exactly what's in package-lock.json (reproducible),
+      # unlike `npm install` which may update the lockfile.
+      - name: Install dependencies
+        run: npm ci
+
+      # Check-only lint (no --fix): CI must never mutate source.
+      - name: Lint
+        run: npx eslint .
+
+      - name: Build
+        run: npm run build
