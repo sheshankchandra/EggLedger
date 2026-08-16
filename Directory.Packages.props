@@ -14,38 +14,38 @@
 
   <ItemGroup>
     <!-- Aspire -->
-    <PackageVersion Include="Aspire.Hosting.AppHost" Version="9.3.1" />
-    <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="9.3.1" />
-    <PackageVersion Include="Aspire.Hosting.NodeJS" Version="9.3.1" />
+    <PackageVersion Include="Aspire.Hosting.AppHost" Version="9.5.2" />
+    <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="9.5.2" />
+    <PackageVersion Include="Aspire.Hosting.NodeJS" Version="9.5.2" />
     <PackageVersion Include="Aspire.Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.3.1" />
 
     <!-- ASP.NET Core / Identity / Auth -->
-    <PackageVersion Include="Microsoft.AspNetCore.Authentication.Google" Version="9.0.7" />
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.Google" Version="9.0.19" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.7" />
     <PackageVersion Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="9.0.7" />
-    <PackageVersion Include="Microsoft.AspNetCore.Identity.UI" Version="9.0.7" />
-    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="9.0.7" />
+    <PackageVersion Include="Microsoft.AspNetCore.Identity.UI" Version="9.0.19" />
+    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="9.0.19" />
 
     <!-- Entity Framework Core / PostgreSQL -->
-    <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="9.0.7" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.7" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.7" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.7" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="9.0.19" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.19" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.19" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.19" />
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
     <PackageVersion Include="AspNetCore.HealthChecks.NpgSql" Version="9.0.0" />
 
     <!-- Identity tokens / JWT -->
-    <PackageVersion Include="Microsoft.IdentityModel.Tokens" Version="8.12.1" />
-    <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.12.1" />
+    <PackageVersion Include="Microsoft.IdentityModel.Tokens" Version="8.22.0" />
+    <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.22.0" />
 
     <!-- API docs -->
-    <PackageVersion Include="Microsoft.OpenApi" Version="1.6.24" />
-    <PackageVersion Include="Scalar.AspNetCore" Version="2.5.6" />
-    <PackageVersion Include="Swashbuckle.AspNetCore" Version="9.0.3" />
+    <PackageVersion Include="Microsoft.OpenApi" Version="1.6.30" />
+    <PackageVersion Include="Scalar.AspNetCore" Version="2.16.20" />
+    <PackageVersion Include="Swashbuckle.AspNetCore" Version="9.0.6" />
 
     <!-- Resilience / service discovery -->
-    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="9.7.0" />
-    <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="9.3.1" />
+    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="9.10.0" />
+    <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="9.5.2" />
 
     <!-- Logging -->
     <PackageVersion Include="log4net" Version="3.3.2" />
@@ -60,7 +60,7 @@
 
     <!-- Utilities / tooling -->
     <PackageVersion Include="FluentResults" Version="4.0.0" />
-    <PackageVersion Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.22.1" />
+    <PackageVersion Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.23.0" />
     <PackageVersion Include="MSTest.TestAdapter" Version="4.3.3" />
   </ItemGroup>
 
