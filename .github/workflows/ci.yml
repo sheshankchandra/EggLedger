@@ -37,6 +37,11 @@ jobs:
       - name: Build
         run: dotnet build --no-restore -c Release
 
+      # Integration tests use Testcontainers, which needs Docker. GitHub-hosted
+      # ubuntu runners provide it out of the box.
+      - name: Test
+        run: dotnet test --no-build -c Release --verbosity normal
+
       # Informational for now (does not fail the build). It surfaces the same
       # vulnerability report we run locally. Once the dev-only Aspire
       # transitives are resolved, flip this to a blocking check.

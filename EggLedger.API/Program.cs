@@ -80,3 +80,6 @@ app.MapDefaultEndpoints()
 
 Console.WriteLine($"EggLedger API starting in '{app.Environment.EnvironmentName}' environment...");
 app.Run();
+
+// Exposed so the integration test project can drive the app via WebApplicationFactory<Program>.
+public partial class Program;
