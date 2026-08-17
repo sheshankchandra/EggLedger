@@ -50,8 +50,8 @@ public static class RateLimitingExtensions
 
         return services;
 
-        // Limits are read from the resolved configuration so they can be tuned per
-        // environment (or raised in tests) without recompiling.
+        // Read from the resolved configuration (RateLimiting:{section}:PermitLimit /
+        // WindowSeconds) so limits are tunable per environment without recompiling.
         static (int permit, int window) ReadLimits(HttpContext context, string section, int defaultPermit, int defaultWindow)
         {
             var config = context.RequestServices.GetRequiredService<IConfiguration>();
