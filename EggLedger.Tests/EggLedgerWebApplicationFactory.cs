@@ -18,12 +18,9 @@ public class EggLedgerWebApplicationFactory : WebApplicationFactory<Program>, IA
 {
     static EggLedgerWebApplicationFactory()
     {
-        // These keys are read during service registration (builder.Configuration),
-        // which WebApplicationFactory.ConfigureAppConfiguration does NOT influence.
-        // Environment variables ARE read by CreateBuilder, so set them here to make the
-        // config available at registration in CI (which has no dev User Secrets). Values
-        // are identical for every factory, so sharing the process env is safe; the real,
-        // per-factory database connection is swapped in via ConfigureTestServices below.
+        // Config consumed during service registration must come from environment
+        // variables; the host builder reads them, but the per-instance
+        // ConfigureAppConfiguration below is applied too late for registration-time reads.
         Environment.SetEnvironmentVariable("ConnectionStrings__DefaultConnection",
             "Host=placeholder;Port=5432;Database=placeholder;Username=placeholder;Password=placeholder");
         Environment.SetEnvironmentVariable("Jwt__SecretKey", "integration-test-signing-key-that-is-long-enough-1234567890");
@@ -43,8 +40,8 @@ public class EggLedgerWebApplicationFactory : WebApplicationFactory<Program>, IA
         .WithPassword("test")
         .Build();
 
-    // Functional tests raise the auth limit so their handful of auth calls never trip
-    // the throttle. The rate-limiting test overrides this to a low number.
+    // Auth rate-limit ceiling for this host. High by default so functional tests are
+    // never throttled; the rate-limiting test lowers it to assert the 429 path.
     protected virtual int AuthPermitLimit => 1000;
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -53,8 +50,7 @@ public class EggLedgerWebApplicationFactory : WebApplicationFactory<Program>, IA
 
         builder.ConfigureAppConfiguration((_, config) =>
         {
-            // Runtime/per-factory values (read from the resolved configuration, not at
-            // registration): keep startup migration off and set this factory's auth limit.
+            // Values resolved at runtime (not needed at registration).
             config.AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["Ef_Migrate"] = "false",
@@ -62,8 +58,8 @@ public class EggLedgerWebApplicationFactory : WebApplicationFactory<Program>, IA
             });
         });
 
-        // Dev User Secrets override ConfigureAppConfiguration for the connection string,
-        // so repoint the DbContext at the container after the app has registered it.
+        // Point the DbContext at this instance's container. Registration used a
+        // placeholder connection string; each factory owns a distinct database.
         builder.ConfigureTestServices(services =>
         {
             var toRemove = services.Where(d =>

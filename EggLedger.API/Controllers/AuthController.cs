@@ -46,13 +46,11 @@ public class AuthController : ControllerBase
         _environment = environment;
     }
 
-    // Environment-aware flags for the refresh-token cookie.
-    // HttpOnly -> JavaScript (and therefore XSS) can never read it.
-    // Dev  : the API is served over HTTP and the SPA is same-site (localhost), so
-    //        Secure=false + SameSite=Lax lets the cookie flow without HTTPS.
-    // Prod : the SPA (Static Web Apps) and API (Container Apps) are on different
-    //        domains over HTTPS, so Secure=true + SameSite=None is required.
-    // Path -> scoped to /auth so the cookie rides along only with refresh/logout.
+    // Refresh-token cookie flags, environment-aware:
+    //   HttpOnly: never readable by JS (XSS mitigation).
+    //   dev  (HTTP, same-site SPA)       -> Secure=false, SameSite=Lax.
+    //   prod (HTTPS, cross-site SPA/API) -> Secure=true,  SameSite=None.
+    //   Path scoped to /auth so it is only sent to the refresh/logout endpoints.
     private CookieOptions BuildRefreshCookieOptions(DateTimeOffset expires)
     {
         var isDev = _environment.IsDevelopment();
@@ -204,13 +202,13 @@ public class AuthController : ControllerBase
 
             _logger.LogInformation("OAuth login successful for email: {Email}, redirecting to frontend", email);
 
-            // Store the refresh token in an HttpOnly cookie instead of the URL.
-            // The SPA never sees the refresh token; it calls /auth/refresh to obtain an in-memory access token.
+            // Deliver the refresh token via an HttpOnly cookie, never the redirect URL.
+            // The SPA obtains an in-memory access token by calling /auth/refresh.
             SetRefreshTokenCookie(loginResult.Value.RefreshToken);
 
             var isNewRegistration = loginResult.Value.IsNewRegistration;
 
-            // Redirect to the Vue callback route with NO tokens in the URL (only a non-sensitive flag).
+            // Callback carries no tokens, only a non-sensitive first-login flag.
             var frontendCallbackUrl = $"{redirectOrigin}/auth/callback?isNewRegistration={isNewRegistration}";
 
             return Redirect(frontendCallbackUrl);
