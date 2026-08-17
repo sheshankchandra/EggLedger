@@ -85,8 +85,11 @@ dotnet build EggLedger.sln
 dotnet format EggLedger.sln
 ```
 
-> **Tests:** there is currently **no** automated test project (despite older README text).
-> A test suite is being added — do not assume `dotnet test` passes yet.
+> **Tests:** `EggLedger.Tests` is an xUnit integration-test project. It boots the real
+> API in-process via `WebApplicationFactory<Program>` against a throwaway PostgreSQL
+> container (Testcontainers), so `dotnet test` requires Docker to be running. It covers
+> the auth flow (register/login/refresh-rotation/CSRF/rate-limit). Add tests for behavior
+> you change; CI runs `dotnet test` on every PR.
 
 ## When making changes
 
