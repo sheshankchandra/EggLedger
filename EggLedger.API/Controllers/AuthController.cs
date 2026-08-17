@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using EggLedger.API.Extensions;
 using EggLedger.DTO.Auth;
 using EggLedger.DTO.User;
 using EggLedger.Models.Options;
@@ -9,46 +10,62 @@ using EggLedger.Services.Interfaces;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace EggLedger.API.Controllers;
 
 [Route("egg-ledger-api/auth")]
 [ApiController]
+[EnableRateLimiting(RateLimitingExtensions.AuthPolicy)]
 public class AuthController : ControllerBase
 {
     private const string RefreshCookieName = "eggledger_refresh_token";
     private const string RefreshCookiePath = "/egg-ledger-api/auth";
+    // Cookie-authenticated endpoints require this custom header. Browsers force a
+    // CORS preflight for it, and our CORS allows only our own origins, so a
+    // cross-site page cannot supply it -> CSRF protection for the refresh cookie.
+    private const string CsrfHeaderName = "X-EggLedger-CSRF";
     private static readonly TimeSpan RefreshCookieLifetime = TimeSpan.FromDays(7);
 
     private readonly IAuthService _authService;
     private readonly ILogger<AuthController> _logger;
     private readonly IConfiguration _configuration;
+    private readonly IWebHostEnvironment _environment;
 
-    public AuthController(IAuthService authService, ILogger<AuthController> logger, IConfiguration configuration)
+    public AuthController(IAuthService authService, ILogger<AuthController> logger, IConfiguration configuration, IWebHostEnvironment environment)
     {
         _authService = authService;
         _logger = logger;
         _configuration = configuration;
+        _environment = environment;
     }
 
-    // Builds the flags for the refresh-token cookie.
-    // HttpOnly  -> JavaScript (and therefore XSS) can never read it.
-    // Secure    -> only sent over HTTPS. The API runs HTTPS in dev (Aspire) and prod, so always on.
-    // SameSite  -> None because the SPA (Static Web Apps) and API (Container Apps) live on different domains.
-    // Path      -> scoped to /auth so the cookie rides along only with refresh/logout, not every API call.
-    private static CookieOptions BuildRefreshCookieOptions(DateTimeOffset expires) => new()
+    // Environment-aware flags for the refresh-token cookie.
+    // HttpOnly -> JavaScript (and therefore XSS) can never read it.
+    // Dev  : the API is served over HTTP and the SPA is same-site (localhost), so
+    //        Secure=false + SameSite=Lax lets the cookie flow without HTTPS.
+    // Prod : the SPA (Static Web Apps) and API (Container Apps) are on different
+    //        domains over HTTPS, so Secure=true + SameSite=None is required.
+    // Path -> scoped to /auth so the cookie rides along only with refresh/logout.
+    private CookieOptions BuildRefreshCookieOptions(DateTimeOffset expires)
     {
-        HttpOnly = true,
-        Secure = true,
-        SameSite = SameSiteMode.None,
-        Path = RefreshCookiePath,
-        Expires = expires,
-        IsEssential = true
-    };
+        var isDev = _environment.IsDevelopment();
+        return new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = !isDev,
+            SameSite = isDev ? SameSiteMode.Lax : SameSiteMode.None,
+            Path = RefreshCookiePath,
+            Expires = expires,
+            IsEssential = true
+        };
+    }
 
     private void SetRefreshTokenCookie(string refreshToken)
     {
@@ -61,6 +78,10 @@ public class AuthController : ControllerBase
         // Delete must use the same Path/flags the cookie was written with, or the browser keeps it.
         Response.Cookies.Append(RefreshCookieName, string.Empty, BuildRefreshCookieOptions(DateTimeOffset.UnixEpoch));
     }
+
+    // Anti-CSRF: cookie-authenticated endpoints require the custom header. A
+    // cross-site attacker cannot send it (CORS preflight blocks foreign origins).
+    private bool IsMissingCsrfHeader() => !Request.Headers.ContainsKey(CsrfHeaderName);
 
     // POST: /egg-ledger-api/auth/register
     [HttpPost("register")]
@@ -208,6 +229,12 @@ public class AuthController : ControllerBase
     {
         try
         {
+            if (IsMissingCsrfHeader())
+            {
+                _logger.LogWarning("Refresh rejected: missing CSRF header");
+                return StatusCode(StatusCodes.Status403Forbidden, "Missing required header.");
+            }
+
             var refreshToken = Request.Cookies[RefreshCookieName];
             if (string.IsNullOrEmpty(refreshToken))
             {
@@ -241,6 +268,12 @@ public class AuthController : ControllerBase
     {
         try
         {
+            if (IsMissingCsrfHeader())
+            {
+                _logger.LogWarning("Logout rejected: missing CSRF header");
+                return StatusCode(StatusCodes.Status403Forbidden, "Missing required header.");
+            }
+
             _logger.LogInformation("Received request to logout a user.");
 
             var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new InvalidOperationException());

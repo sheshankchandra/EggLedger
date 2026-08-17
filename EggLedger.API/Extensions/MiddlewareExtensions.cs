@@ -35,9 +35,16 @@ public static class MiddlewareExtensions
         });
 
         // Standard middleware pipeline
+        if (!app.Environment.IsDevelopment())
+        {
+            // Tell browsers to only ever use HTTPS for this host. Production-only:
+            // we don't want the policy cached for http://localhost during dev.
+            app.UseHsts();
+        }
         app.UseHttpsRedirection();
         app.UseCors(app.Configuration.GetCorsPolicyName());
         app.UseRouting();
+        app.UseRateLimiter();
         app.UseAuthentication();
         app.UseAuthorization();
         app.MapControllers();

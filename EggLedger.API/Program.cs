@@ -21,6 +21,7 @@ builder.Services.AddApplicationOptions(builder.Configuration);
 builder.Services.AddApplicationDatabase(builder.Configuration);
 builder.Services.AddApplicationCors(builder.Configuration);
 builder.Services.AddApplicationAuthentication(builder.Configuration);
+builder.Services.AddApplicationRateLimiting();
 builder.Services.AddApplicationServices();
 
 // Add framework services

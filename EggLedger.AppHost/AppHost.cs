@@ -19,6 +19,10 @@ var api = builder.AddProject<Projects.EggLedger_API>("eggledger-api").WithRefere
 builder.AddNpmApp("eggledger-client", "../EggLedger.Client")
     .WithReference(api)
     .WaitFor(api)
+    // Expose the API's dev URL to Vite so the SPA (and the OAuth start URL) target
+    // the API directly. Same-site localhost + the environment-aware cookie let the
+    // refresh cookie flow over HTTP in development.
+    .WithEnvironment("VITE_API_BASE_URL", api.GetEndpoint("http"))
     .WithUrl("http://localhost:5173")
     .WithExternalHttpEndpoints()
     .PublishAsDockerFile();
