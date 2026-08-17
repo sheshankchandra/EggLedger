@@ -16,6 +16,26 @@ namespace EggLedger.Tests;
 /// </summary>
 public class EggLedgerWebApplicationFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
+    static EggLedgerWebApplicationFactory()
+    {
+        // These keys are read during service registration (builder.Configuration),
+        // which WebApplicationFactory.ConfigureAppConfiguration does NOT influence.
+        // Environment variables ARE read by CreateBuilder, so set them here to make the
+        // config available at registration in CI (which has no dev User Secrets). Values
+        // are identical for every factory, so sharing the process env is safe; the real,
+        // per-factory database connection is swapped in via ConfigureTestServices below.
+        Environment.SetEnvironmentVariable("ConnectionStrings__DefaultConnection",
+            "Host=placeholder;Port=5432;Database=placeholder;Username=placeholder;Password=placeholder");
+        Environment.SetEnvironmentVariable("Jwt__SecretKey", "integration-test-signing-key-that-is-long-enough-1234567890");
+        Environment.SetEnvironmentVariable("Jwt__Issuer", "EggLedgerAPI");
+        Environment.SetEnvironmentVariable("Jwt__Audience", "EggLedgerAudience");
+        Environment.SetEnvironmentVariable("Jwt__ExpiryInMinutes", "15");
+        Environment.SetEnvironmentVariable("Authentication__Google__ClientId", "test-client-id");
+        Environment.SetEnvironmentVariable("Authentication__Google__ClientSecret", "test-client-secret");
+        Environment.SetEnvironmentVariable("Cors__AllowedOrigins__0", "http://localhost:5173");
+        Environment.SetEnvironmentVariable("Cors__PolicyName", "_myAllowSpecificOrigins");
+    }
+
     private readonly PostgreSqlContainer _db = new PostgreSqlBuilder()
         .WithImage("postgres:15-alpine")
         .WithDatabase("eggledger_test")
@@ -33,18 +53,10 @@ public class EggLedgerWebApplicationFactory : WebApplicationFactory<Program>, IA
 
         builder.ConfigureAppConfiguration((_, config) =>
         {
+            // Runtime/per-factory values (read from the resolved configuration, not at
+            // registration): keep startup migration off and set this factory's auth limit.
             config.AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["ConnectionStrings:DefaultConnection"] = _db.GetConnectionString(),
-                ["Jwt:SecretKey"] = "integration-test-signing-key-that-is-long-enough-1234567890",
-                ["Jwt:Issuer"] = "EggLedgerAPI",
-                ["Jwt:Audience"] = "EggLedgerAudience",
-                ["Jwt:ExpiryInMinutes"] = "15",
-                ["Authentication:Google:ClientId"] = "test-client-id",
-                ["Authentication:Google:ClientSecret"] = "test-client-secret",
-                ["Cors:AllowedOrigins:0"] = "http://localhost:5173",
-                ["Cors:PolicyName"] = "_myAllowSpecificOrigins",
-                // Tests apply migrations explicitly; keep startup migration off.
                 ["Ef_Migrate"] = "false",
                 ["RateLimiting:Auth:PermitLimit"] = AuthPermitLimit.ToString(CultureInfo.InvariantCulture),
             });
