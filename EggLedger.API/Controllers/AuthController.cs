@@ -10,10 +10,12 @@ using EggLedger.Services.Interfaces;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace EggLedger.API.Controllers;
@@ -27,35 +29,43 @@ public class AuthController : ControllerBase
     private const string RefreshCookiePath = "/egg-ledger-api/auth";
     // Cookie-authenticated endpoints require this custom header. Browsers force a
     // CORS preflight for it, and our CORS allows only our own origins, so a
-    // cross-site page cannot supply it -> CSRF protection for the SameSite=None cookie.
+    // cross-site page cannot supply it -> CSRF protection for the refresh cookie.
     private const string CsrfHeaderName = "X-EggLedger-CSRF";
     private static readonly TimeSpan RefreshCookieLifetime = TimeSpan.FromDays(7);
 
     private readonly IAuthService _authService;
     private readonly ILogger<AuthController> _logger;
     private readonly IConfiguration _configuration;
+    private readonly IWebHostEnvironment _environment;
 
-    public AuthController(IAuthService authService, ILogger<AuthController> logger, IConfiguration configuration)
+    public AuthController(IAuthService authService, ILogger<AuthController> logger, IConfiguration configuration, IWebHostEnvironment environment)
     {
         _authService = authService;
         _logger = logger;
         _configuration = configuration;
+        _environment = environment;
     }
 
-    // Builds the flags for the refresh-token cookie.
-    // HttpOnly  -> JavaScript (and therefore XSS) can never read it.
-    // Secure    -> only sent over HTTPS. The API runs HTTPS in dev (Aspire) and prod, so always on.
-    // SameSite  -> None because the SPA (Static Web Apps) and API (Container Apps) live on different domains.
-    // Path      -> scoped to /auth so the cookie rides along only with refresh/logout, not every API call.
-    private static CookieOptions BuildRefreshCookieOptions(DateTimeOffset expires) => new()
+    // Environment-aware flags for the refresh-token cookie.
+    // HttpOnly -> JavaScript (and therefore XSS) can never read it.
+    // Dev  : the API is served over HTTP and the SPA is same-site (localhost), so
+    //        Secure=false + SameSite=Lax lets the cookie flow without HTTPS.
+    // Prod : the SPA (Static Web Apps) and API (Container Apps) are on different
+    //        domains over HTTPS, so Secure=true + SameSite=None is required.
+    // Path -> scoped to /auth so the cookie rides along only with refresh/logout.
+    private CookieOptions BuildRefreshCookieOptions(DateTimeOffset expires)
     {
-        HttpOnly = true,
-        Secure = true,
-        SameSite = SameSiteMode.None,
-        Path = RefreshCookiePath,
-        Expires = expires,
-        IsEssential = true
-    };
+        var isDev = _environment.IsDevelopment();
+        return new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = !isDev,
+            SameSite = isDev ? SameSiteMode.Lax : SameSiteMode.None,
+            Path = RefreshCookiePath,
+            Expires = expires,
+            IsEssential = true
+        };
+    }
 
     private void SetRefreshTokenCookie(string refreshToken)
     {
