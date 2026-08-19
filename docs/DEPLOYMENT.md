@@ -195,15 +195,26 @@ az containerapp update -g rg-eggledger-prod -n eggledger-api `
   --set-env-vars "Cors__AllowedOrigins__0=https://<your-swa-hostname>" -o table
 ```
 
-Google OAuth: add `https://<api-hostname>/egg-ledger-api/auth/google-callback` as an
-Authorized redirect URI and `https://<swa-hostname>` as an Authorized JavaScript origin
-in the Google Cloud console. _(Pending.)_
+Google OAuth requires two things behind the Container Apps ingress:
+
+1. **Forwarded headers** must be enabled (see `Program.cs` / `MiddlewareExtensions`),
+   or the app builds an `http://` redirect URI that Google rejects.
+2. Register the correct redirect URI: it is the ASP.NET Core Google handler's
+   **`CallbackPath` (default `/signin-google`)**, NOT the app's own
+   `/egg-ledger-api/auth/google-callback` controller route. The handler processes
+   `/signin-google` internally, then forwards to the controller (via the auth
+   properties `RedirectUri`) to issue the JWT and set the cookie.
+
+In the Google Cloud console, on the OAuth 2.0 Client ID:
+- Authorized JavaScript origin: `https://<swa-hostname>`
+- Authorized redirect URI: `https://<api-hostname>/signin-google`
 
 ## 8. Production smoke test
 
 - Open the Static Web Apps URL; `POST /auth/refresh` returns 401 on first load (healthy:
   reached the API, no session yet) rather than a 405/CORS error.
-- Register a new account -> redirected to the dashboard; the refresh cookie is set with
-  HttpOnly + Secure + SameSite=None; no tokens in localStorage.
+- Register a new account (email/password) and sign in with Google. Both should land on
+  the dashboard signed in, with the refresh cookie set (HttpOnly + Secure + SameSite=None)
+  and no tokens in localStorage.
 - Hard reload keeps the session; logout clears the cookie.
 
