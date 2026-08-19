@@ -5,6 +5,25 @@
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
   </PropertyGroup>
 
+  <!--
+    .NET SDK container image settings, used by: dotnet publish -t:PublishContainer.
+    Registry and tag are supplied at publish time so the same project builds to any
+    registry/version, e.g.:
+      dotnet publish -c Release -t:PublishContainer `
+        -p:ContainerRegistry=<name>.azurecr.io -p:ContainerImageTag=v1
+  -->
+  <PropertyGroup>
+    <ContainerRepository>eggledger-api</ContainerRepository>
+    <ContainerBaseImage>mcr.microsoft.com/dotnet/aspnet:9.0</ContainerBaseImage>
+    <!-- Azure Container Apps runs amd64; pin it regardless of build-host architecture. -->
+    <ContainerRuntimeIdentifier>linux-x64</ContainerRuntimeIdentifier>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The API listens on 8080 in the container (ASP.NET Core default). -->
+    <ContainerPort Include="8080" Type="tcp" />
+  </ItemGroup>
+
   <ItemGroup>
     <Compile Remove="Migrations\**" />
     <Content Remove="Migrations\**" />

@@ -86,9 +86,51 @@ dotnet ef database update `
   --connection "Host=eggledger-pg-prod1.postgres.database.azure.com;Port=5432;Database=eggledgerdb;Username=eggledgeradmin;Password=<password>;SSL Mode=Require;Trust Server Certificate=true"
 ```
 
-## 4. Container Registry — _todo_
+> `dotnet ef` runs the app's startup, which also triggers the in-app `Ef_Migrate`
+> migrator against the *configured* (dev) connection. To force Azure and avoid a
+> double-migrate, override the connection via env var and disable the in-app one:
+>
+> ```powershell
+> $env:ConnectionStrings__DefaultConnection = "<azure connection string>"
+> $env:Ef_Migrate = "false"
+> dotnet ef database update --project EggLedger.Data --startup-project EggLedger.API
+> Remove-Item Env:ConnectionStrings__DefaultConnection, Env:Ef_Migrate
+> ```
 
-## 5. Container Apps (API) — _todo_
+## 4. Container Registry + API image
+
+Container settings (repository, base image, amd64 RID, port 8080) live in
+`EggLedger.API.csproj`, so the publish command only supplies the registry and tag.
+
+```powershell
+az acr create --resource-group rg-eggledger-prod --name eggledgeracr1 --sku Basic -o table
+az acr login --name eggledgeracr1
+
+# Build the image with the .NET SDK container tooling (no Dockerfile) and push it
+dotnet publish EggLedger.API/EggLedger.API.csproj -c Release `
+  -t:PublishContainer `
+  -p:ContainerRegistry=eggledgeracr1.azurecr.io `
+  -p:ContainerImageTag=v1
+
+az acr repository show-tags --name eggledgeracr1 --repository eggledger-api -o table
+```
+
+## 5. Container Apps (API)
+
+```powershell
+az extension add --name containerapp --upgrade
+az provider register --namespace Microsoft.App --wait
+az provider register --namespace Microsoft.OperationalInsights --wait
+
+# Shared environment (owns logging + networking for the app)
+az containerapp env create `
+  --resource-group rg-eggledger-prod --name eggledger-env --location centralindia -o table
+
+# App deploy (image + secrets + env vars + ingress) is filled in as we complete it.
+# Secrets: DB connection string, production JWT key, Google client id/secret.
+# Env vars: ASPNETCORE_ENVIRONMENT=Production, Ef_Migrate=false, secretref pointers,
+#           and Cors__AllowedOrigins__0 set to the Static Web Apps URL (step 7).
+```
 
 ## 6. Static Web Apps (Vue) — _todo_
 
