@@ -17,6 +17,10 @@ public static class MiddlewareExtensions
 {
     public static WebApplication ConfigureApplicationMiddleware(this WebApplication app)
     {
+        // Apply forwarded headers first so every downstream component sees the original
+        // https scheme/host from the Container Apps ingress rather than the internal http hop.
+        app.UseForwardedHeaders();
+
         // Global exception handling (must be first)
         app.UseMiddleware<GlobalExceptionHandlingMiddleware>();
 

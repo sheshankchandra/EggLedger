@@ -2,6 +2,7 @@ using System;
 using EggLedger.API.Extensions;
 using EggLedger.ServiceDefaults;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi.Models;
 
@@ -15,6 +16,17 @@ Console.WriteLine($"Content Root: {builder.Environment.ContentRootPath}");
 // Configure services
 builder.AddApplicationLogging()
        .AddServiceDefaults();
+
+// Honor X-Forwarded-* from the Container Apps ingress so the app sees the original
+// https scheme and client host. Required for correct OAuth redirect URIs and cookie
+// behavior behind the proxy. The ingress hop is trusted and its IP is dynamic, so the
+// known-networks/proxies allow-lists are cleared.
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
 
 // Add services to the container
 builder.Services.AddApplicationOptions(builder.Configuration);
