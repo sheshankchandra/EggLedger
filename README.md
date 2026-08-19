@@ -3,7 +3,7 @@
 A full-stack roommate resource and expense management application built with ASP.NET Core and Vue.js. Track shared groceries, supplies, and household expenses with room-based organization and automatic balance calculations.
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![.NET](https://img.shields.io/badge/.NET-9.0-purple.svg)
+![.NET](https://img.shields.io/badge/.NET-10.0-purple.svg)
 ![Vue.js](https://img.shields.io/badge/Vue.js-3.x-green.svg)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-blue.svg)
 
@@ -18,7 +18,7 @@ A full-stack roommate resource and expense management application built with ASP
 
 ## Technology Stack
 
-**Backend:** ASP.NET Core 9.0, Entity Framework Core, PostgreSQL 15  
+**Backend:** ASP.NET Core 10.0, Entity Framework Core, PostgreSQL 15  
 **Frontend:** Vue.js 3, Vite, Pinia  
 **Authentication:** JWT, Google OAuth 2.0  
 **Orchestration:** .NET Aspire 9.3 (development), Docker Compose (production)  
@@ -30,7 +30,7 @@ A full-stack roommate resource and expense management application built with ASP
 
 ### Prerequisites
 
-- [.NET 9.0 SDK](https://dotnet.microsoft.com/download)
+- [.NET 10.0 SDK](https://dotnet.microsoft.com/download)
 - [Node.js 18+](https://nodejs.org/)
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 

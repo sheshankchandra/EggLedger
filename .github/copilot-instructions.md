@@ -9,7 +9,7 @@ EggLedger is a full-stack roommate resource & expense management app. Users crea
 track shared groceries/supplies (containers), and record stock/consumption orders with
 automatic balance calculations.
 
-**Stack:** ASP.NET Core (.NET 9) Web API · Vue 3 + Vite + Pinia SPA · PostgreSQL 15 ·
+**Stack:** ASP.NET Core (.NET 10) Web API · Vue 3 + Vite + Pinia SPA · PostgreSQL 15 ·
 Entity Framework Core · .NET Aspire (dev orchestration) · JWT + Google OAuth 2.0.
 
 ## Architecture — where code goes
