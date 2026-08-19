@@ -6,7 +6,9 @@ var password = builder.AddParameter("postgres-password", "eggledger123", secret:
 
 var postgres = builder.AddPostgres("postgres-server", username, password, 5432)
     .WithImage("postgres:15-alpine")
-    .WithPgAdmin(pgAdmin => pgAdmin.WithHostPort(5050));
+    // pgWeb is a lightweight Postgres UI that cold-starts in seconds (pgAdmin's
+    // full web IDE took 15-40s to boot).
+    .WithPgWeb(pgWeb => pgWeb.WithHostPort(5050));
 // Uncomment the following line to use a custom Postgres image
 //.WithVolume("eggledger_aspire_db", "/var/lib/postgresql/data");
 
