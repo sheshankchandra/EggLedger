@@ -126,14 +126,84 @@ az provider register --namespace Microsoft.OperationalInsights --wait
 az containerapp env create `
   --resource-group rg-eggledger-prod --name eggledger-env --location centralindia -o table
 
-# App deploy (image + secrets + env vars + ingress) is filled in as we complete it.
-# Secrets: DB connection string, production JWT key, Google client id/secret.
-# Env vars: ASPNETCORE_ENVIRONMENT=Production, Ef_Migrate=false, secretref pointers,
-#           and Cors__AllowedOrigins__0 set to the Static Web Apps URL (step 7).
+# Registry pull credentials
+az acr update --name eggledgeracr1 --admin-enabled true
+$acrPass = az acr credential show --name eggledgeracr1 --query "passwords[0].value" -o tsv
+
+# Secret values (assembled in-shell; never committed)
+$dbConn = "Host=eggledger-pg-prod1.postgres.database.azure.com;Port=5432;Database=eggledgerdb;Username=eggledgeradmin;Password=<password>;SSL Mode=Require;Trust Server Certificate=true"
+$jwtProd = -join ((48..57)+(65..90)+(97..122) | Get-Random -Count 48 | %{[char]$_})   # new prod key
+$googleId = "<google-client-id>"; $googleSecret = "<google-client-secret>"
+
+# Create the app: image + secrets + env vars + external ingress on 8080, scale-to-zero.
+# ASPNETCORE_ENVIRONMENT=Production makes the app load appsettings.Production.json and
+# flip the refresh cookie to Secure=true; SameSite=None. Env vars use secretref: to point
+# at the encrypted secrets rather than embedding values.
+az containerapp create `
+  --resource-group rg-eggledger-prod --name eggledger-api --environment eggledger-env `
+  --image eggledgeracr1.azurecr.io/eggledger-api:v1 `
+  --registry-server eggledgeracr1.azurecr.io `
+  --registry-username eggledgeracr1 --registry-password $acrPass `
+  --target-port 8080 --ingress external --min-replicas 0 --max-replicas 2 `
+  --secrets "db-conn=$dbConn" "jwt-key=$jwtProd" "google-id=$googleId" "google-secret=$googleSecret" `
+  --env-vars "ASPNETCORE_ENVIRONMENT=Production" "ConnectionStrings__DefaultConnection=secretref:db-conn" "Jwt__SecretKey=secretref:jwt-key" "Authentication__Google__ClientId=secretref:google-id" "Authentication__Google__ClientSecret=secretref:google-secret" `
+  -o table
+
+# API URL + health check
+$apiUrl = "https://" + (az containerapp show -g rg-eggledger-prod -n eggledger-api --query "properties.configuration.ingress.fqdn" -o tsv)
+curl.exe "$apiUrl/health"   # expect: Healthy
 ```
 
-## 6. Static Web Apps (Vue) — _todo_
+## 6. Static Web Apps (Vue)
 
-## 7. Production CORS + cookie + Google OAuth callback — _todo_
+Build + deploy run in GitHub Actions (`.github/workflows/azure-static-web-apps.yml`)
+so no `swa` CLI is needed locally (managed devices can't install it from the npm feed).
 
-## 8. Production smoke test — _todo_
+```powershell
+az staticwebapp create --name eggledger-web --resource-group rg-eggledger-prod --location eastasia -o table
+
+# Deployment token -> GitHub repo SECRET  AZURE_STATIC_WEB_APPS_API_TOKEN
+az staticwebapp secrets list -n eggledger-web -g rg-eggledger-prod --query "properties.apiKey" -o tsv
+
+# Site URL
+az staticwebapp show -n eggledger-web -g rg-eggledger-prod --query "defaultHostname" -o tsv
+```
+
+Then configure the repo (Settings > Secrets and variables > Actions):
+
+- **Secret** `AZURE_STATIC_WEB_APPS_API_TOKEN` = the deployment token above.
+- **Variable** `VITE_API_BASE_URL` = the **full API URL including `https://`**
+  (e.g. `https://eggledger-api.<hash>.centralindia.azurecontainerapps.io`).
+
+Run the "Deploy client to Azure Static Web Apps" workflow. `VITE_API_BASE_URL` is a
+**Variable**, not a Secret, because the workflow reads it via `${{ vars.* }}`.
+
+> **Two gotchas that cost real time here — both are missing schemes:**
+> 1. `VITE_API_BASE_URL` must include `https://`. Without it, axios treats it as a
+>    relative path and calls the site's own origin (405s on the static host).
+> 2. It must be the **API** (Container Apps) URL, not the site's own Static Web Apps URL.
+>
+> A changed JS bundle hash after a deploy confirms a fresh build actually shipped.
+
+## 7. Production CORS (and Google OAuth callback)
+
+The API only sends `Access-Control-Allow-Origin` for an **exact** origin match, so the
+value must include `https://` and no trailing slash — the same scheme gotcha as above.
+
+```powershell
+az containerapp update -g rg-eggledger-prod -n eggledger-api `
+  --set-env-vars "Cors__AllowedOrigins__0=https://<your-swa-hostname>" -o table
+```
+
+Google OAuth: add `https://<api-hostname>/egg-ledger-api/auth/google-callback` as an
+Authorized redirect URI and `https://<swa-hostname>` as an Authorized JavaScript origin
+in the Google Cloud console. _(Pending.)_
+
+## 8. Production smoke test
+
+- Open the Static Web Apps URL; `POST /auth/refresh` returns 401 on first load (healthy:
+  reached the API, no session yet) rather than a 405/CORS error.
+- Register a new account -> redirected to the dashboard; the refresh cookie is set with
+  HttpOnly + Secure + SameSite=None; no tokens in localStorage.
+- Hard reload keeps the session; logout clears the cookie.
+

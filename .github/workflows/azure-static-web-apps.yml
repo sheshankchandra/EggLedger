@@ -23,11 +23,11 @@ jobs:
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
           action: upload
-          # Paths are relative to the repo root.
+          # Paths are relative to the repo root. No Functions API in this repo.
           app_location: "EggLedger.Client"
           output_location: "dist"
-          skip_api_build: true
         env:
-          # Baked into the bundle at build time; must point at the deployed API.
+          # Baked into the bundle at build time; must be the FULL deployed API URL
+          # including https:// (e.g. https://eggledger-api.<hash>.<region>.azurecontainerapps.io).
           # Set as a repository variable (Settings > Secrets and variables > Actions > Variables).
           VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
