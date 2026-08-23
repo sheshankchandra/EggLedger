@@ -17,7 +17,7 @@
          so the standalone Aspire.Hosting.NodeJS package is no longer needed. -->
     <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.4.6" />
     <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.4.6" />
-    <PackageVersion Include="Aspire.Npgsql.EntityFrameworkCore.PostgreSQL" Version="13.4.6" />
+    <PackageVersion Include="Aspire.Npgsql.EntityFrameworkCore.PostgreSQL" Version="13.5.2" />
     <!-- AddViteApp / AddJavaScriptApp / WithNpm for the Vue dev server (first-party). -->
     <PackageVersion Include="Aspire.Hosting.JavaScript" Version="13.4.6" />
 
