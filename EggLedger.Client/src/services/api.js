@@ -11,6 +11,9 @@ const apiClient = axios.create({
     // endpoints. Browsers force a CORS preflight for it, so a cross-site page
     // cannot forge these requests.
     'X-EggLedger-CSRF': '1',
+    // Report the frontend build so the API can tag telemetry with it, letting
+    // us see which client version made each request.
+    'X-Client-Version': import.meta.env.VITE_APP_VERSION || 'dev',
   },
 })
 
