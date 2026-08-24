@@ -12,7 +12,9 @@ Manual deployment of EggLedger to Azure using the `az` CLI. Target architecture:
 Secrets (JWT key, DB connection, Google OAuth) are injected as Container Apps
 secrets / environment variables — never committed. See `docs/SECRETS.md`.
 
-> Status: work in progress. Steps 1–3 are done; 4+ are being filled in as we go.
+> Status: complete. Sections 1–8 cover the initial deploy; sections 9–13 cover the
+> Phase 4 hardening (observability, managed identity, Key Vault, custom domain, and
+> the Google OAuth topology).
 
 ## Prerequisites
 
@@ -22,7 +24,7 @@ az login --tenant <tenant-id>                # sign in to the tenant that holds 
 az account show -o table                     # confirm the active subscription
 ```
 
-Docker Desktop and the .NET 9 runtime are also required locally.
+Docker Desktop and the .NET 10 runtime are also required locally.
 
 ## 1. Resource group
 
@@ -206,8 +208,15 @@ Google OAuth requires two things behind the Container Apps ingress:
    properties `RedirectUri`) to issue the JWT and set the cookie.
 
 In the Google Cloud console, on the OAuth 2.0 Client ID:
-- Authorized JavaScript origin: `https://<swa-hostname>`
-- Authorized redirect URI: `https://<api-hostname>/signin-google`
+- Authorized redirect URI: `https://<api-hostname>/signin-google` — **required**.
+- Authorized JavaScript origins: **not used by this flow** (see section 13). Login is a
+  server-side authorization-code flow, so Google only ever talks to the API. Values here
+  are inert; they only matter if you add a browser-side Google SDK (One Tap / GIS).
+
+The post-login redirect target is `allowedOrigins[0]` (the first `Cors__AllowedOrigins__*`
+entry): the Google callback carries no `Origin` header, so `AuthController` falls back to
+the first configured origin when building `{origin}/auth/callback`. Put the primary
+frontend origin at index 0.
 
 ## 8. Production smoke test
 
@@ -217,4 +226,168 @@ In the Google Cloud console, on the OAuth 2.0 Client ID:
   the dashboard signed in, with the refresh cookie set (HttpOnly + Secure + SameSite=None)
   and no tokens in localStorage.
 - Hard reload keeps the session; logout clears the cookie.
+
+## 9. Observability — Application Insights
+
+The app already emits OpenTelemetry (traces/metrics/logs). `ServiceDefaults` enables the
+Azure Monitor exporter when `APPLICATIONINSIGHTS_CONNECTION_STRING` is set, so it activates
+in prod and stays inert in dev. App Insights is workspace-based, so it reuses the Log
+Analytics workspace the Container Apps environment already created.
+
+```powershell
+az extension add -n application-insights 2>$null
+
+# Reuse the workspace the ACA env created
+$laId = az monitor log-analytics workspace show `
+  -g rg-eggledger-prod -n <workspace-name> --query id -o tsv
+
+az monitor app-insights component create `
+  -g rg-eggledger-prod -a eggledger-ai -l centralindia `
+  --workspace $laId --application-type web -o table
+
+$aiConn = az monitor app-insights component show `
+  -g rg-eggledger-prod -a eggledger-ai --query connectionString -o tsv
+
+# Store as a secret, reference as the env var the code reads
+az containerapp secret set -g rg-eggledger-prod -n eggledger-api --secrets appinsights-conn="$aiConn"
+az containerapp update -g rg-eggledger-prod -n eggledger-api `
+  --set-env-vars "APPLICATIONINSIGHTS_CONNECTION_STRING=secretref:appinsights-conn" -o table
+```
+
+> Telemetry only flows once an image containing the exporter code is deployed (the env var
+> alone does nothing on an older image). Redeploy the API after enabling it.
+
+The client stamps its build (`VITE_APP_VERSION` = commit SHA) and sends it as
+`X-Client-Version`; the API tags each request span with `client.version`. Correlate in KQL:
+
+```kusto
+requests | summarize count() by tostring(customDimensions['client.version'])
+```
+
+## 10. Managed identity — ACR pull (drop admin credentials)
+
+Replace the registry admin username/password with the Container App's system-assigned
+identity + the `AcrPull` role.
+
+```powershell
+az containerapp identity assign -g rg-eggledger-prod -n eggledger-api --system-assigned -o table
+$miPrincipal = az containerapp identity show -g rg-eggledger-prod -n eggledger-api --query principalId -o tsv
+$acrId       = az acr show -n eggledgeracr1 --query id -o tsv
+az role assignment create --assignee $miPrincipal --role AcrPull --scope $acrId -o table
+az containerapp registry set -g rg-eggledger-prod -n eggledger-api `
+  --server eggledgeracr1.azurecr.io --identity system -o table
+```
+
+> Verify before removing the fallback: restart the active revision (forces a fresh pull via
+> the identity) and confirm `/health` is 200. Only then disable admin:
+> `az acr update -n eggledgeracr1 --admin-enabled false`. Also remove the now-orphaned
+> `eggledgeracr1azurecrio-eggledgeracr1` secret. Role propagation can take ~1 min.
+
+## 11. Key Vault — secret references
+
+Move the inline ACA secrets into Key Vault; the app config then holds only references, and
+the same managed identity reads them. RBAC has two planes: Owner can manage the vault but
+cannot read/write secret values — that needs a data-plane role.
+
+```powershell
+az keyvault create -g rg-eggledger-prod -n eggledger-kv-prod1 -l centralindia `
+  --enable-rbac-authorization true -o table
+
+$kvId        = az keyvault show -n eggledger-kv-prod1 --query id -o tsv
+$me          = az ad signed-in-user show --query id -o tsv
+$miPrincipal = az containerapp identity show -g rg-eggledger-prod -n eggledger-api --query principalId -o tsv
+az role assignment create --assignee $me --role "Key Vault Secrets Officer" --scope $kvId -o table
+az role assignment create --assignee $miPrincipal --role "Key Vault Secrets User" --scope $kvId -o table
+
+# Copy each existing ACA secret value into Key Vault (values never printed)
+foreach ($s in 'google-id','google-secret','jwt-key','db-conn','appinsights-conn') {
+  $v = az containerapp secret show -g rg-eggledger-prod -n eggledger-api --secret-name $s --query value -o tsv
+  az keyvault secret set --vault-name eggledger-kv-prod1 --name $s --value "$v" -o none
+}
+
+# Flip each ACA secret to a Key Vault reference resolved by the identity
+$kvUri = "https://eggledger-kv-prod1.vault.azure.net/secrets"
+az containerapp secret set -g rg-eggledger-prod -n eggledger-api --secrets `
+  "google-id=keyvaultref:$kvUri/google-id,identityref:system" `
+  "google-secret=keyvaultref:$kvUri/google-secret,identityref:system" `
+  "jwt-key=keyvaultref:$kvUri/jwt-key,identityref:system" `
+  "db-conn=keyvaultref:$kvUri/db-conn,identityref:system" `
+  "appinsights-conn=keyvaultref:$kvUri/appinsights-conn,identityref:system" -o table
+```
+
+> Restart the revision and confirm `/health` 200 + a working login (exercises JWT/Google/DB
+> secrets) to prove the identity reads Key Vault before trusting the migration.
+
+## 12. Custom domain + TLS (Static Web Apps)
+
+TLS certificates are free and auto-managed; the only cost is domain registration. A
+subdomain needs one CNAME. With Cloudflare DNS, set the record to **DNS only (grey cloud)** —
+proxying (orange cloud) resolves the CNAME to Cloudflare and blocks Azure's validation +
+managed cert.
+
+```
+# Cloudflare DNS record
+Type=CNAME  Name=eggledger  Target=<swa-default-hostname>  Proxy=DNS only
+```
+
+```powershell
+az staticwebapp hostname set -g rg-eggledger-prod -n eggledger-web `
+  --hostname eggledger.sshnk.com -o table
+az staticwebapp hostname list -g rg-eggledger-prod -n eggledger-web -o table   # wait for Ready
+```
+
+Changing the **frontend** origin only requires updating the API's CORS list (which also sets
+the OAuth redirect target — see section 7). Make the custom domain index 0:
+
+```powershell
+az containerapp update -g rg-eggledger-prod -n eggledger-api --set-env-vars `
+  "Cors__AllowedOrigins__0=https://eggledger.sshnk.com" `
+  "Cors__AllowedOrigins__1=https://<swa-default-hostname>" -o table
+```
+
+No frontend rebuild, no CSP change, and no Google console change are needed — the API domain
+(and thus the OAuth redirect URI) is unchanged. A custom domain on the **API** would be
+different: it ripples into `VITE_API_BASE_URL`, CORS, the CSP `connect-src`, and Google's
+Authorized redirect URIs.
+
+## 13. Google OAuth topology (why the custom frontend domain "just worked")
+
+This app uses the **authorization-code flow with a confidential client**: the API — not the
+browser — is the OAuth client. It holds the client secret and does the code↔token exchange
+server-to-server; the browser only ever receives an HttpOnly cookie (no tokens in the URL).
+
+Flow:
+
+1. Browser navigates to `<API>/egg-ledger-api/auth/google-login` (a full-page redirect).
+2. API 302s to Google with `redirect_uri=<API>/signin-google`.
+3. Google validates that against **Authorized redirect URIs**, shows consent.
+4. Google redirects to `<API>/signin-google?code=...`.
+5. API exchanges the code, signs in, sets the refresh cookie.
+6. API redirects to `{allowedOrigins[0]}/auth/callback` — the only step that touches the
+   frontend domain, and it is driven by the API's own CORS config, not by Google.
+
+Consequences:
+
+- **Authorized redirect URIs** point at the **API** and are what make login work. Changing
+  the frontend domain needs no Google change; changing the **API** domain does (add
+  `https://<new-api>/signin-google`).
+- **Authorized JavaScript origins** are an origin allowlist for browser-side Google SDK calls
+  (One Tap / GIS `initTokenClient`). This flow never calls Google from JS, so the field is
+  unused here — login from `eggledger.sshnk.com` succeeds even though it is not listed.
+
+### Consent-screen branding
+
+The "to continue to …" text and the small domain shown on Google's account chooser come from
+the **OAuth consent screen** (APIs & Services → Branding), not from the redirect URI. Set:
+
+- **App name** = `EggLedger` (this replaces a raw host in the "continue to" text)
+- **User support email**, and an **App logo** (optional)
+- **Application home page** = `https://eggledger.sshnk.com`
+- **Authorized domain** = `sshnk.com`
+
+To fully brand the host shown mid-flow (so no `azurecontainerapps.io` appears at all), give
+the **API** a custom domain (e.g. `api.sshnk.com`) and re-register its `/signin-google`
+redirect URI — see the API-domain ripple note in section 12. Removing the "Google hasn't
+verified this app" warning for external users requires OAuth verification (domain ownership
+in Search Console + review); for a small user base you can stay in Testing with test users.
 
