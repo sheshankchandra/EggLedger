@@ -60,7 +60,19 @@ public static class Extensions
             .WithTracing(tracing =>
             {
                 tracing.AddSource(builder.Environment.ApplicationName)
-                    .AddAspNetCoreInstrumentation()
+                    .AddAspNetCoreInstrumentation(options =>
+                    {
+                        // Tag each request span with the caller's frontend build (sent as
+                        // X-Client-Version) so telemetry can be grouped by client version.
+                        options.EnrichWithHttpRequest = (activity, request) =>
+                        {
+                            var clientVersion = request.Headers["X-Client-Version"].ToString();
+                            if (!string.IsNullOrEmpty(clientVersion))
+                            {
+                                activity.SetTag("client.version", clientVersion);
+                            }
+                        };
+                    })
                     // Uncomment the following line to enable gRPC instrumentation (requires the OpenTelemetry.Instrumentation.GrpcNetClient package)
                     //.AddGrpcClientInstrumentation()
                     .AddHttpClientInstrumentation();
