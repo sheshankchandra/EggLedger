@@ -5,8 +5,10 @@ import vue from '@vitejs/plugin-vue'
 import vueDevTools from 'vite-plugin-vue-devtools'
 
 // https://vite.dev/config/
-export default defineConfig({
-  plugins: [vue(), vueDevTools()],
+export default defineConfig(({ command }) => ({
+  // vueDevTools is a dev-only inspector; include it only when running the dev
+  // server so it never ends up in a production build.
+  plugins: [vue(), ...(command === 'serve' ? [vueDevTools()] : [])],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
@@ -16,4 +18,4 @@ export default defineConfig({
     port: process.env.PORT ? parseInt(process.env.PORT) : 5173,
     host: '0.0.0.0', // Allow external connections (for Aspire)
   },
-})
+}))
