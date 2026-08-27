@@ -54,7 +54,7 @@ public class OrderService : IOrderService
                 Quantity = dto.Quantity,
                 UserId = user.UserId,
                 Amount = dto.Amount,
-                OrderStatus = OrderStatus.Entered
+                OrderStatus = OrderStatus.Completed
             };
 
             var container = new Container
@@ -77,7 +77,7 @@ public class OrderService : IOrderService
                 OrderId = order.OrderId,
                 ContainerId = container.ContainerId,
                 DetailQuantity = dto.Quantity,
-                OrderDetailStatus = OrderDetailStatus.Entered
+                OrderDetailStatus = OrderDetailStatus.Completed
             };
 
             order.OrderDetails.Add(orderDetail);
@@ -102,21 +102,38 @@ public class OrderService : IOrderService
         }
     }
 
-    public async Task<Result<string>> CreateConsumeOrderAsync(Guid userId, int roomCode, ConsumeOrderDto dto, CancellationToken cancellationToken = default)
+    public async Task<Result<ConsumeOrderResultDto>> CreateConsumeOrderAsync(Guid userId, int roomCode, ConsumeOrderDto dto, CancellationToken cancellationToken = default)
     {
         try
         {
+            if (dto.Quantity <= 0)
+            {
+                return Result.Fail("Quantity must be greater than zero.");
+            }
+
             var user = await _context.Users
                 .FirstOrDefaultAsync(u => u.UserId == userId, cancellationToken);
             var userRoom = await _context.UserRooms
                 .FirstOrDefaultAsync(ur => ur.UserId == userId && ur.Room.RoomCode == roomCode, cancellationToken);
 
-            var orderNameResult = await _helperService.GenerateOrderName(user!, 2, cancellationToken);
+            if (user == null || userRoom == null)
+            {
+                return Result.Fail("User is not a member of the specified room.");
+            }
+
+            var orderNameResult = await _helperService.GenerateOrderName(user, 2, cancellationToken);
             if (orderNameResult.IsFailed)
             {
                 _logger.LogWarning("Unable to generate the order name for user: {UserId}", userId);
                 return Result.Fail("Failed generating an order name");
             }
+
+            var availableContainers = await _context.Containers
+                .Where(c => c.RoomId == userRoom.RoomId && c.RemainingQuantity > 0)
+                .OrderBy(c => c.PurchaseDateTime)
+                .ToListAsync(cancellationToken);
+
+            var availableQuantity = availableContainers.Sum(c => c.RemainingQuantity);
 
             var order = new Order
             {
@@ -127,18 +144,31 @@ public class OrderService : IOrderService
                 Quantity = dto.Quantity,
                 UserId = userId,
                 Amount = 0,
-                OrderStatus = OrderStatus.Entered
+                OrderStatus = OrderStatus.Pending
             };
 
+            // A consume that cannot be fully satisfied is recorded as a Failed order so
+            // the attempt is auditable, and the caller is told how much is actually available.
+            if (availableQuantity < dto.Quantity)
+            {
+                order.OrderStatus = OrderStatus.Failed;
+                _context.Orders.Add(order);
+                await _context.SaveChangesAsync(cancellationToken);
+
+                _logger.LogInformation("Consume order {OrderId} failed: requested {Requested}, available {Available}",
+                    order.OrderId, dto.Quantity, availableQuantity);
+
+                return Result.Ok(new ConsumeOrderResultDto
+                {
+                    OrderName = order.OrderName,
+                    Status = OrderStatus.Failed,
+                    RequestedQuantity = dto.Quantity,
+                    AvailableQuantity = availableQuantity,
+                    Message = $"Not enough stock. Only {availableQuantity} available."
+                });
+            }
+
             int remainingPick = dto.Quantity;
-
-            // Only select containers with available stock, ordered by purchase date
-            var availableContainers = await _context.Containers
-                .Where(c => c.RemainingQuantity > 0)
-                .Where(c => c.RoomId == userRoom!.RoomId)
-                .OrderBy(c => c.PurchaseDateTime)
-                .ToListAsync(cancellationToken);
-
             foreach (var container in availableContainers)
             {
                 if (remainingPick <= 0)
@@ -152,7 +182,7 @@ public class OrderService : IOrderService
                     OrderId = order.OrderId,
                     ContainerId = container.ContainerId,
                     DetailQuantity = taken,
-                    OrderDetailStatus = OrderDetailStatus.Entered,
+                    OrderDetailStatus = OrderDetailStatus.Completed,
                     Container = container
                 });
 
@@ -160,18 +190,7 @@ public class OrderService : IOrderService
                 remainingPick -= taken;
             }
 
-            if (remainingPick > 0)
-            {
-                _logger.LogError("Not enough eggs in stock to fulfill this consumption. Needed: {Needed}, Remaining: {Remaining}", dto.Quantity, remainingPick);
-                return Result.Fail("Not enough eggs in stock to fulfill this consumption.");
-            }
-
-            if (remainingPick < 0)
-            {
-                _logger.LogError("More than required eggs are consumed. Needed : {Needed}, Consumed: {Consumed}", dto.Quantity, dto.Quantity - remainingPick);
-                return Result.Fail("More than required eggs are consumed.");
-            }
-
+            order.OrderStatus = OrderStatus.Completed;
             order.Amount = order.OrderDetails.Sum(d => d.Amount);
 
             _context.Orders.Add(order);
@@ -179,7 +198,14 @@ public class OrderService : IOrderService
 
             _logger.LogInformation("Consume order created: {OrderId}", order.OrderId);
 
-            return Result.Ok(order.OrderName);
+            return Result.Ok(new ConsumeOrderResultDto
+            {
+                OrderName = order.OrderName,
+                Status = OrderStatus.Completed,
+                RequestedQuantity = dto.Quantity,
+                AvailableQuantity = availableQuantity - dto.Quantity,
+                Message = null
+            });
         }
         catch (OperationCanceledException ex)
         {

@@ -308,9 +308,9 @@ public class RoomService : IRoomService
                     UserRoom = r.UserRooms.FirstOrDefault(ur => ur.UserId == userId),
                     ContainerCount = r.Containers.Count(c => c.Status != ContainerStatus.Archived),
                     ActiveOrderDetailsCount = _context.OrderDetails
-                        .Count(od => od.Container.RoomId == r.RoomId && 
+                        .Count(od => od.Container.RoomId == r.RoomId &&
                                     od.Container.Status != ContainerStatus.Archived &&
-                                    od.OrderDetailStatus != OrderDetailStatus.Completed)
+                                    od.OrderDetailStatus == OrderDetailStatus.Pending)
                 })
                 .FirstOrDefaultAsync(cancellationToken);
 
