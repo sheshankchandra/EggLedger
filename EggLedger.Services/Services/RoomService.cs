@@ -341,62 +341,49 @@ public class RoomService : IRoomService
             }
 
             var room = roomWithUserValidation.Room;
-            
+
             _logger.LogInformation("Archiving room {RoomName} (Code: {RoomCode}) and associated containers",
                 room.RoomName, roomCode);
 
-            using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
-            
-            try
+            var archiveTime = DateTime.UtcNow;
+
+            var containersToArchive = await _context.Containers
+                .Where(c => c.RoomId == room.RoomId && c.Status != ContainerStatus.Archived)
+                .ToListAsync(cancellationToken);
+
+            foreach (var container in containersToArchive)
             {
-                var archiveTime = DateTime.UtcNow;
-                int totalAffectedRows = 0;
-
-                // Archive containers (preserves order history)
-                var containersToArchive = await _context.Containers
-                    .Where(c => c.RoomId == room.RoomId && c.Status != ContainerStatus.Archived)
-                    .ToListAsync(cancellationToken);
-
-                foreach (var container in containersToArchive)
-                {
-                    container.Status = ContainerStatus.Archived;
-                    container.DeletedAt = archiveTime;
-                    container.DeletedBy = userId;
-                    container.DeletionReason = "Room archived";
-                    container.ModifiedAt = archiveTime;
-                    container.ModifiedBy = userId;
-                }
-                totalAffectedRows += containersToArchive.Count;
-
-                // Remove user memberships (this is safe to hard delete)
-                var userRoomsDeleted = await _context.UserRooms
-                    .Where(ur => ur.RoomId == room.RoomId)
-                    .ExecuteDeleteAsync(cancellationToken);
-                totalAffectedRows += userRoomsDeleted;
-
-                // Archive the room
-                room.Status = RoomStatus.Archived;
-                room.DeletedAt = archiveTime;
-                room.DeletedBy = userId;
-                room.DeletionReason = "Room archived by admin";
-                room.ModifiedAt = archiveTime;
-                room.ModifiedBy = userId;
-                totalAffectedRows += 1;
-
-                await _context.SaveChangesAsync(cancellationToken);
-                await transaction.CommitAsync(cancellationToken);
-
-                _logger.LogInformation("Successfully archived room {RoomCode}. " +
-                    "Containers archived: {ContainersArchived}, UserRooms removed: {UserRoomsDeleted}", 
-                    roomCode, containersToArchive.Count, userRoomsDeleted);
-
-                return Result.Ok(totalAffectedRows);
+                container.Status = ContainerStatus.Archived;
+                container.DeletedAt = archiveTime;
+                container.DeletedBy = userId;
+                container.DeletionReason = "Room archived";
+                container.ModifiedAt = archiveTime;
+                container.ModifiedBy = userId;
             }
-            catch (Exception)
-            {
-                await transaction.RollbackAsync(cancellationToken);
-                throw;
-            }
+
+            var userRoomsToRemove = await _context.UserRooms
+                .Where(ur => ur.RoomId == room.RoomId)
+                .ToListAsync(cancellationToken);
+            _context.UserRooms.RemoveRange(userRoomsToRemove);
+
+            room.Status = RoomStatus.Archived;
+            room.DeletedAt = archiveTime;
+            room.DeletedBy = userId;
+            room.DeletionReason = "Room archived by admin";
+            room.ModifiedAt = archiveTime;
+            room.ModifiedBy = userId;
+
+            // A single SaveChanges is atomic on its own and stays compatible with the
+            // retrying execution strategy, which forbids user-initiated transactions.
+            await _context.SaveChangesAsync(cancellationToken);
+
+            var totalAffectedRows = containersToArchive.Count + userRoomsToRemove.Count + 1;
+
+            _logger.LogInformation("Successfully archived room {RoomCode}. " +
+                "Containers archived: {ContainersArchived}, UserRooms removed: {UserRoomsDeleted}",
+                roomCode, containersToArchive.Count, userRoomsToRemove.Count);
+
+            return Result.Ok(totalAffectedRows);
         }
         catch (OperationCanceledException)
         {
