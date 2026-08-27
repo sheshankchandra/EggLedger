@@ -1,6 +1,13 @@
 # EggLedger
 
-A full-stack roommate resource and expense management application built with ASP.NET Core and Vue.js. Track shared groceries, supplies, and household expenses with room-based organization and automatic balance calculations.
+A full-stack app for shared households: create a room, track shared groceries and supplies as
+"containers", and record stock/consumption "orders" that keep everyone's balance up to date.
+
+Built as a hands-on learning project, then taken all the way to a hardened production deployment
+on Azure.
+
+**Live:** [eggledger.sshnk.com](https://eggledger.sshnk.com) · API at
+[api.sshnk.com](https://api.sshnk.com)
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![.NET](https://img.shields.io/badge/.NET-10.0-purple.svg)
@@ -9,304 +16,168 @@ A full-stack roommate resource and expense management application built with ASP
 
 ## Features
 
-- **Room-based organization** with unique room codes
-- **Resource tracking** for shared items and expenses
-- **User authentication** with JWT and Google OAuth
-- **Real-time updates** for stock levels and consumption
-- **Role-based permissions** for room admins and members
-- **Database management** with pgAdmin interface
+- **Rooms** with unique join codes, and admin/member roles
+- **Containers** for shared items, with stock and consumption tracking
+- **Orders** (stock / consume) that update balances automatically
+- **Auth** with JWT access tokens and Google OAuth 2.0 (server-side code flow)
+- **Secure session model**: in-memory access token + HttpOnly refresh cookie, silent refresh,
+  anti-CSRF header
+- **OpenAPI** docs via Scalar in development
 
-## Technology Stack
+## Tech stack
 
-**Backend:** ASP.NET Core 10.0, Entity Framework Core, PostgreSQL 15  
-**Frontend:** Vue.js 3, Vite, Pinia  
-**Authentication:** JWT, Google OAuth 2.0  
-**Orchestration:** .NET Aspire 9.3 (development), Docker Compose (production)  
-**Database Management:** pgAdmin 4  
-**Monitoring:** Built-in health checks, OpenTelemetry  
-**Documentation:** OpenAPI/Swagger
+| Area | Choice |
+| --- | --- |
+| Backend | ASP.NET Core (.NET 10), EF Core, FluentResults |
+| Frontend | Vue 3 (Composition API), Vite, Pinia, Vue Router |
+| Database | PostgreSQL 15 |
+| Dev orchestration | .NET Aspire 13 (Postgres + API + Vite + pgWeb) |
+| Auth | JWT, Google OAuth 2.0 |
+| Tests | xUnit + Testcontainers (`WebApplicationFactory`) |
+| Observability | OpenTelemetry → Application Insights (prod) / Aspire dashboard (dev) |
+| Hosting | Azure Container Apps (API) + Static Web Apps (SPA) + Postgres Flexible Server |
 
-## Quick Start
+## Architecture
+
+The backend is layered; each layer has a clear responsibility:
+
+```
+EggLedger/
+├── EggLedger.API/              # Controllers (thin), middleware, DI/config, Program.cs
+├── EggLedger.Services/         # Business logic (returns FluentResults)
+├── EggLedger.Data/             # DbContext, EF Core config, migrations
+├── EggLedger.Models/           # Domain entities (DB-mapped)
+├── EggLedger.DTO/              # Request/response shapes (never return entities)
+├── EggLedger.ServiceDefaults/  # Aspire defaults: health checks, OpenTelemetry
+├── EggLedger.AppHost/          # .NET Aspire orchestration (development only)
+├── EggLedger.Client/           # Vue 3 SPA
+└── EggLedger.Tests/            # xUnit integration tests (Testcontainers)
+```
+
+API routes are prefixed with `/egg-ledger-api/`. Controllers validate input and delegate; all
+business logic lives in the Services layer.
+
+## Quick start (recommended: .NET Aspire)
+
+.NET Aspire orchestrates the whole stack — it starts PostgreSQL in a container, runs the API,
+launches the Vite dev server, and adds pgWeb for database browsing, all behind one dashboard.
 
 ### Prerequisites
 
-- [.NET 10.0 SDK](https://dotnet.microsoft.com/download)
-- [Node.js 18+](https://nodejs.org/)
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+- [.NET 10 SDK](https://dotnet.microsoft.com/download)
+- [Node.js 20.19+ or 22.12+](https://nodejs.org/) (required by Vite 8)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (for the Postgres container)
 
-### Option 1: Using .NET Aspire (Development - Recommended)
-
-.NET Aspire provides orchestration for the entire application stack including PostgreSQL, API, and frontend.
+### Run
 
 ```bash
-# Clone the repository
 git clone https://github.com/sheshankchandra/EggLedger.git
 cd EggLedger
 
-# Restore all packages
-dotnet restore
+# Frontend deps (Aspire also runs `npm ci` on start, but this warms the cache)
+cd EggLedger.Client && npm install && cd ..
 
-# Install frontend dependencies
-cd EggLedger.Client
-npm install
-cd ..
-
-# Run the entire application with Aspire
+# Start everything
 dotnet run --project EggLedger.AppHost
 ```
 
-This will:
-- Start PostgreSQL 15 in a Docker container
-- Run the API server with proper database connection
-- Start the Vue.js development server
-- Provide a unified dashboard at `https://localhost:17071`
-- Include pgAdmin for database management (accessible via Aspire dashboard)
+Then open the **Aspire dashboard** at `https://localhost:17071`. From there you can open the Vue
+client (Aspire assigns it a port), inspect logs/traces/metrics, and open **pgWeb** to browse the
+database. The AppHost injects `VITE_API_BASE_URL` so the SPA and the OAuth start URL target the
+API automatically.
 
-### Option 2: Using Docker Compose
-
-For containerized deployment (development, staging, or production) when you want to run all services in containers:
-
-```bash
-# Clone the repository
-git clone https://github.com/sheshankchandra/EggLedger.git
-cd EggLedger
-
-# Copy and configure the appsettings
-cp EggLedger.API/appsettings-example.json EggLedger.API/appsettings.json
-
-# Edit appsettings.json with your configuration
-# (See Configuration section below)
-
-# Start all services
-docker-compose up -d
-```
-
-This will start:
-- **PostgreSQL 15** on port `5432`
-- **pgAdmin 4** on port `5050` (admin@eggledger.com / eggledger123)
-- **EggLedger API** on port `8080`
-- **EggLedger Client** on port `5173`
-
-### Option 3: Manual Setup
-
-If you prefer to run components separately:
-
-#### Database Setup
-
-```bash
-# Using Docker
-docker run --name eggledger-postgres \
-  -e POSTGRES_USER=eggledger \
-  -e POSTGRES_PASSWORD=eggledger123 \
-  -e POSTGRES_DB=eggledgerDB \
-  -p 5432:5432 -d postgres:15-alpine
-```
-
-#### Backend Setup
-
-```bash
-cd EggLedger.API
-dotnet restore
-dotnet ef database update
-dotnet run
-```
-
-API available at `http://localhost:8080`
-
-#### Frontend Setup
-
-```bash
-cd EggLedger.Client
-npm install
-npm run dev
-```
-
-Frontend available at `http://localhost:5173`
+> Running the client on its own with `npm run dev` works only if you also provide
+> `VITE_API_BASE_URL` yourself — otherwise Google login has no API URL to redirect to. The Aspire
+> flow is the intended dev loop.
 
 ## Configuration
 
-### Backend Configuration
+Local secrets are read from **.NET User Secrets** in development (never committed).
+`EggLedger.API/appsettings-example.json` shows the shape of the non-secret settings. The keys the
+app expects:
 
-Copy `EggLedger.API/appsettings-example.json` to `EggLedger.API/appsettings.json` and configure:
-
-```json
+```jsonc
 {
   "Jwt": {
-    "SecretKey": "your-long-secure-jwt-secret-key-here",
+    "SecretKey": "<long random key>",
     "Issuer": "EggLedgerAPI",
-    "ExpiryInMinutes": 15,
-    "Audience": "EggLedgerAudience"
+    "Audience": "EggLedgerAudience",
+    "ExpiryInMinutes": 15
   },
-  "ConnectionStrings": {
-    "DefaultConnection": "Host=eggledger-postgres;Port=5432;Username=eggledger;Password=eggledger123;Database=eggledgerDB;"
-  },
-  "Authentication": {
-    "Google": {
-      "ClientSecret": "your-google-client-secret",
-      "ClientId": "your-google-client-id"
-    }
-  },
-  "Cors": {
-    "AllowedOrigins": ["http://localhost:5173", "https://localhost:5173"],
-    "PolicyName": "_myAllowSpecificOrigins"
-  },
-  "Environment": {
-    "EGGLEDGER_LOG_PATH": {
-      "Windows": "C:\\Logs\\EggLedger",
-      "Linux": "/var/log/eggledger",
-      "macOS": "/var/log/eggledger"
-    }
-  },
-  "Ef_Migrate": "true"
+  "ConnectionStrings": { "DefaultConnection": "Host=...;Database=eggledgerDB;..." },
+  "Authentication": { "Google": { "ClientId": "...", "ClientSecret": "..." } },
+  "Cors": { "AllowedOrigins": ["http://localhost:5173"], "PolicyName": "_myAllowSpecificOrigins" },
+  "Ef_Migrate": "true"   // dev only; false in production (migrations run deliberately)
 }
 ```
 
-### Frontend Environment Variables
+See [`docs/SECRETS.md`](docs/SECRETS.md) for the User Secrets workflow and
+[`docs/MIGRATIONS.md`](docs/MIGRATIONS.md) for how migrations are gated.
 
-The frontend is configured to connect to the API at `http://localhost:8080` by default. This can be customized in the Docker Compose environment variables:
+## API overview
 
-```yaml
-environment:
-  - VITE_API_URL=http://localhost:8080
-```
+Base path: `/egg-ledger-api`. A few representative endpoints:
 
-### Database Management
+- **Auth** — `POST /auth/login`, `POST /auth/register`, `POST /auth/refresh`,
+  `POST /auth/logout`, `GET /auth/google-login`
+- **Rooms** — `POST /room/create`, `POST /room/join`, `GET /room/user/all`
+- **Containers** — `GET /room/{roomCode}/container/all`, `POST /room/{roomCode}/container/create`
+- **Orders** — `POST /{roomCode}/orders/stock`, `POST /{roomCode}/orders/consume`
 
-When using Docker Compose, pgAdmin is available at `http://localhost:5050`:
-- **Email:** admin@eggledger.com
-- **Password:** eggledger123
+Full interactive docs (Scalar) at `http://localhost:8080/scalar/v2` when the API runs in
+development.
 
-### Logging
+## Security model
 
-EggLedger uses log4net for comprehensive logging. Log directories are automatically created by the application based on your operating system.
+- Access tokens are held **in memory** on the client; the **refresh token is an HttpOnly cookie**
+  (`Secure` + `SameSite=None` in prod). Tokens never touch `localStorage` or URLs.
+- Cookie-authenticated endpoints require a custom **anti-CSRF header** (`X-EggLedger-CSRF`), which
+  forces a CORS preflight a cross-site page can't forge.
+- **CORS** is restricted to configured origins (no `AllowAnyOrigin`).
+- **Rate limiting**: a global per-IP budget plus a stricter budget on auth endpoints (429 on
+  breach), both tunable via `RateLimiting:*` config.
+- **HSTS** in production; forwarded headers honored behind the Container Apps ingress.
+- Google login uses the **authorization-code flow with a confidential client** — the API holds the
+  secret and does the token exchange; the browser only ever gets the cookie.
 
-**Log Locations:**
-- **Windows**: `C:\Logs\EggLedger\`
-- **Linux**: `/var/log/eggledger/`
-- **macOS**: `/var/log/eggledger/`
-
-**Log Files:**
-- `eggledger-api.log` - All application logs (INFO and above)
-- `eggledger-api-errors.log` - Error logs only (ERROR and FATAL)
-
-## API Endpoints
-
-### Authentication
-- `POST /egg-ledger-api/auth/login` - User login
-- `POST /egg-ledger-api/auth/register` - User registration
-- `GET /egg-ledger-api/auth/google-login` - Google OAuth
-
-### Room Management
-- `POST /egg-ledger-api/room/create` - Create room
-- `POST /egg-ledger-api/room/join` - Join room
-- `GET /egg-ledger-api/room/user/all` - Get user rooms
-
-### Container Management
-- `GET /egg-ledger-api/room/{roomCode}/container/all` - List containers
-- `POST /egg-ledger-api/room/{roomCode}/container/create` - Create container
-- `PUT /egg-ledger-api/room/{roomCode}/container/update/{id}` - Update container
-
-### Order Management
-- `POST /egg-ledger-api/{roomCode}/orders/stock` - Record purchase
-- `POST /egg-ledger-api/{roomCode}/orders/consume` - Record consumption
-
-## Development
-
-### Aspire Dashboard
-
-When running with .NET Aspire, you get access to a comprehensive dashboard at `https://localhost:17071` that provides:
-
-- **Resource Overview**: Monitor all services (API, Frontend, Database)
-- **Logs**: Centralized logging from all components
-- **Metrics**: Performance metrics and telemetry
-- **Traces**: Distributed tracing across services
-- **Environment Variables**: Configuration management
-
-### Development vs Production
-
-The application is designed to work optimally in both development and production:
-
-**Development (with Aspire):**
-- Automatic PostgreSQL container management
-- Service discovery and orchestration
-- Unified dashboard and monitoring
-- Hot reload for both frontend and backend
-
-**Production (Docker Compose):**
-- Production-optimized container configurations
-- Resource limits and health checks
-- pgAdmin for database management
-- Environment-based configuration
-- Container-ready with proper Dockerfile configurations
-
-**Development (Docker Compose):**
-- Same containerized setup as production
-- Useful for testing production-like environments
-- Consistent deployment across different machines
-- Easy to share and reproduce development environments
-
-### Building for Production
-
-```bash
-# Backend
-cd EggLedger.API
-dotnet publish -c Release
-
-# Frontend
-cd EggLedger.Client
-npm run build
-```
-
-### Running Tests
+## Testing
 
 ```bash
 dotnet test
 ```
 
-## Architecture
+`EggLedger.Tests` boots the real API in-process via `WebApplicationFactory<Program>` against a
+throwaway PostgreSQL container (Testcontainers), so **Docker must be running**. It covers the auth
+flow: register, login, refresh rotation, CSRF, and rate limiting. CI runs `dotnet test` on every
+PR.
 
+## Deployment
+
+The app runs on Azure: the SPA on **Static Web Apps**, the API on **Container Apps**
+(scale-to-zero) pulling its image from **Container Registry** via **managed identity**, backed by
+**PostgreSQL Flexible Server**, with secrets in **Key Vault** and telemetry in **Application
+Insights**. Custom domains (`eggledger.sshnk.com`, `api.sshnk.com`) use free managed TLS.
+
+The full runbook — every `az` command, DNS record, and the gotchas learned along the way — is in
+[`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
+
+## Building for production
+
+```bash
+# API container image (SDK container tooling, no Dockerfile)
+dotnet publish EggLedger.API/EggLedger.API.csproj -c Release -t:PublishContainer
+
+# Frontend
+cd EggLedger.Client && npm run build
 ```
-EggLedger/
-├── EggLedger.API/          # ASP.NET Core Web API
-├── EggLedger.Models/       # Domain Models
-├── EggLedger.Data/         # Entity Framework Context
-├── EggLedger.Services/     # Business Logic Services
-├── EggLedger.DTO/          # Data Transfer Objects
-├── EggLedger.Client/       # Vue.js Frontend
-├── EggLedger.AppHost/      # .NET Aspire Orchestration
-├── EggLedger.ServiceDefaults/ # Aspire Service Defaults
-└── EggLedger.sln          # Visual Studio Solution
-```
-
-The solution is organized as a .NET solution with integrated frontend orchestration:
-- **Visual Studio 2022**: Open `EggLedger.sln` for backend development
-- **Visual Studio Code**: Open the workspace for full-stack development
-- **JetBrains Rider**: Native support for .NET solutions
-- **.NET Aspire**: Handles frontend orchestration automatically
-
-## Docker Services
-
-When using Docker Compose, the following services are available:
-
-| Service          | Port | Description                   |
-|------------------|------|-------------------------------|
-| PostgreSQL       | 5432 | Main database                 |
-| pgAdmin          | 5050 | Database management interface |
-| EggLedger API    | 8080 | Backend API                   |
-| EggLedger Client | 5173 | Frontend application          |
-
-## Documentation
-
-API documentation available at `http://localhost:8080/scalar/v2` when running in development mode.
 
 ## Contributing
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests for new functionality
-5. Submit a pull request
+1. Create a feature branch
+2. Make your changes, matching the existing layering and conventions
+3. Add or adjust tests for behavior you change
+4. Open a pull request (CI runs build, tests, and lint)
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT — see [LICENSE](LICENSE).
