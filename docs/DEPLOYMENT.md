@@ -4,13 +4,17 @@ Manual deployment of EggLedger to Azure using the `az` CLI. Target architecture:
 
 | Component | Azure service |
 | --- | --- |
-| Vue SPA | Static Web Apps |
-| .NET API | Container Apps (scale-to-zero) |
+| Vue SPA | Static Web Apps (`eggledger.sshnk.com`) |
+| .NET API | Container Apps, scale-to-zero (`api.sshnk.com`) |
 | Database | PostgreSQL Flexible Server (Burstable B1ms) |
-| API image | Container Registry |
+| API image | Container Registry (managed-identity pull) |
+| Secrets | Key Vault (referenced by managed identity) |
+| Observability | Application Insights (OpenTelemetry) |
 
-Secrets (JWT key, DB connection, Google OAuth) are injected as Container Apps
-secrets / environment variables — never committed. See `docs/SECRETS.md`.
+**Live:** frontend at <https://eggledger.sshnk.com>, API at <https://api.sshnk.com>.
+
+Secrets (JWT key, DB connection, Google OAuth, App Insights) live in Key Vault and are pulled
+by the Container App's managed identity — never committed. See `docs/SECRETS.md`.
 
 > Status: complete. Sections 1–8 cover the initial deploy; sections 9–13 cover the
 > Phase 4 hardening (observability, managed identity, Key Vault, custom domain, and
@@ -348,7 +352,48 @@ az containerapp update -g rg-eggledger-prod -n eggledger-api --set-env-vars `
 No frontend rebuild, no CSP change, and no Google console change are needed — the API domain
 (and thus the OAuth redirect URI) is unchanged. A custom domain on the **API** would be
 different: it ripples into `VITE_API_BASE_URL`, CORS, the CSP `connect-src`, and Google's
-Authorized redirect URIs.
+Authorized redirect URIs — see the next section.
+
+## 12b. Custom domain + TLS (API / Container Apps)
+
+Container Apps needs **two** DNS records (unlike SWA's single CNAME): a **CNAME** for routing
+and a **TXT `asuid.<sub>`** record to prove ownership. TLS stays free and managed. Both records
+are **DNS only (grey cloud)** in Cloudflare.
+
+```powershell
+# 1. Ownership token for the TXT record + the CNAME target (current app FQDN)
+$verifyId = az containerapp show -g rg-eggledger-prod -n eggledger-api `
+  --query "properties.customDomainVerificationId" -o tsv
+az containerapp show -g rg-eggledger-prod -n eggledger-api `
+  --query "properties.configuration.ingress.fqdn" -o tsv
+```
+
+```
+# Cloudflare DNS records (both DNS only)
+Type=CNAME  Name=api        Target=<app-fqdn>.azurecontainerapps.io
+Type=TXT    Name=asuid.api  Value=<verifyId>
+```
+
+```powershell
+# 2. After DNS resolves, add the hostname and bind a managed cert
+az containerapp hostname add -g rg-eggledger-prod -n eggledger-api --hostname api.sshnk.com -o table
+az containerapp hostname bind -g rg-eggledger-prod -n eggledger-api `
+  --hostname api.sshnk.com --environment eggledger-env --validation-method CNAME -o table
+curl.exe -i https://api.sshnk.com/health   # expect 200 Healthy with a valid cert
+```
+
+Moving the **API** to a custom domain is the four-place ripple:
+
+1. **`VITE_API_BASE_URL`** GitHub Actions Variable → `https://api.sshnk.com` (triggers a client rebuild).
+2. **CSP `connect-src`** in `staticwebapp.config.json` → add `https://api.sshnk.com` (keep the old
+   ACA host during the cutover, then drop it).
+3. **Google Authorized redirect URI** → add `https://api.sshnk.com/signin-google` (keep the old
+   one during the cutover).
+4. **CORS does not change** — it lists the *frontend* origin (`eggledger.sshnk.com`), which is
+   unchanged.
+
+> Bonus: with `eggledger.sshnk.com` and `api.sshnk.com` both under `sshnk.com`, frontend and API
+> are now **same-site**, so the refresh cookie could be tightened from `SameSite=None` to `Lax`.
 
 ## 13. Google OAuth topology (why the custom frontend domain "just worked")
 

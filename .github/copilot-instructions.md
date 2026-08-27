@@ -74,10 +74,11 @@ API routes are prefixed with `/egg-ledger-api/`. API docs are served via Scalar 
 ## Build & run
 
 ```bash
-# Full stack (Aspire) — starts Postgres, API, and the Vue dev server
+# Full stack (Aspire) — starts Postgres, pgWeb, the API, and the Vue (Vite) dev server
 dotnet run --project EggLedger.AppHost
 
-# Frontend only
+# Frontend only (also set VITE_API_BASE_URL, or Google login has no API URL to target;
+# the AppHost injects it automatically, so the Aspire flow above is preferred)
 cd EggLedger.Client && npm install && npm run dev
 
 # Build / format the whole solution

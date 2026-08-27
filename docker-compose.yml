@@ -1,4 +1,9 @@
-# This version includes production-optimized settings
+# DEVELOPMENT / LOCAL USE ONLY — do not deploy this to production.
+#
+# The credentials below (eggledger123) are throwaway local defaults committed
+# on purpose for a one-command local spin-up. Production runs on Azure with
+# secrets in Key Vault and managed identity (see docs/DEPLOYMENT.md); the
+# recommended local dev loop is `dotnet run --project EggLedger.AppHost`.
 
 services:
   # PostgreSQL Database
