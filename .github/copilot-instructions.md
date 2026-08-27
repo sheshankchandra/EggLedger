@@ -52,6 +52,10 @@ API routes are prefixed with `/egg-ledger-api/`. API docs are served via Scalar 
 - Validate DTOs with data annotations (`[Required]`, `[MinLength]`, `[EmailAddress]`, etc.).
 - Return `FluentResults` from services; translate to appropriate HTTP status codes in the
   controller.
+- Write **production-quality comments only**: explain non-obvious *why* that helps a future
+  developer. Do not narrate the current change, the conversation, or reasoning that is only
+  relevant to the author right now (e.g. "we do this because the old code did X"). If the code
+  is self-explanatory, add no comment. Keep comments short.
 
 ## Vue / frontend conventions
 
@@ -97,3 +101,16 @@ dotnet format EggLedger.sln
 - Match the existing layering and conventions above.
 - Add/adjust input validation and tests for behavior you change.
 - Do not introduce secrets, and do not weaken CORS or auth.
+
+## Commit & PR workflow (strict)
+
+- **Never commit without explicit approval.** Make the changes, then stop and let
+  the user review the working tree. Only run `git commit` after the user has
+  reviewed and explicitly says to commit.
+- After a commit, do not open a PR automatically. When the user says to raise the
+  PR, gather every commit on the current branch that is not yet on `master`,
+  write/refresh the PR description in `pr-body.md` (git-ignored), and hand the user
+  the exact `git push` + `gh pr create --body-file pr-body.md` commands to run.
+- The user pushes and creates PRs from their own terminal; do not push on their
+  behalf.
+
