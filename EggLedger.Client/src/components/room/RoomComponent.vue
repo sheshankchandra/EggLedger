@@ -366,7 +366,7 @@ const handleConsume = async () => {
     // Import orderService here since we need it for consumption
     const { orderService } = await import('@/services/order.service')
 
-    await orderService.consumeOrder(
+    const response = await orderService.consumeOrder(
       props.room.roomCode,
       {
         quantity: consumeForm.value.quantity,
@@ -376,10 +376,15 @@ const handleConsume = async () => {
 
     await authStore.fetchUserRooms()
     await fetchContainers()
-    showNotification(`Recorded consumption of ${consumeForm.value.quantity} eggs!`)
 
-    // Reset form
-    consumeForm.value.quantity = 1
+    const result = response.data
+    // The API returns a message only when the consume was not fulfilled.
+    if (result?.message) {
+      showNotification(result.message, 'error')
+    } else {
+      showNotification(`Recorded consumption of ${result?.requestedQuantity ?? consumeForm.value.quantity} eggs!`)
+      consumeForm.value.quantity = 1
+    }
   } catch (err) {
     if (err.name === 'AbortError' || err.code === 'ERR_CANCELED') return
     error.value = 'Failed to record consumption.'

@@ -1,11 +1,9 @@
-﻿namespace EggLedger.Models.Enums;
+namespace EggLedger.Models.Enums;
 
 public enum OrderDetailStatus
 {
-    Entered = 101,
-    Pending = 201,
-    Processing = 301,
-    Retry = 401,
-    Completed = 601,
-    Cancelled = 701
+    Pending = 1,
+    Completed = 2,
+    Failed = 3,
+    Cancelled = 4
 }

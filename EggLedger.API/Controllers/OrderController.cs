@@ -70,11 +70,12 @@ public class OrderController : ControllerBase
 
             if (result is { IsSuccess: true, Value: not null })
             {
-                _logger.LogInformation("Successfully created Consumed order: {OrderName}", result.Value);
+                _logger.LogInformation("Consume order {OrderName} recorded with status {Status}", result.Value.OrderName, result.Value.Status);
                 return Ok(result.Value);
             }
 
-            if (result.Errors.Any(e => e.Message.Contains("not found", StringComparison.OrdinalIgnoreCase)))
+            if (result.Errors.Any(e => e.Message.Contains("not found", StringComparison.OrdinalIgnoreCase) ||
+                                       e.Message.Contains("not a member", StringComparison.OrdinalIgnoreCase)))
             {
                 _logger.LogWarning("Consuming order not found.");
                 return NotFound(result.Errors.Select(e => e.Message));

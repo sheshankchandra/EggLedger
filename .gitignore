@@ -432,3 +432,5 @@ pnpm-debug.log*
 .aspire/
 
 /SQL Helper
+# Scratch PR description (not part of the project)
+pr-body.md
