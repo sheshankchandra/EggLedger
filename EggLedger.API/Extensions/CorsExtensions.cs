@@ -7,7 +7,7 @@ namespace EggLedger.API.Extensions;
 
 public static class CorsExtensions
 {
-    public static IServiceCollection AddApplicationCors(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddApplicationCors(this IServiceCollection services, IConfiguration configuration, bool isDevelopment = false)
     {
         var corsSection = configuration.GetSection(CorsOptions.SectionName);
         var corsOptions = corsSection.Get<CorsOptions>() ?? new CorsOptions();
@@ -19,10 +19,24 @@ public static class CorsExtensions
             options.AddPolicy(name: corsOptions.PolicyName,
                 policy =>
                 {
-                    policy.WithOrigins(corsOptions.AllowedOrigins)
-                        .AllowAnyHeader()
-                        .AllowAnyMethod()
-                        .AllowCredentials();
+                    if (isDevelopment)
+                    {
+                        // The Aspire dev server binds to a dynamic port, so allow any
+                        // localhost origin during local development.
+                        policy.SetIsOriginAllowed(origin =>
+                                Uri.TryCreate(origin, UriKind.Absolute, out var uri) &&
+                                (uri.Host == "localhost" || uri.Host == "127.0.0.1"))
+                            .AllowAnyHeader()
+                            .AllowAnyMethod()
+                            .AllowCredentials();
+                    }
+                    else
+                    {
+                        policy.WithOrigins(corsOptions.AllowedOrigins)
+                            .AllowAnyHeader()
+                            .AllowAnyMethod()
+                            .AllowCredentials();
+                    }
                 });
         });
 
