@@ -12,6 +12,8 @@ export const useAuthStore = defineStore('auth', {
     user: JSON.parse(localStorage.getItem('user')) || null,
     userRooms: JSON.parse(localStorage.getItem('userRooms')) || [],
     isNewUser: false,
+    // Shared in-flight refresh request; de-dupes concurrent refreshSession() callers.
+    _refreshPromise: null,
     abortControllers: {
       profile: null,
       rooms: null,
@@ -69,16 +71,26 @@ export const useAuthStore = defineStore('auth', {
 
     // Exchange the HttpOnly refresh cookie for a fresh in-memory access token.
     // Returns the new token on success, or null if the session can no longer be refreshed.
+    // Concurrent callers share a single in-flight request so the single-use refresh
+    // token is only rotated once (e.g. app startup racing the OAuth callback).
     async refreshSession() {
-      try {
-        const response = await authService.refresh()
-        const token = response.data.accessToken
-        this.setToken(token)
-        return token
-      } catch {
-        this.token = null
-        return null
-      }
+      if (this._refreshPromise) return this._refreshPromise
+
+      this._refreshPromise = (async () => {
+        try {
+          const response = await authService.refresh()
+          const token = response.data.accessToken
+          this.setToken(token)
+          return token
+        } catch {
+          this.token = null
+          return null
+        } finally {
+          this._refreshPromise = null
+        }
+      })()
+
+      return this._refreshPromise
     },
 
     // Called once on app startup to silently restore a session from the refresh cookie.

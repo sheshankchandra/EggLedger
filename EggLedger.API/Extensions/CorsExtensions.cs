@@ -23,9 +23,7 @@ public static class CorsExtensions
                     {
                         // The Aspire dev server binds to a dynamic port, so allow any
                         // localhost origin during local development.
-                        policy.SetIsOriginAllowed(origin =>
-                                Uri.TryCreate(origin, UriKind.Absolute, out var uri) &&
-                                (uri.Host == "localhost" || uri.Host == "127.0.0.1"))
+                        policy.SetIsOriginAllowed(IsLocalhostOrigin)
                             .AllowAnyHeader()
                             .AllowAnyMethod()
                             .AllowCredentials();
@@ -41,6 +39,28 @@ public static class CorsExtensions
         });
 
         return services;
+    }
+
+    public static bool IsLocalhostOrigin(string? origin)
+    {
+        return !string.IsNullOrEmpty(origin) &&
+               Uri.TryCreate(origin, UriKind.Absolute, out var uri) &&
+               (uri.Host == "localhost" || uri.Host == "127.0.0.1");
+    }
+
+    public static bool IsAllowedOrigin(string? origin, CorsOptions corsOptions, bool isDevelopment)
+    {
+        if (string.IsNullOrEmpty(origin))
+        {
+            return false;
+        }
+
+        if (isDevelopment && IsLocalhostOrigin(origin))
+        {
+            return true;
+        }
+
+        return corsOptions.AllowedOrigins.Contains(origin);
     }
 
     public static string GetCorsPolicyName(this IConfiguration configuration)
