@@ -30,9 +30,6 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error),
 )
 
-// De-duplicate concurrent refreshes: many 401s share one refresh round-trip.
-let refreshPromise = null
-
 // Response interceptor: on a 401, silently refresh once and replay the request.
 apiClient.interceptors.response.use(
   (response) => response,
@@ -46,15 +43,15 @@ apiClient.interceptors.response.use(
       original._retry = true
       const authStore = useAuthStore()
       try {
-        refreshPromise = refreshPromise || authStore.refreshSession()
-        const newToken = await refreshPromise
-        refreshPromise = null
+        // refreshSession de-dupes concurrent callers, so a burst of 401s shares
+        // one refresh round-trip and rotates the single-use token only once.
+        const newToken = await authStore.refreshSession()
         if (newToken) {
           original.headers.Authorization = `Bearer ${newToken}`
           return apiClient(original)
         }
       } catch {
-        refreshPromise = null
+        // fall through to logout below
       }
       // Refresh failed -> session is over.
       await authStore.logout()
