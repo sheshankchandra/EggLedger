@@ -136,6 +136,40 @@
             <p><strong>Created:</strong> {{ formatDate(selectedContainer.purchaseDateTime) }}</p>
           </div>
         </div>
+        <div
+          v-if="selectedContainer.buyerId === currentUserId"
+          class="modal-footer"
+        >
+          <button @click="openDeleteContainerConfirm" class="btn btn-danger">
+            Delete Container
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Delete Container Confirmation Modal -->
+    <div v-if="showDeleteContainerModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 class="modal-title text-danger">⚠️ Delete Container</h3>
+          <button @click="closeDeleteContainerConfirm" class="close-btn">×</button>
+        </div>
+        <div class="modal-body">
+          <p>
+            Are you sure you want to delete "<strong>{{ containerToDelete?.containerName }}</strong
+            >"?
+          </p>
+          <div class="alert alert-warning">
+            This action cannot be undone. You can only delete a container that no one has consumed
+            from yet.
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button @click="closeDeleteContainerConfirm" class="btn btn-secondary">Cancel</button>
+          <button @click="confirmDeleteContainer" :disabled="deletingContainer" class="btn btn-danger">
+            {{ deletingContainer ? 'Deleting...' : 'Delete Container' }}
+          </button>
+        </div>
       </div>
     </div>
 
@@ -209,6 +243,9 @@ const notification = ref(null)
 const showDetailModal = ref(false)
 const selectedContainer = ref(null)
 const showDeleteModal = ref(false)
+const showDeleteContainerModal = ref(false)
+const containerToDelete = ref(null)
+const deletingContainer = ref(false)
 
 // Computed properties
 const isRoomAdmin = computed(() => {
@@ -218,6 +255,8 @@ const isRoomAdmin = computed(() => {
   }
   return user.userId === props.room.adminUserId
 })
+
+const currentUserId = computed(() => authStore.getUser?.userId)
 
 const stockForm = ref({
   containerName: '',
@@ -402,6 +441,42 @@ const openContainerDetail = (container) => {
 const closeDetailModal = () => {
   showDetailModal.value = false
   selectedContainer.value = null
+}
+
+const openDeleteContainerConfirm = () => {
+  containerToDelete.value = selectedContainer.value
+  showDeleteContainerModal.value = true
+}
+
+const closeDeleteContainerConfirm = () => {
+  showDeleteContainerModal.value = false
+  containerToDelete.value = null
+}
+
+const confirmDeleteContainer = async () => {
+  const container = containerToDelete.value
+  if (!container) return
+
+  deletingContainer.value = true
+  try {
+    await containerService.deleteContainer(props.room.roomCode, container.containerId)
+    await fetchContainers()
+    closeDeleteContainerConfirm()
+    closeDetailModal()
+    showNotification('Container deleted.')
+  } catch (err) {
+    if (err.name === 'AbortError' || err.code === 'ERR_CANCELED') return
+    const message =
+      err.response?.status === 409
+        ? err.response.data?.[0] || 'Some eggs have already been consumed from this container.'
+        : err.response?.status === 403
+          ? 'Only the owner can delete this container.'
+          : 'Failed to delete the container.'
+    showNotification(message, 'error')
+    closeDeleteContainerConfirm()
+  } finally {
+    deletingContainer.value = false
+  }
 }
 
 onMounted(fetchContainers)
