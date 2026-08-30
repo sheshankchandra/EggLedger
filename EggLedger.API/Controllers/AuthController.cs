@@ -77,6 +77,19 @@ public class AuthController : ControllerBase
         Response.Cookies.Append(RefreshCookieName, string.Empty, BuildRefreshCookieOptions(DateTimeOffset.UnixEpoch));
     }
 
+    private string? ResolveReturnOrigin(string? returnOrigin)
+    {
+        var corsOptions = _configuration.GetSection(CorsOptions.SectionName).Get<CorsOptions>() ?? new CorsOptions();
+        var candidate = returnOrigin;
+
+        if (string.IsNullOrEmpty(candidate) && Uri.TryCreate(Request.Headers.Referer.FirstOrDefault(), UriKind.Absolute, out var referer))
+        {
+            candidate = referer.GetLeftPart(UriPartial.Authority);
+        }
+
+        return CorsExtensions.IsAllowedOrigin(candidate, corsOptions, _environment.IsDevelopment()) ? candidate : null;
+    }
+
     // Anti-CSRF: cookie-authenticated endpoints require the custom header. A
     // cross-site attacker cannot send it (CORS preflight blocks foreign origins).
     private bool IsMissingCsrfHeader() => !Request.Headers.ContainsKey(CsrfHeaderName);
@@ -133,13 +146,22 @@ public class AuthController : ControllerBase
     // GET /egg-ledger-api/auth/google-login
     [HttpGet("google-login")]
     [AllowAnonymous]
-    public IActionResult GoogleLogin()
+    public IActionResult GoogleLogin([FromQuery] string? returnOrigin = null)
     {
         try
         {
             _logger.LogInformation("Google OAuth login initiated");
             var callbackUrl = Url.Action("GoogleCallback", "Auth", null, Request.Scheme);
             var properties = new AuthenticationProperties { RedirectUri = callbackUrl };
+
+            // Carry the validated initiating origin through the OAuth round-trip so the
+            // callback redirects back to the client that started login, independent of port.
+            var resolvedOrigin = ResolveReturnOrigin(returnOrigin);
+            if (resolvedOrigin != null)
+            {
+                properties.Items["returnOrigin"] = resolvedOrigin;
+            }
+
             return Challenge(properties, GoogleDefaults.AuthenticationScheme);
         }
         catch (Exception ex)
@@ -163,18 +185,25 @@ public class AuthController : ControllerBase
                 _logger.LogWarning("No allowed origins configured for CORS");
                 return BadRequest("CORS configuration is missing allowed origins.");
             }
-            // Try to get the Origin header from the request and Validate the origin
-            var requestOrigin = Request.Headers["Origin"].FirstOrDefault() ?? allowedOrigins.FirstOrDefault();
-            var redirectOrigin = allowedOrigins.Contains(requestOrigin) ? requestOrigin : allowedOrigins.FirstOrDefault();
 
             _logger.LogInformation("Processing Google OAuth callback");
-            
+
             var authenticateResult = await HttpContext.AuthenticateAsync(GoogleDefaults.AuthenticationScheme);
 
             if (!authenticateResult.Succeeded)
             {
                 _logger.LogWarning("Google authentication failed during callback");
                 return BadRequest("Google authentication failed.");
+            }
+
+            // Prefer the origin captured at login start; fall back to the first configured
+            // origin. Re-validate so a tampered cookie can't redirect to an arbitrary site.
+            var redirectOrigin = allowedOrigins[0];
+            if (authenticateResult.Properties is not null &&
+                authenticateResult.Properties.Items.TryGetValue("returnOrigin", out var storedOrigin) &&
+                CorsExtensions.IsAllowedOrigin(storedOrigin, corsOptions, _environment.IsDevelopment()))
+            {
+                redirectOrigin = storedOrigin!;
             }
 
             var email = authenticateResult.Principal.FindFirstValue(ClaimTypes.Email);

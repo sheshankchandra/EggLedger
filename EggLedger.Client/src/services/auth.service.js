@@ -27,7 +27,8 @@ export const authService = {
   // GET /egg-ledger-api/auth/google-login
   googleLogin() {
     const baseURL = import.meta.env.VITE_API_BASE_URL || window.location.origin
-    window.location.href = `${baseURL}/egg-ledger-api/auth/google-login`
+    const returnOrigin = encodeURIComponent(window.location.origin)
+    window.location.href = `${baseURL}/egg-ledger-api/auth/google-login?returnOrigin=${returnOrigin}`
   },
 }
 
