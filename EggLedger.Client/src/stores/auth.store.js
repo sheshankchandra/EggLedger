@@ -137,12 +137,13 @@ export const useAuthStore = defineStore('auth', {
     },
 
     // After the OAuth redirect the refresh cookie is already set by the API.
-    // Trade it for an access token, load the profile, then route.
+    // App startup (initializeAuth) exchanges it for a token before mount, so reuse
+    // that session here and only refresh if it isn't established yet.
     async handleGoogleLoginCallback(isNewRegistration = false) {
       this.isNewUser = isNewRegistration
-      const token = await this.refreshSession()
+      const token = this.token || (await this.refreshSession())
       if (token) {
-        await this.fetchProfile()
+        if (!this.user) await this.fetchProfile()
         router.push('/dashboard')
       } else {
         router.push('/accounts/login')
