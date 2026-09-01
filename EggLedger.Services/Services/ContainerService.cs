@@ -1,4 +1,4 @@
-﻿using EggLedger.Data;
+using EggLedger.Data;
 using EggLedger.DTO.Container;
 using EggLedger.Models.Enums;
 using EggLedger.Models.Models;
@@ -40,6 +40,7 @@ public class ContainerService : IContainerService
                     ContainerId = c.ContainerId,
                     ContainerName = c.ContainerName,
                     PurchaseDateTime = c.PurchaseDateTime,
+                    BuyerId = c.BuyerId,
                     BuyerName = c.Buyer.Name,
                     TotalQuantity = c.TotalQuantity,
                     RemainingQuantity = c.RemainingQuantity,
@@ -89,6 +90,7 @@ public class ContainerService : IContainerService
                 ContainerId = container.ContainerId,
                 ContainerName = container.ContainerName,
                 PurchaseDateTime = container.PurchaseDateTime,
+                BuyerId = container.BuyerId,
                 BuyerName = container.Buyer.Name,
                 TotalQuantity = container.TotalQuantity,
                 RemainingQuantity = container.RemainingQuantity,
@@ -143,6 +145,7 @@ public class ContainerService : IContainerService
                 ContainerId = container.ContainerId,
                 ContainerName = container.ContainerName,
                 PurchaseDateTime = container.PurchaseDateTime,
+                BuyerId = container.BuyerId,
                 BuyerName = container.Buyer.Name,
                 TotalQuantity = container.TotalQuantity,
                 RemainingQuantity = container.RemainingQuantity,
@@ -196,6 +199,57 @@ public class ContainerService : IContainerService
         {
             _logger.LogError(ex, "Error occurred in ArchiveContainerAsync for containerId {ContainerId}", containerId);
             return Result.Fail("An error occurred while Archiving the container.");
+        }
+    }
+
+    public async Task<Result> DeleteContainerAsync(Guid containerId, Guid userId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var container = await _context.Containers
+                .FirstOrDefaultAsync(c => c.ContainerId == containerId && c.Status != ContainerStatus.Archived, cancellationToken);
+
+            if (container == null)
+            {
+                _logger.LogWarning("Container with ID {ContainerId} not found.", containerId);
+                return Result.Fail("Container not found");
+            }
+
+            if (container.BuyerId != userId)
+            {
+                _logger.LogWarning("User {UserId} is not the owner of container {ContainerId}", userId, containerId);
+                return Result.Fail("Only the owner can delete this container");
+            }
+
+            var consumed = container.TotalQuantity - container.RemainingQuantity;
+            if (consumed > 0)
+            {
+                _logger.LogWarning("Container {ContainerId} has {Consumed} consumed eggs and cannot be deleted", containerId, consumed);
+                return Result.Fail($"Cannot delete: {consumed} egg(s) have already been consumed from this container.");
+            }
+
+            var now = DateTime.UtcNow;
+            container.Status = ContainerStatus.Archived;
+            container.DeletedAt = now;
+            container.DeletedBy = userId;
+            container.DeletionReason = "Deleted by owner";
+            container.ModifiedAt = now;
+            container.ModifiedBy = userId;
+
+            await _context.SaveChangesAsync(cancellationToken);
+
+            _logger.LogInformation("Container {ContainerId} deleted by owner {UserId}.", containerId, userId);
+            return Result.Ok();
+        }
+        catch (OperationCanceledException ex)
+        {
+            _logger.LogInformation(ex, "DeleteContainerAsync was canceled for containerId {ContainerId}", containerId);
+            return Result.Fail("Operation was canceled.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred in DeleteContainerAsync for containerId {ContainerId}", containerId);
+            return Result.Fail("An error occurred while deleting the container.");
         }
     }
 
@@ -254,6 +308,7 @@ public class ContainerService : IContainerService
                     ContainerId = container.ContainerId,
                     ContainerName = container.ContainerName,
                     PurchaseDateTime = container.PurchaseDateTime,
+                    BuyerId = container.BuyerId,
                     BuyerName = container.Buyer.Name,
                     TotalQuantity = container.TotalQuantity,
                     RemainingQuantity = container.RemainingQuantity,
@@ -298,6 +353,7 @@ public class ContainerService : IContainerService
                     ContainerId = container.ContainerId,
                     ContainerName = container.ContainerName,
                     PurchaseDateTime = container.PurchaseDateTime,
+                    BuyerId = container.BuyerId,
                     BuyerName = container.Buyer.Name,
                     TotalQuantity = container.TotalQuantity,
                     RemainingQuantity = container.RemainingQuantity,
@@ -348,6 +404,7 @@ public class ContainerService : IContainerService
                     ContainerId = container.ContainerId,
                     ContainerName = container.ContainerName,
                     PurchaseDateTime = container.PurchaseDateTime,
+                    BuyerId = container.BuyerId,
                     BuyerName = container.Buyer.Name,
                     TotalQuantity = container.TotalQuantity,
                     RemainingQuantity = container.RemainingQuantity,
@@ -412,6 +469,7 @@ public class ContainerService : IContainerService
                 ContainerId = container.ContainerId,
                 ContainerName = container.ContainerName,
                 PurchaseDateTime = container.PurchaseDateTime,
+                BuyerId = container.BuyerId,
                 BuyerName = buyer.Name,
                 TotalQuantity = container.TotalQuantity,
                 RemainingQuantity = container.RemainingQuantity,

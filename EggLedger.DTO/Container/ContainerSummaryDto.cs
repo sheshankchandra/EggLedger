@@ -7,6 +7,7 @@ public class ContainerSummaryDto
     public required Guid ContainerId { get; set; }
     public required string ContainerName { get; set; }
     public required DateTime PurchaseDateTime { get; set; }
+    public required Guid BuyerId { get; set; }
     public required string BuyerName { get; set; }
     public required int TotalQuantity { get; set; }
     public required int RemainingQuantity { get; set; }

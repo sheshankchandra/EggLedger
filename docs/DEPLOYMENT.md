@@ -231,6 +231,39 @@ frontend origin at index 0.
   and no tokens in localStorage.
 - Hard reload keeps the session; logout clears the cookie.
 
+## 8b. Redeploying the API (new image)
+
+To ship backend changes, build a new image and point the Container App at it. Bump the
+tag every time (`v1` → `v2` → …) so the platform pulls the exact new image and a bad deploy
+can be rolled back by pointing back at the previous tag.
+
+```powershell
+# 1. Build from the MERGED code. Deploy from master, not a feature branch, or you will
+#    ship stale code that silently lacks the fix you just merged.
+cd C:\Dev\EggLedger
+git checkout master
+git pull origin master
+
+# 2. Log in (your Azure AD identity; the ACR admin user is disabled). Token lasts ~3h.
+az acr login -n eggledgeracr1
+
+# 3. Build + push the new image (bump the tag)
+dotnet publish EggLedger.API/EggLedger.API.csproj -c Release -t:PublishContainer `
+  -p:ContainerRegistry=eggledgeracr1.azurecr.io -p:ContainerImageTag=v6
+
+# 4. Point the Container App at the new tag
+az containerapp update -g rg-eggledger-prod -n eggledger-api `
+  --image eggledgeracr1.azurecr.io/eggledger-api:v6 -o table
+
+# 5. Verify
+curl.exe -i https://api.sshnk.com/health   # expect 200 Healthy on the new revision
+```
+
+> If a symptom persists after a deploy, confirm what is actually running before re-debugging:
+> `az containerapp show -g rg-eggledger-prod -n eggledger-api --query "properties.template.containers[0].image" -o tsv`.
+> A mismatch (or an App Insights stack trace matching pre-fix code) usually means the image
+> was built from a stale branch — rebuild from `master` with a fresh tag.
+
 ## 9. Observability — Application Insights
 
 The app already emits OpenTelemetry (traces/metrics/logs). `ServiceDefaults` enables the

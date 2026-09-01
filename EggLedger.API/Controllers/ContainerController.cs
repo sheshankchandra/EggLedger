@@ -159,6 +159,41 @@ public class ContainerController : ControllerBase
         }
     }
 
+    // DELETE: egg-ledger-api/room/{roomCode}/container/delete/{id}
+    [Authorize(Policy = "RoomMember")]
+    [HttpDelete("delete/{id}")]
+    public async Task<IActionResult> DeleteContainer([FromRoute] int roomCode, Guid id, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new InvalidOperationException());
+            var result = await _containerService.DeleteContainerAsync(id, userId, cancellationToken);
+            if (result.IsSuccess)
+                return NoContent();
+
+            if (result.Errors.Any(e => e.Message == "Container not found"))
+                return NotFound();
+
+            if (result.Errors.Any(e => e.Message.Contains("owner", StringComparison.OrdinalIgnoreCase)))
+                return Forbid();
+
+            if (result.Errors.Any(e => e.Message.Contains("already been consumed", StringComparison.OrdinalIgnoreCase)))
+                return Conflict(result.Errors.Select(e => e.Message));
+
+            return BadRequest(result.Errors.Select(e => e.Message));
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("Request was canceled by the client for DeleteContainer, roomCode: {RoomCode}, id: {Id}", roomCode, id);
+            return StatusCode(499, "Client closed request.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unhandled exception in DeleteContainer for roomCode: {RoomCode}, id: {Id}", roomCode, id);
+            return StatusCode(500, "An unexpected error occurred.");
+        }
+    }
+
     // PUT: egg-ledger-api/room/{roomCode}/container/suspend/{id}
     [Authorize(Policy = "RoomMember")]
     [HttpPut("suspend/{id}")]

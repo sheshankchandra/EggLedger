@@ -129,7 +129,9 @@ public class OrderService : IOrderService
             }
 
             var availableContainers = await _context.Containers
-                .Where(c => c.RoomId == userRoom.RoomId && c.RemainingQuantity > 0)
+                .Where(c => c.RoomId == userRoom.RoomId &&
+                            c.Status == ContainerStatus.Available &&
+                            c.RemainingQuantity > 0)
                 .OrderBy(c => c.PurchaseDateTime)
                 .ToListAsync(cancellationToken);
 
