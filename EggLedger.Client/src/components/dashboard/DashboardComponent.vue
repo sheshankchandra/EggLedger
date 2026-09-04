@@ -335,7 +335,11 @@ const handleJoinRoom = async () => {
 
 .dashboard-hero {
   padding: var(--spacing-xl);
-  background: linear-gradient(135deg, #123e32, var(--color-primary));
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--color-primary) 55%, black),
+    var(--color-primary)
+  );
   border-radius: var(--radius-2xl);
   box-shadow: var(--shadow-lg);
   color: var(--text-inverse);

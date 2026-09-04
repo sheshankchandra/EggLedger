@@ -117,7 +117,7 @@ defineExpose({ reset })
 }
 
 .consume-panel {
-  background: #f5f8fb;
+  background: var(--bg-tertiary);
 }
 
 .consume-row {

@@ -420,7 +420,7 @@ onUnmounted(() => {
 }
 
 .order-type.consume {
-  background: #fed7d7;
+  background: var(--color-danger-light);
   color: var(--color-danger);
 }
 

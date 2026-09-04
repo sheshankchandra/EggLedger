@@ -297,7 +297,7 @@ onMounted(() => inventoryStore.fetchContainers(props.room.roomCode))
   gap: var(--spacing-xl);
   padding: var(--spacing-xl);
   border-radius: var(--radius-2xl);
-  background: linear-gradient(145deg, #ffffff, #f1f7f3);
+  background: linear-gradient(145deg, var(--bg-primary), var(--bg-tertiary));
   border: 1px solid var(--border-light);
   box-shadow: var(--shadow-md);
 }
@@ -348,7 +348,7 @@ onMounted(() => inventoryStore.fetchContainers(props.room.roomCode))
   padding: var(--spacing-md);
   border: 1px solid var(--border-light);
   border-radius: var(--radius-lg);
-  background: rgba(255, 255, 255, 0.72);
+  background: color-mix(in srgb, var(--bg-primary) 72%, transparent);
 }
 
 .summary-card > span,

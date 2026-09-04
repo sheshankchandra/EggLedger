@@ -6,6 +6,16 @@
     <link rel="apple-touch-icon" href="/eggledger.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>EggLedger</title>
+    <script>
+      // Set the theme before anything renders, so there's no flash of the wrong theme
+      // while the Vue app boots (theme.store.js re-applies this once Pinia is ready).
+      try {
+        var theme = localStorage.getItem('theme')
+        if (theme) document.documentElement.setAttribute('data-theme', theme)
+      } catch {
+        /* localStorage unavailable (e.g. privacy mode) - fall back to system preference */
+      }
+    </script>
   </head>
   <body>
     <div id="app"></div>

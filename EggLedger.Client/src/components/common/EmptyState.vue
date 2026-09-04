@@ -22,7 +22,7 @@ defineProps({
   padding: var(--spacing-2xl) var(--spacing-lg);
   border: 1px dashed var(--border-medium);
   border-radius: var(--radius-xl);
-  background: rgba(255, 255, 255, 0.64);
+  background: color-mix(in srgb, var(--bg-primary) 64%, transparent);
   text-align: center;
 }
 

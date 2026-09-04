@@ -228,7 +228,7 @@ const handleGoogleRegister = async () => {
 .auth-title {
   font-size: 1.75rem;
   font-weight: 700;
-  color: #111827;
+  color: var(--text-primary);
   margin-bottom: 0.25rem;
 }
 
@@ -244,16 +244,18 @@ const handleGoogleRegister = async () => {
   display: block;
   font-size: 0.875rem;
   font-weight: 500;
-  color: #374151;
+  color: var(--text-secondary);
   margin-bottom: 0.5rem;
 }
 
 .form-input {
   width: 100%;
   padding: 0.625rem 0.75rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--border-medium);
   border-radius: 0.375rem;
   font-size: 0.9rem;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
   transition:
     border-color 0.15s ease-in-out,
     box-shadow 0.15s ease-in-out;
@@ -261,17 +263,17 @@ const handleGoogleRegister = async () => {
 
 .form-input:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: var(--color-primary);
+  box-shadow: var(--input-focus-ring);
 }
 
 .form-input:disabled {
-  background-color: #f9fafb;
-  color: #6b7280;
+  background-color: var(--bg-tertiary);
+  color: var(--text-muted);
 }
 
 .form-input.is-invalid {
-  border-color: #dc2626;
+  border-color: var(--color-danger);
 }
 
 .form-feedback {
@@ -281,7 +283,7 @@ const handleGoogleRegister = async () => {
 }
 
 .form-feedback.is-invalid {
-  color: #dc2626;
+  color: var(--color-danger);
 }
 
 .btn {
@@ -299,16 +301,16 @@ const handleGoogleRegister = async () => {
 }
 
 .btn-primary {
-  background-color: #3b82f6;
-  color: white;
+  background-color: var(--color-primary);
+  color: var(--text-inverse);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background-color: #2563eb;
+  background-color: var(--color-primary-hover);
 }
 
 .btn-primary:disabled {
-  background-color: #9ca3af;
+  background-color: var(--color-gray-400);
   cursor: not-allowed;
 }
 
@@ -319,10 +321,10 @@ const handleGoogleRegister = async () => {
 .btn-google {
   width: 100%;
   padding: 0.625rem 0.75rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--border-medium);
   border-radius: 0.375rem;
-  background-color: white;
-  color: #374151;
+  background-color: var(--bg-primary);
+  color: var(--text-secondary);
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s ease-in-out;
@@ -333,7 +335,7 @@ const handleGoogleRegister = async () => {
 }
 
 .btn-google:hover:not(:disabled) {
-  background-color: #f9fafb;
+  background-color: var(--bg-tertiary);
 }
 
 .btn-google:disabled {
@@ -359,35 +361,17 @@ const handleGoogleRegister = async () => {
   left: 0;
   right: 0;
   height: 1px;
-  background-color: #e5e7eb;
+  background-color: var(--border-light);
   z-index: 1;
 }
 
 .divider span {
   position: relative;
-  background-color: white;
+  background-color: var(--bg-primary);
   padding: 0 1rem;
-  color: #6b7280;
+  color: var(--text-muted);
   font-size: 0.875rem;
   z-index: 2;
-}
-
-.alert {
-  padding: 0.625rem 0.75rem;
-  border-radius: 0.375rem;
-  margin-top: 0.75rem;
-}
-
-.alert-error {
-  background-color: #fef2f2;
-  color: #dc2626;
-  border: 1px solid #fecaca;
-}
-
-.alert-success {
-  background-color: #f0fdf4;
-  color: #16a34a;
-  border: 1px solid #bbf7d0;
 }
 
 .spinner {
@@ -403,28 +387,5 @@ const handleGoogleRegister = async () => {
   to {
     transform: rotate(360deg);
   }
-}
-
-.auth-switch {
-  text-align: center;
-  margin-top: 1.5rem;
-}
-
-.auth-switch p {
-  color: #6b7280;
-  font-size: 0.875rem;
-}
-
-.link-button {
-  background: none;
-  border: none;
-  color: #3b82f6;
-  text-decoration: underline;
-  cursor: pointer;
-  font-size: inherit;
-}
-
-.link-button:hover {
-  color: #2563eb;
 }
 </style>
