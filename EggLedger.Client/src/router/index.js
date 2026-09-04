@@ -3,6 +3,7 @@ import HomeView from '../views/HomeView.vue'
 import AccountsView from '../views/AccountsView.vue'
 import DashboardView from '../views/DashboardView.vue'
 import RoomView from '../views/RoomView.vue'
+import BalancesView from '../views/BalancesView.vue'
 import ProfileView from '../views/ProfileView.vue'
 import GoogleCallbackView from '../views/GoogleCallbackView.vue'
 import ContainerDetailView from '../views/ContainerDetailView.vue'
@@ -40,6 +41,12 @@ const routes = [
     path: '/room',
     name: 'room',
     component: RoomView,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/room/balances',
+    name: 'room-balances',
+    component: BalancesView,
     meta: { requiresAuth: true },
   },
   {

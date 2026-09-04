@@ -15,7 +15,8 @@ public class User
     // Navigation properties
     public virtual UserPassword? UserPassword { get; set; }
     public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
-    public virtual ICollection<Transaction> Transactions { get; set; } = new List<Transaction>();
+    public virtual ICollection<Settlement> SettlementsPaid { get; set; } = new List<Settlement>();
+    public virtual ICollection<Settlement> SettlementsReceived { get; set; } = new List<Settlement>();
     public virtual ICollection<Container> Containers { get; set; } = new List<Container>();
     public virtual ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
     public virtual ICollection<UserRoom> UserRooms { get; set; } = new List<UserRoom>();

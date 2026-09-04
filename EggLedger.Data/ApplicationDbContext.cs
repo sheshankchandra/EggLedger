@@ -10,7 +10,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<OrderDetail> OrderDetails { get; set; } = null!;
     public DbSet<RefreshToken> RefreshTokens { get; set; } = null!;
     public DbSet<Room> Rooms { get; set; } = null!;
-    public DbSet<Transaction> Transactions { get; set; } = null!;
+    public DbSet<Settlement> Settlements { get; set; } = null!;
     public DbSet<User> Users { get; set; } = null!;
     public DbSet<UserPassword> UserPasswords { get; set; } = null!;
     public DbSet<UserRoom> UserRooms { get; set; } = null!;
@@ -152,40 +152,40 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.Property(e => e.CreatedAt).IsRequired();
         });
 
-        // Configure the Transaction entity
-        modelBuilder.Entity<Transaction>(entity =>
+        // Configure the Settlement entity
+        modelBuilder.Entity<Settlement>(entity =>
         {
             // Primary Key configuration
-            entity.HasKey(e => e.TransactionId);
-            entity.Property(e => e.TransactionId).ValueGeneratedNever();
+            entity.HasKey(e => e.SettlementId);
+            entity.Property(e => e.SettlementId).ValueGeneratedNever();
 
             // Property configurations
             entity.Property(e => e.Datestamp).IsRequired();
             entity.Property(e => e.Amount)
                   .IsRequired()
                   .HasColumnType("decimal(18,2)");
-            entity.Property(e => e.Status).IsRequired();
+            entity.Property(e => e.Note).HasMaxLength(500);
 
             // Relationships (Foreign Keys)
-            // Transaction to Order
-            entity.HasOne(d => d.Order)
-                  .WithMany(p => p.Transactions)
-                  .HasForeignKey(d => d.OrderId)
-                  .OnDelete(DeleteBehavior.Cascade);
+            // Settlement to Room
+            entity.HasOne(d => d.Room)
+                  .WithMany(p => p.Settlements) // Room has many Settlements
+                  .HasForeignKey(d => d.RoomId)
+                  .OnDelete(DeleteBehavior.Cascade); // Deleting a Room will delete its settlement history
 
-            // Transaction to User (Payer)
+            // Settlement to User (Payer)
             entity.HasOne(d => d.Payer)
-                  .WithMany()
+                  .WithMany(p => p.SettlementsPaid)
                   .HasForeignKey(d => d.PayerId)
                   .OnDelete(DeleteBehavior.Restrict)
-                  .HasConstraintName("FK_Transaction_Payer");
+                  .HasConstraintName("FK_Settlement_Payer");
 
-            // Transaction to User (Receiver)
+            // Settlement to User (Receiver)
             entity.HasOne(d => d.Receiver)
-                  .WithMany()
+                  .WithMany(p => p.SettlementsReceived)
                   .HasForeignKey(d => d.ReceiverId)
                   .OnDelete(DeleteBehavior.Restrict)
-                  .HasConstraintName("FK_Transaction_Receiver");
+                  .HasConstraintName("FK_Settlement_Receiver");
         });
 
         // Configure the User entity

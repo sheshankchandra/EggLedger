@@ -1,4 +1,4 @@
-﻿using EggLedger.Models.Enums;
+using EggLedger.Models.Enums;
 
 namespace EggLedger.Models.Models;
 
@@ -8,7 +8,7 @@ public class Room : AuditableEntity
     public required string RoomName { get; set; }
     public required int RoomCode { get; set; }
     public required bool IsPublic { get; set; }
-    
+
     /// <summary>
     /// Status of the room (Active, Archived, Suspended)
     /// </summary>
@@ -17,6 +17,7 @@ public class Room : AuditableEntity
     // Navigation properties
     public virtual ICollection<UserRoom> UserRooms { get; set; } = new List<UserRoom>();
     public virtual ICollection<Container> Containers { get; set; } = new List<Container>();
+    public virtual ICollection<Settlement> Settlements { get; set; } = new List<Settlement>();
 
     /// <summary>
     /// Checks if the room is currently active and accessible

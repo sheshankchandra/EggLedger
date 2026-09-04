@@ -7,14 +7,19 @@
           <h1>{{ room.roomName }}</h1>
           <p>Keep purchases and usage in sync for everyone in this room.</p>
         </div>
-        <button
-          v-if="isRoomAdmin"
-          @click="showDeleteModal = true"
-          class="room-settings-button"
-          type="button"
-        >
-          Room settings
-        </button>
+        <div class="room-title-actions">
+          <router-link to="/room/balances" class="btn btn-secondary btn-sm">
+            View balances
+          </router-link>
+          <button
+            v-if="isRoomAdmin"
+            @click="showDeleteModal = true"
+            class="room-settings-button"
+            type="button"
+          >
+            Room settings
+          </button>
+        </div>
       </div>
 
       <div class="summary-grid" aria-label="Room summary">
@@ -321,6 +326,13 @@ onMounted(() => inventoryStore.fetchContainers(props.room.roomCode))
   margin: 0;
 }
 
+.room-title-actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
 .room-settings-button {
   flex-shrink: 0;
   padding: var(--spacing-sm) var(--spacing-md);
@@ -413,7 +425,7 @@ onMounted(() => inventoryStore.fetchContainers(props.room.roomCode))
     flex-direction: column;
   }
 
-  .room-settings-button {
+  .room-title-actions {
     align-self: flex-start;
   }
 
