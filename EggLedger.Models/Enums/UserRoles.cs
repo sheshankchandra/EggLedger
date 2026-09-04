@@ -1,7 +1,7 @@
-﻿namespace EggLedger.Models.Enums;
+namespace EggLedger.Models.Enums;
 
-public static class UserRoles
+public enum UserRoles
 {
-    public const int User = 0;
-    public const int Admin = 1;
+    User = 0,
+    Admin = 1
 }

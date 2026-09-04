@@ -1,15 +1,12 @@
-﻿using System;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using EggLedger.Data;
 using EggLedger.Models.Models;
+using EggLedger.Services.Extensions;
 using EggLedger.Services.Interfaces;
 using FluentResults;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
-namespace EggLedger.API.Helpers;
+namespace EggLedger.Services.Services;
 
 public class HelperService : IHelperService
 {
@@ -24,7 +21,7 @@ public class HelperService : IHelperService
 
     public async Task<Result<string>> GenerateOrderName(User user, int i, CancellationToken cancellationToken = default)
     {
-        try
+        return await _logger.ExecuteAsync(async () =>
         {
             int serialNumber = 1;
             string userName = user.FirstName;
@@ -42,22 +39,12 @@ public class HelperService : IHelperService
             string orderName = $"{orderPrefix}-{userName}-{serialNumber}";
 
             return Result.Ok(orderName);
-        }
-        catch (OperationCanceledException ex)
-        {
-            _logger.LogInformation(ex, "GenerateOrderName was canceled for userId {UserId}", user.UserId);
-            return Result.Fail("Operation was canceled.");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred in GenerateOrderName for userId {UserId}", user.UserId);
-            return Result.Fail("An error occurred while generating order name.");
-        }
+        }, "An error occurred while generating order name.");
     }
 
     public async Task<Result<string>> GenerateContainerName(User user, CancellationToken cancellationToken = default)
     {
-        try
+        return await _logger.ExecuteAsync(async () =>
         {
             int serialNumber = 1;
             string userName = user.FirstName;
@@ -75,27 +62,18 @@ public class HelperService : IHelperService
             string containerName = $"{containerPrefix}-{userName}-{serialNumber}";
 
             return Result.Ok(containerName);
-        }
-        catch (OperationCanceledException ex)
-        {
-            _logger.LogInformation(ex, "GenerateContainerName was canceled for userId {UserId}", user.UserId);
-            return Result.Fail("Operation was canceled.");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred in GenerateContainerName for userId {UserId}", user.UserId);
-            return Result.Fail("An error occurred while generating container name.");
-        }
+        }, "An error occurred while generating container name.");
     }
 
     public int GenerateNewRoomCode()
     {
-        int roomCode = new Random().Next(100000, 1000000);
-
-        while (_context.Rooms.Any(c => c.RoomCode == roomCode))
+        // Random.Shared is a shared, thread-safe instance (.NET 6+) - avoids the
+        // time-seeded-collision risk of constructing a new Random() per call/iteration.
+        int roomCode;
+        do
         {
-            roomCode = new Random().Next(100000, 1000000);
-        }
+            roomCode = Random.Shared.Next(100000, 1000000);
+        } while (_context.Rooms.Any(c => c.RoomCode == roomCode));
 
         return roomCode;
     }

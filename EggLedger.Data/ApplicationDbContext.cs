@@ -1,4 +1,4 @@
-﻿using EggLedger.Models.Models;
+using EggLedger.Models.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace EggLedger.Data;
@@ -161,7 +161,9 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 
             // Property configurations
             entity.Property(e => e.Datestamp).IsRequired();
-            entity.Property(e => e.Amount).IsRequired();
+            entity.Property(e => e.Amount)
+                  .IsRequired()
+                  .HasColumnType("decimal(18,2)");
             entity.Property(e => e.Status).IsRequired();
 
             // Relationships (Foreign Keys)
@@ -203,7 +205,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
                   .IsRequired()
                   .HasMaxLength(255);
             entity.HasIndex(e => e.Email).IsUnique();
-            entity.Property(e => e.Role).IsRequired(); // Assuming Role is an integer or enum
+            entity.Property(e => e.Role).IsRequired();
             entity.Property(e => e.Provider)
                   .HasMaxLength(50);
         });

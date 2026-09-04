@@ -2,6 +2,7 @@ using EggLedger.Data;
 using EggLedger.DTO.Container;
 using EggLedger.Models.Enums;
 using EggLedger.Models.Models;
+using EggLedger.Services.Extensions;
 using EggLedger.Services.Interfaces;
 using FluentResults;
 using Microsoft.EntityFrameworkCore;
@@ -25,7 +26,7 @@ public class ContainerService : IContainerService
     /// </summary>
     public async Task<Result<List<ContainerSummaryDto>>> GetAllContainersAsync(int roomCode, CancellationToken cancellationToken = default)
     {
-        try
+        return await _logger.ExecuteAsync(async () =>
         {
             var room = await _context.Rooms.FirstOrDefaultAsync(r => r.RoomCode == roomCode, cancellationToken);
             if (room == null)
@@ -44,7 +45,7 @@ public class ContainerService : IContainerService
                     BuyerName = c.Buyer.Name,
                     TotalQuantity = c.TotalQuantity,
                     RemainingQuantity = c.RemainingQuantity,
-                    Amount = c.Amount,  
+                    Amount = c.Amount,
                     RoomName = c.Room.RoomName,
                     Status = c.Status,
                     Price = c.Price,
@@ -54,17 +55,7 @@ public class ContainerService : IContainerService
 
             _logger.LogInformation("Found {Count} containers in room {RoomName}.", containersList.Count, room.RoomName);
             return Result.Ok(containersList);
-        }
-        catch (OperationCanceledException ex)
-        {
-            _logger.LogInformation(ex, "GetAllContainersAsync was canceled for roomCode {RoomCode}", roomCode);
-            return Result.Fail("Operation was canceled.");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred in GetAllContainersAsync for roomCode {RoomCode}", roomCode);
-            return Result.Fail("An error occurred while retrieving containers.");
-        }
+        }, "An error occurred while retrieving containers.");
     }
 
     /// <summary>
@@ -72,7 +63,7 @@ public class ContainerService : IContainerService
     /// </summary>
     public async Task<Result<ContainerSummaryDto>> GetContainerAsync(Guid containerId, CancellationToken cancellationToken = default)
     {
-        try
+        return await _logger.ExecuteAsync(async () =>
         {
             var container = await _context.Containers
                 .Include(container => container.Buyer)
@@ -103,22 +94,12 @@ public class ContainerService : IContainerService
 
             _logger.LogInformation("Container {ContainerName} retrieved successfully.", summaryDto.ContainerName);
             return Result.Ok(summaryDto);
-        }
-        catch (OperationCanceledException ex)
-        {
-            _logger.LogInformation(ex, "GetContainerAsync was canceled for containerId {ContainerId}", containerId);
-            return Result.Fail("Operation was canceled.");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred in GetContainerAsync for containerId {ContainerId}", containerId);
-            return Result.Fail("An error occurred while retrieving the container.");
-        }
+        }, "An error occurred while retrieving the container.");
     }
 
     public async Task<Result<ContainerSummaryDto>> UpdateContainerAsync(Guid containerId, ContainerUpdateDto dto, CancellationToken cancellationToken = default)
     {
-        try
+        return await _logger.ExecuteAsync(async () =>
         {
             var container = await _context.Containers
                 .Include(container => container.Room)
@@ -158,22 +139,12 @@ public class ContainerService : IContainerService
 
             _logger.LogInformation("Container {ContainerId} updated successfully.", container.ContainerId);
             return Result.Ok(containerDto);
-        }
-        catch (OperationCanceledException ex)
-        {
-            _logger.LogInformation(ex, "UpdateContainerAsync was canceled for containerId {ContainerId}", containerId);
-            return Result.Fail("Operation was canceled.");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred in UpdateContainerAsync for containerId {ContainerId}", containerId);
-            return Result.Fail("An error occurred while updating the container.");
-        }
+        }, "An error occurred while updating the container.");
     }
 
     public async Task<Result> ArchiveContainerAsync(Guid containerId, CancellationToken cancellationToken = default)
     {
-        try
+        return await _logger.ExecuteAsync(async () =>
         {
             var container = await _context.Containers
                 .FirstOrDefaultAsync(c => c.ContainerId == containerId, cancellationToken);
@@ -189,22 +160,12 @@ public class ContainerService : IContainerService
 
             _logger.LogInformation("Container {ContainerId} Archived successfully.", containerId);
             return Result.Ok();
-        }
-        catch (OperationCanceledException ex)
-        {
-            _logger.LogInformation(ex, "ArchiveContainerAsync was canceled for containerId {ContainerId}", containerId);
-            return Result.Fail("Operation was canceled.");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred in ArchiveContainerAsync for containerId {ContainerId}", containerId);
-            return Result.Fail("An error occurred while Archiving the container.");
-        }
+        }, "An error occurred while Archiving the container.");
     }
 
     public async Task<Result> DeleteContainerAsync(Guid containerId, Guid userId, CancellationToken cancellationToken = default)
     {
-        try
+        return await _logger.ExecuteAsync(async () =>
         {
             var container = await _context.Containers
                 .FirstOrDefaultAsync(c => c.ContainerId == containerId && c.Status != ContainerStatus.Archived, cancellationToken);
@@ -240,22 +201,12 @@ public class ContainerService : IContainerService
 
             _logger.LogInformation("Container {ContainerId} deleted by owner {UserId}.", containerId, userId);
             return Result.Ok();
-        }
-        catch (OperationCanceledException ex)
-        {
-            _logger.LogInformation(ex, "DeleteContainerAsync was canceled for containerId {ContainerId}", containerId);
-            return Result.Fail("Operation was canceled.");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred in DeleteContainerAsync for containerId {ContainerId}", containerId);
-            return Result.Fail("An error occurred while deleting the container.");
-        }
+        }, "An error occurred while deleting the container.");
     }
 
     public async Task<Result> SuspendContainerAsync(Guid containerId, CancellationToken cancellationToken = default)
     {
-        try
+        return await _logger.ExecuteAsync(async () =>
         {
             var container = await _context.Containers
                 .FirstOrDefaultAsync(c => c.ContainerId == containerId, cancellationToken);
@@ -271,22 +222,12 @@ public class ContainerService : IContainerService
 
             _logger.LogInformation("Container {ContainerId} Suspended successfully.", containerId);
             return Result.Ok();
-        }
-        catch (OperationCanceledException ex)
-        {
-            _logger.LogInformation(ex, "SuspendContainerAsync was canceled for containerId {ContainerId}", containerId);
-            return Result.Fail("Operation was canceled.");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred in SuspendContainerAsync for containerId {ContainerId}", containerId);
-            return Result.Fail("An error occurred while Suspending the container.");
-        }
+        }, "An error occurred while Suspending the container.");
     }
 
     public async Task<Result<List<ContainerSummaryDto>>> SearchContainersByOwnerNameAsync(int roomCode, string ownerName, CancellationToken cancellationToken = default)
     {
-        try
+        return await _logger.ExecuteAsync(async () =>
         {
             if (string.IsNullOrWhiteSpace(ownerName))
             {
@@ -321,22 +262,12 @@ public class ContainerService : IContainerService
                 .ToListAsync(cancellationToken);
 
             return Result.Ok(containers);
-        }
-        catch (OperationCanceledException ex)
-        {
-            _logger.LogInformation(ex, "SearchContainersByOwnerNameAsync was canceled for roomCode {RoomCode}, ownerName {OwnerName}", roomCode, ownerName);
-            return Result.Fail("Operation was canceled.");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred in SearchContainersByOwnerNameAsync for roomCode {RoomCode}, ownerName {OwnerName}", roomCode, ownerName);
-            return Result.Fail("An error occurred while searching containers.");
-        }
+        }, "An error occurred while searching containers.");
     }
 
     public async Task<Result<List<ContainerSummaryDto>>> GetMyContainers(Guid userId, int roomCode, CancellationToken cancellationToken = default)
     {
-        try
+        return await _logger.ExecuteAsync(async () =>
         {
             var room = await _context.Rooms.FirstOrDefaultAsync(r => r.RoomCode == roomCode, cancellationToken);
             if (room == null)
@@ -366,22 +297,12 @@ public class ContainerService : IContainerService
                 .ToListAsync(cancellationToken);
 
             return Result.Ok(containers);
-        }
-        catch (OperationCanceledException ex)
-        {
-            _logger.LogInformation(ex, "GetMyContainers was canceled for roomCode {RoomCode}, BuyerId {BuyerId}", roomCode, userId);
-            return Result.Fail("Operation was canceled.");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred in GetMyContainers for roomCode {RoomCode}, BuyerId {BuyerId}", roomCode, userId);
-            return Result.Fail("An error occurred while getting containers.");
-        }
+        }, "An error occurred while getting containers.");
     }
 
     public async Task<Result<List<ContainerSummaryDto>>> GetPagedContainersAsync(int roomCode, int page, int pageSize, CancellationToken cancellationToken = default)
     {
-        try
+        return await _logger.ExecuteAsync(async () =>
         {
             // Validate pagination parameters
             page = Math.Max(1, page);
@@ -417,22 +338,12 @@ public class ContainerService : IContainerService
                 .ToListAsync(cancellationToken);
 
             return Result.Ok(containers);
-        }
-        catch (OperationCanceledException ex)
-        {
-            _logger.LogInformation(ex, "GetPagedContainersAsync was canceled for roomCode {RoomCode}, page {Page}, pageSize {PageSize}", roomCode, page, pageSize);
-            return Result.Fail("Operation was canceled.");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred in GetPagedContainersAsync for roomCode {RoomCode}, page {Page}, pageSize {PageSize}", roomCode, page, pageSize);
-            return Result.Fail("An error occurred while retrieving paged containers.");
-        }
+        }, "An error occurred while retrieving paged containers.");
     }
 
     public async Task<Result<ContainerSummaryDto>> CreateContainerAsync(int roomCode, ContainerCreateDto dto, CancellationToken cancellationToken = default)
     {
-        try
+        return await _logger.ExecuteAsync(async () =>
         {
             // Find room by room code
             var room = await _context.Rooms.FirstOrDefaultAsync(r => r.RoomCode == roomCode, cancellationToken);
@@ -482,16 +393,6 @@ public class ContainerService : IContainerService
 
             _logger.LogInformation("Created container {ContainerName} with ID {ContainerId} in room {RoomName}", container.ContainerName, container.ContainerId, room.RoomName);
             return Result.Ok(result);
-        }
-        catch (OperationCanceledException ex)
-        {
-            _logger.LogInformation(ex, "CreateContainerAsync was canceled for roomCode {RoomCode}", roomCode);
-            return Result.Fail("Operation was canceled.");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error creating container for roomCode {RoomCode}", roomCode);
-            return Result.Fail("Failed to create container");
-        }
+        }, "Failed to create container");
     }
 }

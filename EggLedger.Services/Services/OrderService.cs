@@ -1,8 +1,8 @@
-﻿using System.Diagnostics;
 using EggLedger.Data;
 using EggLedger.DTO.Order;
 using EggLedger.Models.Enums;
 using EggLedger.Models.Models;
+using EggLedger.Services.Extensions;
 using EggLedger.Services.Interfaces;
 using FluentResults;
 using Microsoft.EntityFrameworkCore;
@@ -25,7 +25,7 @@ public class OrderService : IOrderService
 
     public async Task<Result<string>> CreateStockOrderAsync(Guid userId, int roomCode, StockOrderDto dto, CancellationToken cancellationToken = default)
     {
-        try
+        return await _logger.ExecuteAsync(async () =>
         {
             var user = await _context.Users.FirstOrDefaultAsync(u => u.UserId == userId, cancellationToken);
             var userRoom = await _context.UserRooms
@@ -89,22 +89,12 @@ public class OrderService : IOrderService
             _logger.LogInformation("Stock order created: {OrderId}", order.OrderId);
 
             return Result.Ok(order.OrderName);
-        }
-        catch (OperationCanceledException ex)
-        {
-            _logger.LogInformation(ex, "CreateStockOrderAsync was canceled for userId {UserId}, roomCode {RoomCode}", userId, roomCode);
-            return Result.Fail("Operation was canceled.");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred in CreateStockOrderAsync for userId {UserId}, roomCode {RoomCode}", userId, roomCode);
-            return Result.Fail("An error occurred while creating the stock order.");
-        }
+        }, "An error occurred while creating the stock order.");
     }
 
     public async Task<Result<ConsumeOrderResultDto>> CreateConsumeOrderAsync(Guid userId, int roomCode, ConsumeOrderDto dto, CancellationToken cancellationToken = default)
     {
-        try
+        return await _logger.ExecuteAsync(async () =>
         {
             if (dto.Quantity <= 0)
             {
@@ -208,22 +198,12 @@ public class OrderService : IOrderService
                 AvailableQuantity = availableQuantity - dto.Quantity,
                 Message = null
             });
-        }
-        catch (OperationCanceledException ex)
-        {
-            _logger.LogInformation(ex, "CreateConsumeOrderAsync was canceled for userId {UserId}, roomCode {RoomCode}", userId, roomCode);
-            return Result.Fail("Operation was canceled.");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred in CreateConsumeOrderAsync for userId {UserId}, roomCode {RoomCode}", userId, roomCode);
-            return Result.Fail("An error occurred while creating the consume order.");
-        }
+        }, "An error occurred while creating the consume order.");
     }
 
     public async Task<Result<OrderDto>> GetOrderByIdAsync(Guid orderId, CancellationToken cancellationToken = default)
     {
-        try
+        return await _logger.ExecuteAsync(async () =>
         {
             var order = await _context.Orders
                 .Include(o => o.OrderDetails)
@@ -235,54 +215,41 @@ public class OrderService : IOrderService
 
             var dto = MapToOrderDto(order);
             return Result.Ok(dto);
-        }
-        catch (OperationCanceledException ex)
-        {
-            _logger.LogInformation(ex, "GetOrderByIdAsync was canceled for orderId {OrderId}", orderId);
-            return Result.Fail("Operation was canceled.");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred in GetOrderByIdAsync for orderId {OrderId}", orderId);
-            return Result.Fail("An error occurred while retrieving the order.");
-        }
+        }, "An error occurred while retrieving the order.");
     }
 
-    public async Task<Result<List<OrderDto>>> GetOrdersByUserAsync(Guid userId, CancellationToken cancellationToken = default)
+    public async Task<Result<List<OrderDto>>> GetOrdersByUserAsync(Guid userId, int roomCode, int page = 1, int pageSize = 20, CancellationToken cancellationToken = default)
     {
-        try
+        return await _logger.ExecuteAsync(async () =>
         {
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.UserId == userId, cancellationToken);
+            page = Math.Max(1, page);
+            pageSize = Math.Clamp(pageSize, 1, 100);
 
-            if (user == null)
+            var room = await _context.Rooms.FirstOrDefaultAsync(r => r.RoomCode == roomCode, cancellationToken);
+            if (room == null)
             {
-                return Result.Fail("User not found");
+                return Result.Fail("Room not found");
             }
 
+            // Scoped to this room: an Order's details are always drawn from containers in a
+            // single room, so this also prevents leaking a member's order history from other rooms.
             var orders = await _context.Orders
-                .Where(o => o.UserId == userId)
+                .Where(o => o.UserId == userId && o.OrderDetails.Any(od => od.Container.RoomId == room.RoomId))
+                .OrderByDescending(o => o.Datestamp)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .Include(o => o.OrderDetails)
                 .ThenInclude(od => od.Container)
                 .ToListAsync(cancellationToken);
 
             var dtos = orders.Select(MapToOrderDto).ToList();
             return Result.Ok(dtos);
-        }
-        catch (OperationCanceledException ex)
-        {
-            _logger.LogInformation(ex, "GetOrdersByUserAsync was canceled for userId {UserId}", userId);
-            return Result.Fail("Operation was canceled.");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred in GetOrdersByUserAsync for userId {UserId}", userId);
-            return Result.Fail("An error occurred while retrieving orders for the user.");
-        }
+        }, "An error occurred while retrieving orders for the user.");
     }
 
     public async Task<Result<List<OrderDto>>> GetOrdersByContainerAsync(Guid containerId, CancellationToken cancellationToken = default)
     {
-        try
+        return await _logger.ExecuteAsync(async () =>
         {
             var orders = await _context.Orders
                 .Where(o => o.OrderDetails.Any(od => od.ContainerId == containerId))
@@ -292,17 +259,7 @@ public class OrderService : IOrderService
 
             var dtos = orders.Select(MapToOrderDto).ToList();
             return Result.Ok(dtos);
-        }
-        catch (OperationCanceledException ex)
-        {
-            _logger.LogInformation(ex, "GetOrdersByContainerAsync was canceled for containerId {ContainerId}", containerId);
-            return Result.Fail("Operation was canceled.");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred in GetOrdersByContainerAsync for containerId {ContainerId}", containerId);
-            return Result.Fail("An error occurred while retrieving orders for the container.");
-        }
+        }, "An error occurred while retrieving orders for the container.");
     }
 
     // Helper method to map Order to OrderDto

@@ -1,4 +1,6 @@
-﻿namespace EggLedger.Models.Models;
+using EggLedger.Models.Enums;
+
+namespace EggLedger.Models.Models;
 
 public class Transaction
 {
@@ -7,8 +9,8 @@ public class Transaction
     public DateTime Datestamp { get; set; }
     public Guid PayerId { get; set; }
     public Guid ReceiverId { get; set; }
-    public int Amount { get; set; }
-    public int Status { get; set; }
+    public decimal Amount { get; set; }
+    public TransactionStatus Status { get; set; }
 
     // Navigation properties
     public virtual User Payer { get; set; } = null!;

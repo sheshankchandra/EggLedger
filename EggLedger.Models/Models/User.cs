@@ -1,4 +1,6 @@
-﻿namespace EggLedger.Models.Models;
+using EggLedger.Models.Enums;
+
+namespace EggLedger.Models.Models;
 
 public class User
 {
@@ -7,7 +9,7 @@ public class User
     public string FirstName { get; set; } = null!;
     public string? LastName { get; set; }
     public string Email { get; set; } = null!;
-    public int Role { get; set; }
+    public UserRoles Role { get; set; }
     public string? Provider { get; set; }
 
     // Navigation properties

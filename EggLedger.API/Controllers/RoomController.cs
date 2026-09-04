@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
@@ -128,11 +128,13 @@ public class RoomController : ControllerBase
 
     // GET: egg-ledger-api/room/{roomCode}/all
     [HttpGet("{roomCode:int}/users")]
-    public async Task<ActionResult<List<UserSummaryDto>>> GetAllRoomUsers([FromRoute] int roomCode, CancellationToken cancellationToken)
+    public async Task<ActionResult<List<UserSummaryDto>>> GetAllRoomUsers([FromRoute] int roomCode, [FromQuery] int page, [FromQuery] int pageSize, CancellationToken cancellationToken)
     {
         try
         {
-            var result = await _roomService.GetAllRoomUsersAsync(roomCode, cancellationToken);
+            var effectivePage = page <= 0 ? 1 : page;
+            var effectivePageSize = pageSize <= 0 ? 50 : pageSize;
+            var result = await _roomService.GetAllRoomUsersAsync(roomCode, effectivePage, effectivePageSize, cancellationToken);
             if (result.IsSuccess)
                 return Ok(result.Value);
             return StatusCode(500, result.Errors);
@@ -209,7 +211,7 @@ public class RoomController : ControllerBase
         try
         {
             _logger.LogInformation("Received request to delete room with code: {RoomCode}", roomCode);
-            
+
             var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
             {
@@ -218,13 +220,13 @@ public class RoomController : ControllerBase
             }
 
             var result = await _roomService.DeleteRoomAsync(roomCode, userId, ct);
-            
+
             if (result.IsSuccess)
             {
                 _logger.LogInformation("Successfully deleted room with code: {RoomCode} by user: {UserId}", roomCode, userId);
                 return Ok(result.Value);
             }
-            
+
             _logger.LogWarning("Failed to delete room with code: {RoomCode}. Errors: {Errors}", roomCode, string.Join(", ", result.Errors.Select(e => e.Message)));
             return BadRequest(result.Errors.Select(e => e.Message));
         }

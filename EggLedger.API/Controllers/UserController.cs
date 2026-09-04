@@ -1,11 +1,13 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 using EggLedger.DTO.User;
+using EggLedger.Models.Enums;
 using EggLedger.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 
@@ -13,6 +15,7 @@ namespace EggLedger.API.Controllers;
 
 [ApiController]
 [Route("egg-ledger-api/user")]
+[Authorize]
 public class UserController : ControllerBase
 {
     private readonly IUserService _userService;
@@ -24,13 +27,30 @@ public class UserController : ControllerBase
         _logger = logger;
     }
 
+    /// <summary>
+    /// True when the caller is either an Admin or the same user identified by <paramref name="userId"/>.
+    /// Every non-Admin endpoint below is scoped to "your own account" with this check.
+    /// </summary>
+    private bool IsSelfOrAdmin(Guid userId)
+    {
+        if (User.IsInRole(nameof(UserRoles.Admin)))
+            return true;
+
+        var callerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        return Guid.TryParse(callerId, out var parsedId) && parsedId == userId;
+    }
+
     // GET: egg-ledger-api/user/all
+    // Lists every user in the system - Admin only, never room-scoped or public.
     [HttpGet("all")]
-    public async Task<ActionResult<List<UserSummaryDto>>> GetAllUsers(CancellationToken cancellationToken)
+    [Authorize(Roles = nameof(UserRoles.Admin))]
+    public async Task<ActionResult<List<UserSummaryDto>>> GetAllUsers([FromQuery] int page, [FromQuery] int pageSize, CancellationToken cancellationToken)
     {
         try
         {
-            var result = await _userService.GetAllUsersAsync(cancellationToken);
+            var effectivePage = page <= 0 ? 1 : page;
+            var effectivePageSize = pageSize <= 0 ? 50 : pageSize;
+            var result = await _userService.GetAllUsersAsync(effectivePage, effectivePageSize, cancellationToken);
             if (result.IsSuccess)
                 return Ok(result.Value);
             return StatusCode(500, result.Errors);
@@ -51,6 +71,9 @@ public class UserController : ControllerBase
     [HttpGet("{id}")]
     public async Task<ActionResult<UserSummaryDto>> GetUser(Guid id, CancellationToken cancellationToken)
     {
+        if (!IsSelfOrAdmin(id))
+            return Forbid();
+
         try
         {
             var result = await _userService.GetUserByIdAsync(id, cancellationToken);
@@ -76,6 +99,14 @@ public class UserController : ControllerBase
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateUser(Guid id, [FromBody] UserUpdateDto dto, CancellationToken cancellationToken)
     {
+        if (!IsSelfOrAdmin(id))
+            return Forbid();
+
+        // Only an Admin may change a role - otherwise a user could PUT their own
+        // profile with a Role and promote themselves.
+        if (dto.Role.HasValue && !User.IsInRole(nameof(UserRoles.Admin)))
+            return Forbid();
+
         try
         {
             var result = await _userService.UpdateUserAsync(id, dto, cancellationToken);
@@ -101,6 +132,9 @@ public class UserController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteUser(Guid id, CancellationToken cancellationToken)
     {
+        if (!IsSelfOrAdmin(id))
+            return Forbid();
+
         try
         {
             var result = await _userService.DeleteUserAsync(id, cancellationToken);
