@@ -117,6 +117,7 @@
 <script setup>
 import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useRoomStore } from '@/stores/room.store'
 import NavigationHeader from '@/components/common/NavigationHeader.vue'
 import RoomIndicator from '@/components/room/RoomIndicator.vue'
 import { orderService } from '@/services/order.service'
@@ -129,6 +130,7 @@ const props = defineProps({
 })
 
 const router = useRouter()
+const roomStore = useRoomStore()
 
 // Get container info from sessionStorage if available
 const containerInfo = computed(() => {
@@ -140,9 +142,7 @@ const loading = ref(false) // No longer loading container info
 const loadingOrders = ref(true)
 const error = ref(null)
 const orders = ref([])
-const selectedRoomCode = computed(() => {
-  return sessionStorage.getItem('selectedRoomCode')
-})
+const selectedRoomCode = computed(() => roomStore.selectedRoomCode)
 
 let abortController = new AbortController()
 

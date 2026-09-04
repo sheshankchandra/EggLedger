@@ -30,19 +30,12 @@
 <script setup>
 import { computed } from 'vue'
 import { useAuthStore } from '@/stores/auth.store'
+import { useRoomStore } from '@/stores/room.store'
 
 const authStore = useAuthStore()
+const roomStore = useRoomStore()
 
-const selectedRoomCode = computed(() => {
-  return sessionStorage.getItem('selectedRoomCode')
-})
-
-const selectedRoom = computed(() => {
-  if (!selectedRoomCode.value) return null
-  // Convert stored room code to number to match the data type from API
-  const roomCodeToFind = Number(selectedRoomCode.value)
-  return authStore.getUserRooms.find((room) => room.roomCode === roomCodeToFind) || null
-})
+const selectedRoom = computed(() => roomStore.selectedRoom)
 
 const handleLogout = () => {
   authStore.logout()
