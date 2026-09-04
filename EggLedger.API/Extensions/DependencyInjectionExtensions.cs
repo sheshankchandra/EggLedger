@@ -17,6 +17,7 @@ public static class DependencyInjectionExtensions
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<IRoomService, RoomService>();
         services.AddScoped<ILedgerService, LedgerService>();
+        services.AddScoped<IStatsService, StatsService>();
 
         // Background Services
         services.AddHostedService<DatabaseStartupValidationService>();

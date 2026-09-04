@@ -19,11 +19,13 @@ namespace EggLedger.API.Controllers;
 public class UserController : ControllerBase
 {
     private readonly IUserService _userService;
+    private readonly IStatsService _statsService;
     private readonly ILogger<UserController> _logger;
 
-    public UserController(IUserService userService, ILogger<UserController> logger)
+    public UserController(IUserService userService, IStatsService statsService, ILogger<UserController> logger)
     {
         _userService = userService;
+        _statsService = statsService;
         _logger = logger;
     }
 
@@ -212,6 +214,37 @@ public class UserController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled exception in GetProfile");
+            return StatusCode(500, "An unexpected error occurred.");
+        }
+    }
+
+    // GET: egg-ledger-api/user/stats?range=week|month|year|max
+    [HttpGet("stats")]
+    public async Task<IActionResult> GetStats([FromQuery] StatsRange range = StatsRange.Week, CancellationToken cancellationToken = default)
+    {
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+        if (userIdClaim == null)
+            return Unauthorized();
+
+        var userId = Guid.Parse(userIdClaim.Value);
+
+        try
+        {
+            var result = await _statsService.GetUserStatsAsync(userId, range, cancellationToken);
+            if (result.IsSuccess)
+                return Ok(result.Value);
+            if (result.Errors.Any(e => e.Message == "User not found"))
+                return NotFound();
+            return StatusCode(500, result.Errors.Select(e => e.Message));
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("Request was canceled by the client for GetStats");
+            return StatusCode(499, "Client closed request.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unhandled exception in GetStats");
             return StatusCode(500, "An unexpected error occurred.");
         }
     }

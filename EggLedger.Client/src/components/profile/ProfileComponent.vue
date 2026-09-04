@@ -40,6 +40,75 @@
         </div>
       </section>
 
+      <!-- Activity & Streaks -->
+      <section class="profile-section" aria-labelledby="activity-heading">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Activity</p>
+            <h2 id="activity-heading">Your streaks & stats</h2>
+          </div>
+          <div class="range-tabs" role="tablist" aria-label="Time range">
+            <button
+              v-for="option in rangeOptions"
+              :key="option.value"
+              type="button"
+              role="tab"
+              :aria-selected="statsStore.range === option.value"
+              :class="{ active: statsStore.range === option.value }"
+              @click="statsStore.fetchStats(option.value)"
+            >
+              {{ option.label }}
+            </button>
+          </div>
+        </div>
+
+        <div class="streak-card">
+          <span class="streak-flame" aria-hidden="true">🔥</span>
+          <div>
+            <strong>{{ statsStore.currentStreakDays }}-day streak</strong>
+            <small>Longest streak: {{ statsStore.longestStreakDays }} days</small>
+          </div>
+        </div>
+
+        <LoadingSkeleton
+          v-if="statsStore.loading"
+          :count="1"
+          height="280px"
+          aria-label="Loading stats"
+        />
+        <template v-else>
+          <div class="stats-summary-grid">
+            <div class="summary-card summary-card-primary">
+              <span>{{ resource.displayName }} eaten</span>
+              <strong>{{ statsStore.totalEggsConsumed }}</strong>
+              <small>In this period</small>
+            </div>
+            <div class="summary-card">
+              <span>Protein</span>
+              <strong>{{ statsStore.totalProteinGrams }}g</strong>
+              <small>Estimated from {{ resource.plural }} eaten</small>
+            </div>
+            <div class="summary-card">
+              <span>Calories</span>
+              <strong>{{ statsStore.totalCalories }}</strong>
+              <small>kcal in this period</small>
+            </div>
+          </div>
+
+          <EmptyState
+            v-if="statsStore.buckets.every((bucket) => bucket.eggsConsumed === 0)"
+            :icon="resource.icon"
+            title="No activity yet"
+            :description="`Record a consume order to start tracking your ${resource.plural} habit.`"
+          />
+          <StatsChart
+            v-else
+            :buckets="statsStore.buckets"
+            :aria-label="`${resource.displayName} consumed over time`"
+          />
+        </template>
+      </section>
+
       <!-- Room Memberships -->
       <section class="profile-section" aria-labelledby="rooms-heading">
         <div class="section-heading">
@@ -225,11 +294,14 @@ import EmptyState from '@/components/common/EmptyState.vue'
 import LoadingSkeleton from '@/components/common/LoadingSkeleton.vue'
 import RoomCard from '@/components/common/RoomCard.vue'
 import InventoryGrid from '@/components/room/InventoryGrid.vue'
+import StatsChart from '@/components/profile/StatsChart.vue'
+import { useStatsStore } from '@/stores/stats.store'
 
 const router = useRouter()
 const authStore = useAuthStore()
 const roomStore = useRoomStore()
 const inventoryStore = useInventoryStore()
+const statsStore = useStatsStore()
 const { notification, showNotification } = useNotification()
 const loading = ref(false)
 const error = ref(null)
@@ -239,6 +311,13 @@ const changingPassword = ref(false)
 const passwordFormError = ref(null)
 const loadingContainers = ref(false)
 const userContainers = ref([])
+
+const rangeOptions = [
+  { value: 'Week', label: '1W' },
+  { value: 'Month', label: '1M' },
+  { value: 'Year', label: '1Y' },
+  { value: 'Max', label: 'Max' },
+]
 
 const passwordForm = reactive({
   current: '',
@@ -437,6 +516,7 @@ onMounted(async () => {
 
   // Fetch user containers after profile is loaded
   await fetchUserContainers()
+  await statsStore.fetchStats('Week')
 })
 
 // Watch for changes in selected room to refresh containers
@@ -571,6 +651,67 @@ watch(selectedRoom, async (newRoom, oldRoom) => {
   gap: var(--spacing-lg);
 }
 
+.range-tabs {
+  display: flex;
+  flex-shrink: 0;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xs);
+  border-radius: var(--radius-md);
+  background: var(--bg-tertiary);
+}
+
+.range-tabs button {
+  padding: var(--spacing-xs) var(--spacing-md);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+}
+
+.range-tabs button.active {
+  background: var(--bg-primary);
+  color: var(--color-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.streak-card {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+  padding: var(--spacing-md) var(--spacing-lg);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  background: var(--bg-tertiary);
+}
+
+.streak-flame {
+  font-size: var(--font-size-2xl);
+  line-height: 1;
+}
+
+.streak-card strong {
+  display: block;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+}
+
+.streak-card small {
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.stats-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-lg);
+}
+
 .actions-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -599,6 +740,10 @@ watch(selectedRoom, async (newRoom, oldRoom) => {
   .section-heading {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .range-tabs {
+    align-self: flex-start;
   }
 
   .actions-grid {

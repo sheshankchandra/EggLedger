@@ -253,6 +253,7 @@ public class OrderService : IOrderService
         {
             var orders = await _context.Orders
                 .Where(o => o.OrderDetails.Any(od => od.ContainerId == containerId))
+                .OrderByDescending(o => o.Datestamp)
                 .Include(o => o.OrderDetails)
                 .ThenInclude(od => od.Container)
                 .ToListAsync(cancellationToken);
