@@ -106,7 +106,6 @@
                   </span>
                 </div>
               </div>
-
             </div>
           </div>
         </div>
@@ -238,7 +237,7 @@ const getContainerAmount = (order) => {
   const containerDetail = order.orderDetails.find(
     (d) => d.containerId === (containerInfo.value?.containerId || props.containerId),
   )
-  return containerDetail ? containerDetail.price *  containerDetail.detailQuantity : 0
+  return containerDetail ? containerDetail.price * containerDetail.detailQuantity : 0
 }
 
 const getOrderStatusDisplay = (orderStatus) => {

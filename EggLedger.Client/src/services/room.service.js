@@ -33,7 +33,9 @@ export const roomService = {
 
   // Update room public status (admin only)
   async updateRoomPublicStatus(updateData, signal) {
-    const response = await apiClient.post('/egg-ledger-api/room/update/IsPublic', updateData, { signal })
+    const response = await apiClient.post('/egg-ledger-api/room/update/IsPublic', updateData, {
+      signal,
+    })
     return response.data
   },
 

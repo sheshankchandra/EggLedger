@@ -5,7 +5,7 @@
       <p class="auth-subtitle">Sign in to your account</p>
     </div>
 
-    <form @submit.prevent="handleLogin" class="form">
+    <form @submit.prevent="handleLogin" class="form" novalidate>
       <div class="form-group">
         <label for="email" class="form-label">Email</label>
         <input
@@ -13,10 +13,21 @@
           id="email"
           v-model="email"
           class="form-input"
+          :class="{ 'is-invalid': touched.email && emailError }"
+          :aria-invalid="touched.email && !!emailError"
+          aria-describedby="email-feedback"
           required
           :disabled="loading"
           placeholder="Enter your email"
+          @blur="touched.email = true"
         />
+        <small
+          v-if="touched.email && emailError"
+          id="email-feedback"
+          class="form-feedback is-invalid"
+        >
+          {{ emailError }}
+        </small>
       </div>
 
       <div class="form-group">
@@ -26,10 +37,21 @@
           id="password"
           v-model="password"
           class="form-input"
+          :class="{ 'is-invalid': touched.password && passwordError }"
+          :aria-invalid="touched.password && !!passwordError"
+          aria-describedby="password-feedback"
           required
           :disabled="loading"
           placeholder="Enter your password"
+          @blur="touched.password = true"
         />
+        <small
+          v-if="touched.password && passwordError"
+          id="password-feedback"
+          class="form-feedback is-invalid"
+        >
+          {{ passwordError }}
+        </small>
       </div>
 
       <button type="submit" class="btn btn-primary w-full" :disabled="loading">
@@ -71,7 +93,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.store'
 import authService from '@/services/auth.service'
@@ -81,6 +103,15 @@ const email = ref('')
 const password = ref('')
 const loading = ref(false)
 const error = ref('')
+const touched = reactive({ email: false, password: false })
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const emailError = computed(() => {
+  if (!email.value) return 'Email is required.'
+  if (!EMAIL_PATTERN.test(email.value)) return 'Enter a valid email address.'
+  return ''
+})
+const passwordError = computed(() => (!password.value ? 'Password is required.' : ''))
 
 // Composables
 const router = useRouter()
@@ -88,10 +119,9 @@ const authStore = useAuthStore()
 
 // Methods
 const handleLogin = async () => {
-  if (!email.value || !password.value) {
-    error.value = 'Please fill in all fields'
-    return
-  }
+  touched.email = true
+  touched.password = true
+  if (emailError.value || passwordError.value) return
 
   loading.value = true
   error.value = ''
@@ -182,6 +212,20 @@ const handleGoogleLogin = async () => {
 .form-input:disabled {
   background-color: #f9fafb;
   color: #6b7280;
+}
+
+.form-input.is-invalid {
+  border-color: #dc2626;
+}
+
+.form-feedback {
+  display: block;
+  margin-top: 0.375rem;
+  font-size: 0.8125rem;
+}
+
+.form-feedback.is-invalid {
+  color: #dc2626;
 }
 
 .btn {

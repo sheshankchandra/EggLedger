@@ -1,8 +1,8 @@
 import { defineStore } from 'pinia'
 import authService from '@/services/auth.service'
-import roomService from '@/services/room.service'
 import userService from '@/services/user.service'
 import router from '@/router'
+import { useRoomStore } from '@/stores/room.store'
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
@@ -10,26 +10,20 @@ export const useAuthStore = defineStore('auth', {
     // The refresh token is an HttpOnly cookie the browser manages; JS never sees it.
     token: null,
     user: JSON.parse(localStorage.getItem('user')) || null,
-    userRooms: JSON.parse(localStorage.getItem('userRooms')) || [],
     isNewUser: false,
     // Shared in-flight refresh request; de-dupes concurrent refreshSession() callers.
     _refreshPromise: null,
     abortControllers: {
       profile: null,
-      rooms: null,
       auth: null,
     },
     loading: {
       profile: false,
-      rooms: false,
     },
   }),
   getters: {
     isAuthenticated: (state) => !!state.token,
     getUser: (state) => state.user,
-    getUserRooms: (state) => state.userRooms,
-    hasRooms: (state) => state.userRooms && state.userRooms.length > 0,
-    isLoadingRooms: (state) => state.loading.rooms,
     isLoadingProfile: (state) => state.loading.profile,
     getIsNewUser: (state) => state.isNewUser,
   },
@@ -119,23 +113,6 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
-    async fetchUserRooms() {
-      if (!this.token || this.loading.rooms) return
-
-      try {
-        this.loading.rooms = true
-        const signal = this.createAbortController('rooms')
-        const userRooms = await roomService.getUserRooms(signal)
-        this.setUserRooms(userRooms)
-      } catch (error) {
-        if (error.name === 'AbortError') return
-        console.error('Failed to fetch user rooms:', error)
-        this.setUserRooms([])
-      } finally {
-        this.loading.rooms = false
-      }
-    },
-
     // After the OAuth redirect the refresh cookie is already set by the API.
     // App startup (initializeAuth) exchanges it for a token before mount, so reuse
     // that session here and only refresh if it isn't established yet.
@@ -159,11 +136,6 @@ export const useAuthStore = defineStore('auth', {
       localStorage.setItem('user', JSON.stringify(user))
     },
 
-    setUserRooms(userRooms) {
-      this.userRooms = userRooms
-      localStorage.setItem('userRooms', JSON.stringify(userRooms))
-    },
-
     async logout() {
       try {
         // Abort all ongoing requests
@@ -179,18 +151,19 @@ export const useAuthStore = defineStore('auth', {
 
       this.token = null
       this.user = null
-      this.userRooms = []
       this.abortControllers = {
         profile: null,
-        rooms: null,
         auth: null,
       }
       this.loading = {
         profile: false,
-        rooms: false,
       }
       localStorage.removeItem('user')
+      // Clean up the legacy pre-store cache key so stale data can't leak into the new room store.
       localStorage.removeItem('userRooms')
+
+      useRoomStore().reset()
+
       router.push('/')
     },
   },

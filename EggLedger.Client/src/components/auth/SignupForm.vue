@@ -4,7 +4,7 @@
       <h2 class="auth-title">Sign up to get started</h2>
     </div>
 
-    <form @submit.prevent="handleRegister" class="form">
+    <form @submit.prevent="handleRegister" class="form" novalidate>
       <div class="form-group">
         <label for="fullName" class="form-label">Full Name</label>
         <input
@@ -12,11 +12,21 @@
           id="fullName"
           v-model="form.fullName"
           class="form-input"
+          :class="{ 'is-invalid': touched.fullName && fullNameError }"
+          :aria-invalid="touched.fullName && !!fullNameError"
+          aria-describedby="fullName-feedback"
           required
-          @blur="splitFullName"
+          @blur="handleFullNameBlur"
           :disabled="loading"
           placeholder="Enter your full name"
         />
+        <small
+          v-if="touched.fullName && fullNameError"
+          id="fullName-feedback"
+          class="form-feedback is-invalid"
+        >
+          {{ fullNameError }}
+        </small>
       </div>
 
       <div class="form-group">
@@ -26,10 +36,21 @@
           id="email"
           v-model="form.email"
           class="form-input"
+          :class="{ 'is-invalid': touched.email && emailError }"
+          :aria-invalid="touched.email && !!emailError"
+          aria-describedby="email-feedback"
           required
           :disabled="loading"
           placeholder="Enter your email"
+          @blur="touched.email = true"
         />
+        <small
+          v-if="touched.email && emailError"
+          id="email-feedback"
+          class="form-feedback is-invalid"
+        >
+          {{ emailError }}
+        </small>
       </div>
 
       <div class="form-group">
@@ -39,10 +60,21 @@
           id="password"
           v-model="form.password"
           class="form-input"
+          :class="{ 'is-invalid': touched.password && passwordError }"
+          :aria-invalid="touched.password && !!passwordError"
+          aria-describedby="password-feedback"
           required
           :disabled="loading"
           placeholder="Create a password"
+          @blur="touched.password = true"
         />
+        <small
+          v-if="touched.password && passwordError"
+          id="password-feedback"
+          class="form-feedback is-invalid"
+        >
+          {{ passwordError }}
+        </small>
       </div>
 
       <button type="submit" class="btn btn-primary w-full" :disabled="loading">
@@ -86,7 +118,7 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.store'
 import authService from '@/services/auth.service'
@@ -100,6 +132,20 @@ const form = reactive({
 const loading = ref(false)
 const error = ref('')
 const success = ref(false)
+const touched = reactive({ fullName: false, email: false, password: false })
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const fullNameError = computed(() => (!form.fullName.trim() ? 'Full name is required.' : ''))
+const emailError = computed(() => {
+  if (!form.email) return 'Email is required.'
+  if (!EMAIL_PATTERN.test(form.email)) return 'Enter a valid email address.'
+  return ''
+})
+const passwordError = computed(() => {
+  if (!form.password) return 'Password is required.'
+  if (form.password.length < 6) return 'Password must be at least 6 characters.'
+  return ''
+})
 
 // Composables
 const router = useRouter()
@@ -116,9 +162,18 @@ const splitFullName = () => {
   }
 }
 
+const handleFullNameBlur = () => {
+  splitFullName()
+  touched.fullName = true
+}
+
 // Methods
 const handleRegister = async () => {
+  touched.fullName = true
+  touched.email = true
+  touched.password = true
   splitFullName()
+  if (fullNameError.value || emailError.value || passwordError.value) return
 
   loading.value = true
   error.value = ''
@@ -132,6 +187,9 @@ const handleRegister = async () => {
     Object.keys(form).forEach((key) => {
       form[key] = ''
     })
+    touched.fullName = false
+    touched.email = false
+    touched.password = false
 
     // Auto-redirect to login after 2 seconds
     setTimeout(() => {
@@ -210,6 +268,20 @@ const handleGoogleRegister = async () => {
 .form-input:disabled {
   background-color: #f9fafb;
   color: #6b7280;
+}
+
+.form-input.is-invalid {
+  border-color: #dc2626;
+}
+
+.form-feedback {
+  display: block;
+  margin-top: 0.375rem;
+  font-size: 0.8125rem;
+}
+
+.form-feedback.is-invalid {
+  color: #dc2626;
 }
 
 .btn {

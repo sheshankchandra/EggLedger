@@ -23,23 +23,28 @@
         </button>
       </div>
 
-      <div v-if="authStore.isLoadingRooms" class="rooms-grid" aria-label="Loading rooms">
-        <div v-for="index in 3" :key="index" class="room-card room-card-skeleton"></div>
-      </div>
+      <LoadingSkeleton
+        v-if="roomStore.isLoading"
+        :count="3"
+        height="260px"
+        aria-label="Loading rooms"
+      />
 
-      <div v-else-if="rooms.length === 0" class="empty-state">
-        <div class="empty-icon" aria-hidden="true">⌂</div>
-        <h3>Create your first shared room</h3>
-        <p>Invite your household, track purchases, and keep shared stock visible to everyone.</p>
-        <div class="empty-actions">
+      <EmptyState
+        v-else-if="rooms.length === 0"
+        icon="⌂"
+        title="Create your first shared room"
+        description="Invite your household, track purchases, and keep shared stock visible to everyone."
+      >
+        <template #actions>
           <button @click="openLobby('create')" class="btn btn-primary" type="button">
             Create a room
           </button>
           <button @click="openLobby('join')" class="btn btn-secondary" type="button">
             Join a room
           </button>
-        </div>
-      </div>
+        </template>
+      </EmptyState>
 
       <div v-else class="rooms-grid">
         <button
@@ -73,108 +78,107 @@
       </div>
     </section>
 
-    <div v-if="showLobby" class="modal" @click.self="closeLobby">
-      <div
-        class="modal-content lobby-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="lobby-title"
-      >
-        <div class="modal-header">
-          <div>
-            <p class="eyebrow">Room setup</p>
-            <h2 id="lobby-title" class="modal-title">Create or join a room</h2>
-          </div>
-          <button @click="closeLobby" class="close-btn" type="button" aria-label="Close">×</button>
-        </div>
-
-        <div class="lobby-tabs" role="tablist" aria-label="Room setup method">
-          <button
-            :class="{ active: lobbyMode === 'create' }"
-            type="button"
-            role="tab"
-            :aria-selected="lobbyMode === 'create'"
-            @click="lobbyMode = 'create'"
-          >
-            Create room
-          </button>
-          <button
-            :class="{ active: lobbyMode === 'join' }"
-            type="button"
-            role="tab"
-            :aria-selected="lobbyMode === 'join'"
-            @click="lobbyMode = 'join'"
-          >
-            Join room
-          </button>
-        </div>
-
-        <div class="modal-body">
-          <form v-if="lobbyMode === 'create'" @submit.prevent="handleCreateRoom">
-            <div class="form-group">
-              <label for="room-name" class="form-label">Room name</label>
-              <input
-                id="room-name"
-                v-model.trim="createForm.roomName"
-                type="text"
-                maxlength="80"
-                placeholder="For example, Green Street Flat"
-                class="form-input"
-                required
-              />
-              <small class="field-hint">Use a name your household will recognize.</small>
-            </div>
-            <fieldset class="form-group">
-              <legend class="form-label">Who can join?</legend>
-              <div class="visibility-options">
-                <label :class="{ selected: !createForm.isPublic }">
-                  <input v-model="createForm.isPublic" type="radio" :value="false" />
-                  <span><strong>Private</strong><small>Only people with the code</small></span>
-                </label>
-                <label :class="{ selected: createForm.isPublic }">
-                  <input v-model="createForm.isPublic" type="radio" :value="true" />
-                  <span><strong>Open</strong><small>Discoverable to others</small></span>
-                </label>
-              </div>
-            </fieldset>
-            <button type="submit" :disabled="loading" class="btn btn-primary submit-button">
-              {{ loading ? 'Creating room…' : 'Create room' }}
-            </button>
-          </form>
-
-          <form v-else @submit.prevent="handleJoinRoom">
-            <div class="form-group">
-              <label for="room-code" class="form-label">Six-digit room code</label>
-              <input
-                id="room-code"
-                v-model.trim="joinForm.roomCode"
-                type="text"
-                inputmode="numeric"
-                autocomplete="one-time-code"
-                placeholder="000000"
-                maxlength="6"
-                pattern="\d{6}"
-                required
-                class="form-input room-code-input"
-              />
-              <small class="field-hint">Ask a room member to share the code with you.</small>
-            </div>
-            <button type="submit" :disabled="loading" class="btn btn-primary submit-button">
-              {{ loading ? 'Joining room…' : 'Join room' }}
-            </button>
-          </form>
-        </div>
-      </div>
-    </div>
-
-    <div
-      v-if="notification.message"
-      :class="['notification', notification.type]"
-      role="status"
-      aria-live="polite"
+    <Modal
+      v-if="showLobby"
+      title="Create or join a room"
+      content-class="lobby-modal"
+      :closable="!loading"
+      :close-on-overlay-click="!loading"
+      @close="closeLobby"
     >
-      {{ notification.message }}
-    </div>
+      <template #eyebrow>Room setup</template>
+
+      <div class="lobby-tabs" role="tablist" aria-label="Room setup method">
+        <button
+          :class="{ active: lobbyMode === 'create' }"
+          type="button"
+          role="tab"
+          :aria-selected="lobbyMode === 'create'"
+          @click="lobbyMode = 'create'"
+        >
+          Create room
+        </button>
+        <button
+          :class="{ active: lobbyMode === 'join' }"
+          type="button"
+          role="tab"
+          :aria-selected="lobbyMode === 'join'"
+          @click="lobbyMode = 'join'"
+        >
+          Join room
+        </button>
+      </div>
+
+      <form v-if="lobbyMode === 'create'" @submit.prevent="handleCreateRoom" novalidate>
+        <div class="form-group">
+          <label for="room-name" class="form-label">Room name</label>
+          <input
+            id="room-name"
+            v-model.trim="createForm.roomName"
+            type="text"
+            maxlength="80"
+            placeholder="For example, Green Street Flat"
+            class="form-input"
+            :class="{ 'is-invalid': roomNameError }"
+            :aria-invalid="!!roomNameError"
+            aria-describedby="room-name-feedback"
+            required
+            @blur="roomNameTouched = true"
+          />
+          <small v-if="roomNameError" id="room-name-feedback" class="form-feedback is-invalid">
+            {{ roomNameError }}
+          </small>
+          <small v-else class="field-hint">Use a name your household will recognize.</small>
+        </div>
+        <fieldset class="form-group">
+          <legend class="form-label">Who can join?</legend>
+          <div class="visibility-options">
+            <label :class="{ selected: !createForm.isPublic }">
+              <input v-model="createForm.isPublic" type="radio" :value="false" />
+              <span><strong>Private</strong><small>Only people with the code</small></span>
+            </label>
+            <label :class="{ selected: createForm.isPublic }">
+              <input v-model="createForm.isPublic" type="radio" :value="true" />
+              <span><strong>Open</strong><small>Discoverable to others</small></span>
+            </label>
+          </div>
+        </fieldset>
+        <button type="submit" :disabled="loading" class="btn btn-primary submit-button">
+          {{ loading ? 'Creating room…' : 'Create room' }}
+        </button>
+      </form>
+
+      <form v-else @submit.prevent="handleJoinRoom" novalidate>
+        <div class="form-group">
+          <label for="room-code" class="form-label">Six-digit room code</label>
+          <input
+            id="room-code"
+            v-model.trim="joinForm.roomCode"
+            type="text"
+            inputmode="numeric"
+            autocomplete="one-time-code"
+            placeholder="000000"
+            maxlength="6"
+            pattern="\d{6}"
+            required
+            class="form-input room-code-input"
+            :class="{ 'is-invalid': roomCodeError }"
+            :aria-invalid="!!roomCodeError"
+            aria-describedby="room-code-feedback"
+            @blur="roomCodeTouched = true"
+          />
+          <small v-if="roomCodeError" id="room-code-feedback" class="form-feedback is-invalid">
+            {{ roomCodeError }}
+          </small>
+          <small v-else class="field-hint">Ask a room member to share the code with you.</small>
+        </div>
+        <button type="submit" :disabled="loading" class="btn btn-primary submit-button">
+          {{ loading ? 'Joining room…' : 'Join room' }}
+        </button>
+      </form>
+    </Modal>
+
+    <Toast :notification="notification" />
   </section>
 </template>
 
@@ -182,17 +186,25 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { resourceConfig as resource } from '@/config/resource.config'
 import { useAuthStore } from '@/stores/auth.store'
-import roomService from '@/services/room.service'
+import { useRoomStore } from '@/stores/room.store'
+import { useNotification } from '@/composables/useNotification'
+import { errorMessage, isCanceled } from '@/utils/httpError'
+import Modal from '@/components/common/BaseModal.vue'
+import LoadingSkeleton from '@/components/common/LoadingSkeleton.vue'
+import EmptyState from '@/components/common/EmptyState.vue'
+import Toast from '@/components/common/ToastNotification.vue'
 
 const emit = defineEmits(['room-selected'])
 const authStore = useAuthStore()
+const roomStore = useRoomStore()
+const { notification, showNotification } = useNotification(5000)
 const showLobby = ref(false)
 const lobbyMode = ref('create')
 const loading = ref(false)
 const isNewUser = ref(false)
 let abortController = new AbortController()
 
-const rooms = computed(() => authStore.getUserRooms || [])
+const rooms = computed(() => roomStore.userRooms)
 const firstName = computed(() => authStore.getUser?.name?.trim().split(/\s+/)[0] || 'there')
 const greeting = computed(() => {
   const hour = new Date().getHours()
@@ -207,10 +219,23 @@ const roomSummary = computed(() => {
 
 const createForm = reactive({ roomName: '', isPublic: false })
 const joinForm = reactive({ roomCode: '' })
-const notification = reactive({ message: '', type: 'success' })
+
+// Real-time field validation state
+const roomNameTouched = ref(false)
+const roomCodeTouched = ref(false)
+const roomNameError = computed(() => {
+  if (!roomNameTouched.value) return ''
+  if (!createForm.roomName.trim()) return 'Give your room a name.'
+  return ''
+})
+const roomCodeError = computed(() => {
+  if (!roomCodeTouched.value) return ''
+  if (!/^\d{6}$/.test(joinForm.roomCode)) return 'Enter a valid six-digit room code.'
+  return ''
+})
 
 onMounted(async () => {
-  await authStore.fetchUserRooms()
+  await roomStore.fetchUserRooms()
   isNewUser.value = authStore.getIsNewUser
 })
 
@@ -239,14 +264,6 @@ const formatDate = (dateString) => {
   return new Intl.DateTimeFormat(undefined, { month: 'short', year: 'numeric' }).format(date)
 }
 
-const showNotification = (message, type = 'success', duration = 5000) => {
-  notification.message = message
-  notification.type = type
-  setTimeout(() => {
-    notification.message = ''
-  }, duration)
-}
-
 const startRequest = () => {
   abortController.abort()
   abortController = new AbortController()
@@ -254,17 +271,12 @@ const startRequest = () => {
   return abortController.signal
 }
 
-const errorMessage = (error, fallback) => {
-  if (Array.isArray(error.response?.data)) return error.response.data.join(', ')
-  if (typeof error.response?.data === 'string') return error.response.data
-  return error.response?.data?.message || fallback
-}
-
 const handleCreateRoom = async () => {
-  if (loading.value) return
+  roomNameTouched.value = true
+  if (loading.value || roomNameError.value) return
   const signal = startRequest()
   try {
-    const response = await roomService.createRoom(
+    const response = await roomStore.createRoom(
       { roomName: createForm.roomName, isOpen: createForm.isPublic },
       signal,
     )
@@ -274,8 +286,9 @@ const handleCreateRoom = async () => {
     showLobby.value = false
     createForm.roomName = ''
     createForm.isPublic = false
+    roomNameTouched.value = false
   } catch (error) {
-    if (error.name === 'AbortError' || error.code === 'ERR_CANCELED') return
+    if (isCanceled(error)) return
     showNotification(errorMessage(error, 'Could not create the room. Please try again.'), 'error')
   } finally {
     loading.value = false
@@ -283,20 +296,19 @@ const handleCreateRoom = async () => {
 }
 
 const handleJoinRoom = async () => {
-  if (!/^\d{6}$/.test(joinForm.roomCode)) {
-    showNotification('Enter a valid six-digit room code.', 'error')
-    return
-  }
+  roomCodeTouched.value = true
+  if (roomCodeError.value) return
   const signal = startRequest()
   try {
-    const response = await roomService.joinRoom(joinForm.roomCode, signal)
+    const response = await roomStore.joinRoom(joinForm.roomCode, signal)
     if (!response.isSuccess) throw new Error(response.value || 'Failed to join room.')
     showNotification('You joined the room.')
     selectRoom(joinForm.roomCode)
     showLobby.value = false
     joinForm.roomCode = ''
+    roomCodeTouched.value = false
   } catch (error) {
-    if (error.name === 'AbortError' || error.code === 'ERR_CANCELED') return
+    if (isCanceled(error)) return
     showNotification(
       errorMessage(error, 'Could not join the room. Check the code and try again.'),
       'error',
@@ -472,49 +484,6 @@ const handleJoinRoom = async () => {
   font-weight: var(--font-weight-semibold);
 }
 
-.room-card-skeleton {
-  border-color: transparent;
-  background: linear-gradient(90deg, #edf2ef 25%, #f8faf9 50%, #edf2ef 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.4s infinite;
-  cursor: default;
-}
-
-.empty-state {
-  padding: var(--spacing-2xl) var(--spacing-lg);
-  border: 1px dashed var(--border-medium);
-  border-radius: var(--radius-xl);
-  background: rgba(255, 255, 255, 0.64);
-  text-align: center;
-}
-
-.empty-state h3 {
-  margin-bottom: var(--spacing-sm);
-}
-
-.empty-state p {
-  max-width: 520px;
-  margin: 0 auto var(--spacing-lg);
-}
-
-.empty-icon {
-  display: grid;
-  width: 56px;
-  height: 56px;
-  margin: 0 auto var(--spacing-md);
-  place-items: center;
-  border-radius: 50%;
-  background: var(--color-primary-light);
-  color: var(--color-primary);
-  font-size: var(--font-size-2xl);
-}
-
-.empty-actions {
-  display: flex;
-  justify-content: center;
-  gap: var(--spacing-sm);
-}
-
 .lobby-modal {
   max-width: 560px;
 }
@@ -594,12 +563,6 @@ const handleJoinRoom = async () => {
   width: 100%;
 }
 
-@keyframes shimmer {
-  to {
-    background-position: -200% 0;
-  }
-}
-
 @media (max-width: 640px) {
   .dashboard {
     gap: var(--spacing-xl);
@@ -628,8 +591,7 @@ const handleJoinRoom = async () => {
     padding: 0;
   }
 
-  .visibility-options,
-  .empty-actions {
+  .visibility-options {
     grid-template-columns: 1fr;
     flex-direction: column;
   }

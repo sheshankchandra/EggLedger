@@ -25,7 +25,7 @@
           </div>
           <div class="info-item">
             <label class="form-label">User ID</label>
-            <span class="user-id">{{ user.id || user.userId }}</span>
+            <span class="user-id">{{ user.userId }}</span>
           </div>
           <div class="info-item">
             <label class="form-label">Role</label>
@@ -37,11 +37,11 @@
       <!-- Room Memberships -->
       <div class="profile-section">
         <h3>Room Memberships</h3>
-        <div v-if="authStore.getUserRooms.length === 0" class="card text-center p-5">
+        <div v-if="roomStore.userRooms.length === 0" class="card text-center p-5">
           <p class="text-secondary">You're not a member of any rooms yet.</p>
         </div>
         <div v-else class="rooms-list">
-          <div v-for="room in authStore.getUserRooms" :key="room.roomId" class="room-item">
+          <div v-for="room in roomStore.userRooms" :key="room.roomId" class="room-item">
             <div class="room-info">
               <h4>{{ room.roomName }}</h4>
               <span class="room-code">{{ room.roomCode }}</span>
@@ -53,7 +53,7 @@
             </div>
             <div class="room-meta">
               <span class="join-date">Joined: {{ formatDate(room.joinedAt) }}</span>
-              <span v-if="room.adminUserId === user.id" class="admin-badge">Admin</span>
+              <span v-if="room.adminUserId === user.userId" class="admin-badge">Admin</span>
             </div>
           </div>
         </div>
@@ -119,7 +119,7 @@
         <h3>Your Statistics</h3>
         <div class="stats-grid">
           <div class="stat-card">
-            <div class="stat-number">{{ authStore.getUserRooms.length }}</div>
+            <div class="stat-number">{{ roomStore.userRooms.length }}</div>
             <div class="stat-label">Rooms Joined</div>
           </div>
           <div class="stat-card">
@@ -173,9 +173,7 @@
     </div>
 
     <!-- Notification -->
-    <div v-if="notification" :class="['notification', notification.type]">
-      {{ notification.message }}
-    </div>
+    <Toast :notification="notification" />
   </div>
 </template>
 
@@ -183,20 +181,23 @@
 import { onMounted, computed, ref, reactive, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.store'
-import { containerService } from '@/services/container.service'
+import { useRoomStore } from '@/stores/room.store'
+import { useInventoryStore } from '@/stores/inventory.store'
+import { useNotification } from '@/composables/useNotification'
+import Toast from '@/components/common/ToastNotification.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const roomStore = useRoomStore()
+const inventoryStore = useInventoryStore()
+const { notification, showNotification } = useNotification()
 const loading = ref(false)
 const error = ref(null)
 const refreshing = ref(false)
 const showChangePassword = ref(false)
 const changingPassword = ref(false)
-const notification = ref(null)
 const loadingContainers = ref(false)
 const userContainers = ref([])
-
-let abortController = new AbortController()
 
 const passwordForm = reactive({
   current: '',
@@ -205,27 +206,18 @@ const passwordForm = reactive({
 })
 
 const user = computed(() => authStore.getUser)
-
-const selectedRoomCode = computed(() => {
-  return sessionStorage.getItem('selectedRoomCode')
-})
-
-const selectedRoom = computed(() => {
-  if (!selectedRoomCode.value) return null
-  const roomCodeToFind = Number(selectedRoomCode.value)
-  return authStore.getUserRooms.find((room) => room.roomCode === roomCodeToFind) || null
-})
+const selectedRoom = computed(() => roomStore.selectedRoom)
 
 const totalContainers = computed(() => {
-  return authStore.getUserRooms.reduce((total, room) => total + (room.containerCount || 0), 0)
+  return roomStore.userRooms.reduce((total, room) => total + (room.containerCount || 0), 0)
 })
 
 const totalEggs = computed(() => {
-  return authStore.getUserRooms.reduce((total, room) => total + (room.totalEggs || 0), 0)
+  return roomStore.userRooms.reduce((total, room) => total + (room.totalEggs || 0), 0)
 })
 
 const adminRooms = computed(() => {
-  return authStore.getUserRooms.filter((room) => room.adminUserId === user.value?.id).length
+  return roomStore.userRooms.filter((room) => room.adminUserId === user.value?.userId).length
 })
 
 const getRoleName = (role) => {
@@ -250,13 +242,6 @@ const formatDate = (dateString) => {
   }
 }
 
-const showNotification = (message, type = 'success') => {
-  notification.value = { message, type }
-  setTimeout(() => {
-    notification.value = null
-  }, 4000)
-}
-
 const refreshProfile = async () => {
   refreshing.value = true
   try {
@@ -273,7 +258,7 @@ const refreshProfile = async () => {
 const refreshRooms = async () => {
   refreshing.value = true
   try {
-    await authStore.fetchUserRooms()
+    await roomStore.fetchUserRooms()
     await fetchUserContainers()
     showNotification('Refreshed successfully!')
   } catch {
@@ -337,18 +322,9 @@ const fetchUserContainers = async () => {
   }
 
   loadingContainers.value = true
-
   try {
-    abortController.abort()
-    abortController = new AbortController()
-
-    const response = await containerService.searchContainersByOwner(
-      selectedRoom.value.roomCode,
-      user.value.name,
-      abortController.signal,
-    )
-
-    userContainers.value = response.data || []
+    userContainers.value =
+      (await inventoryStore.searchMyContainers(selectedRoom.value.roomCode, user.value.name)) || []
   } catch (err) {
     if (err.name === 'AbortError') return
     console.error('Error fetching containers:', err)
@@ -655,25 +631,6 @@ watch(selectedRoom, async (newRoom, oldRoom) => {
   border: 1px solid var(--border-medium);
   border-radius: var(--radius-md);
   box-sizing: border-box;
-}
-
-.notification {
-  position: fixed;
-  top: var(--spacing-md);
-  right: var(--spacing-md);
-  padding: var(--spacing-md) var(--spacing-lg);
-  border-radius: var(--radius-md);
-  color: var(--text-inverse);
-  font-weight: var(--font-weight-semibold);
-  z-index: 1001;
-}
-
-.notification.success {
-  background: var(--color-success);
-}
-
-.notification.error {
-  background: var(--color-danger);
 }
 
 @media (max-width: 768px) {
