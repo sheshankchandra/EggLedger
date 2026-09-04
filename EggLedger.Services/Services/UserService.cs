@@ -129,8 +129,7 @@ public class UserService : IUserService
 
             if (emailChanged)
             {
-                _logger.LogInformation("User updated successfully: {UserId}, Email changed from {OldEmail} to {NewEmail}",
-                    user.UserId, originalEmail, user.Email);
+                _logger.LogInformation("User updated successfully: {UserId}, Email changed", user.UserId);
             }
             else
             {
