@@ -18,7 +18,8 @@ const appVersion = rawVersion.slice(0, 7)
   bottom: 4px;
   right: 6px;
   font-size: 10px;
-  color: rgba(0, 0, 0, 0.35);
+  color: var(--text-muted);
+  opacity: 0.6;
   pointer-events: none;
   user-select: none;
   z-index: 9999;

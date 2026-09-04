@@ -1,4 +1,3 @@
-﻿using System.Globalization;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -9,8 +8,10 @@ using EggLedger.DTO.User;
 using EggLedger.Models.Enums;
 using EggLedger.Models.Models;
 using EggLedger.Models.Options;
+using EggLedger.Services.Extensions;
 using EggLedger.Services.Interfaces;
 using FluentResults;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -26,23 +27,26 @@ public class AuthService : IAuthService
     private readonly PasswordHasher<User> _passwordHasher;
     private readonly JwtOptions _jwtOptions;
     private readonly IHelperService _helperService;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
     public AuthService(
-        ApplicationDbContext context, 
-        ILogger<AuthService> logger, 
-        IOptions<JwtOptions> jwtOptions, 
-        IHelperService helperService)
+        ApplicationDbContext context,
+        ILogger<AuthService> logger,
+        IOptions<JwtOptions> jwtOptions,
+        IHelperService helperService,
+        IHttpContextAccessor httpContextAccessor)
     {
         _context = context;
         _logger = logger;
         _passwordHasher = new PasswordHasher<User>();
         _jwtOptions = jwtOptions.Value;
         _helperService = helperService;
+        _httpContextAccessor = httpContextAccessor;
     }
 
     public async Task<Result<TokenResponseDto>> CreateUserAsync(UserCreateDto dto)
     {
-        try
+        return await _logger.ExecuteAsync(async () =>
         {
             // Check if email already exists
             if (await _context.Users.AnyAsync(u => u.Email == dto.Email))
@@ -54,7 +58,9 @@ public class AuthService : IAuthService
                 FirstName = dto.FirstName,
                 LastName = dto.LastName,
                 Email = dto.Email,
-                Role = dto.Role,
+                // Role is never client-supplied: every self-registered account starts as a
+                // plain User. Promoting to Admin is an out-of-band operation, not a signup field.
+                Role = UserRoles.User,
                 Provider = null
             };
 
@@ -74,17 +80,12 @@ public class AuthService : IAuthService
             _logger.LogInformation("User created successfully: {UserId}, Email: {Email}", user.UserId, user.Email);
 
             return await CreateTokenResponse(user);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Unexpected error occurred in CreateUserAsync for email '{Email}'", dto.Email);
-            return Result.Fail("An unexpected error occurred. Please try again later.");
-        }
+        }, "An unexpected error occurred. Please try again later.");
     }
 
     public async Task<Result<TokenResponseDto>> LoginAsync(LoginDto dto)
     {
-        try
+        return await _logger.ExecuteAsync(async () =>
         {
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
 
@@ -122,17 +123,12 @@ public class AuthService : IAuthService
 
             _logger.LogInformation("User '{Email}' successfully logged in.", dto.Email);
             return await CreateTokenResponse(user);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Unexpected error occurred in LoginAsync for email '{Email}'", dto.Email);
-            return Result.Fail("An unexpected error occurred. Please try again later.");
-        }
+        }, "An unexpected error occurred. Please try again later.");
     }
 
     public async Task<Result<TokenResponseDto>> LoginWithProviderAsync(string email, string name, string provider)
     {
-        try
+        return await _logger.ExecuteAsync(async () =>
         {
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
             var isNewUser = false;
@@ -164,27 +160,22 @@ public class AuthService : IAuthService
 
             _logger.LogInformation("User '{Email}' successfully logged in via {Provider}.", email, provider);
             var tokenResponse = await CreateTokenResponse(user);
-            
+
             if (isNewUser)
             {
                 tokenResponse.Value.IsNewRegistration = true;
             }
-            
+
             return tokenResponse;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Unexpected error occurred in LoginWithProviderAsync for email '{Email}'", email);
-            return Result.Fail("An unexpected error occurred. Please try again later.");
-        }
+        }, "An unexpected error occurred. Please try again later.");
     }
 
     public async Task<Result<TokenResponseDto>> RefreshTokensAsync(RefreshTokenRequestDto request)
     {
-        try
+        return await _logger.ExecuteAsync(async () =>
         {
             _logger.LogInformation("Processing refresh token request for user {UserId}", request.UserId);
-            
+
             var user = await ValidateRefreshTokenAsync(request.UserId, request.RefreshToken);
             if (user is null)
             {
@@ -199,17 +190,12 @@ public class AuthService : IAuthService
 
             // Create new token pair
             return await CreateTokenResponse(user);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Unexpected error occurred in RefreshTokensAsync for userId {UserId}", request.UserId);
-            return Result.Fail("An unexpected error occurred. Please try again later.");
-        }
+        }, "An unexpected error occurred. Please try again later.");
     }
 
     public async Task<Result<TokenResponseDto>> RefreshTokensAsync(string refreshToken)
     {
-        try
+        return await _logger.ExecuteAsync(async () =>
         {
             var user = await ValidateRefreshTokenAsync(refreshToken);
             if (user is null)
@@ -224,17 +210,12 @@ public class AuthService : IAuthService
             _logger.LogInformation("Refresh token successfully rotated for user {UserId}", user.UserId);
 
             return await CreateTokenResponse(user);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Unexpected error occurred in RefreshTokensAsync (cookie flow)");
-            return Result.Fail("An unexpected error occurred. Please try again later.");
-        }
+        }, "An unexpected error occurred. Please try again later.");
     }
 
     public async Task<Result<TokenResponseDto>> CreateTokenResponse(User? user)
     {
-        try
+        return await _logger.ExecuteAsync(async () =>
         {
             var tokenResponse = new TokenResponseDto
             {
@@ -242,13 +223,8 @@ public class AuthService : IAuthService
                 RefreshToken = await GenerateAndSaveRefreshTokenAsync(user)
             };
 
-            return tokenResponse;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred in CreateTokenResponse for userId {UserId}", user?.UserId);
-            return Result.Fail("An error occurred while creating token response.");
-        }
+            return Result.Ok(tokenResponse);
+        }, "An error occurred while creating token response.");
     }
 
     public string GenerateJwtToken(User user)
@@ -258,7 +234,7 @@ public class AuthService : IAuthService
             new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),
             new Claim(ClaimTypes.Email, user.Email),
             new Claim(ClaimTypes.Name, user.Name), // Add the user's full name as a claim
-            new Claim(ClaimTypes.Role, user.Role.ToString(CultureInfo.InvariantCulture))
+            new Claim(ClaimTypes.Role, user.Role.ToString())
         };
 
         // Add RoomId's to the claims
@@ -300,7 +276,7 @@ public class AuthService : IAuthService
                 Id = Guid.NewGuid(),
                 Token = GenerateRefreshToken(),
                 Expires = DateTime.UtcNow.AddDays(7),
-                CreatedByIp = "TODO:CaptureIPAddress",
+                CreatedByIp = GetClientIpAddress(),
                 UserId = user.UserId,
                 Created = DateTime.UtcNow
             };
@@ -318,6 +294,11 @@ public class AuthService : IAuthService
             throw;
         }
     }
+
+    // ForwardedHeadersMiddleware (configured in Program.cs) rewrites Connection.RemoteIpAddress
+    // from X-Forwarded-For, so this reflects the real client IP even behind the Container Apps ingress.
+    private string GetClientIpAddress() =>
+        _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 
     public async Task<User?> ValidateRefreshTokenAsync(Guid userId, string refreshToken)
     {
@@ -466,16 +447,11 @@ public class AuthService : IAuthService
 
     public async Task<Result> LogoutAsync(Guid userId, string refreshToken)
     {
-        try
+        return await _logger.ExecuteAsync(async () =>
         {
             await RevokeRefreshTokenAsync(userId, refreshToken);
             _logger.LogInformation("User {UserId} successfully logged out", userId);
             return Result.Ok();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while logging out user {UserId}", userId);
-            return Result.Fail("Logout failed");
-        }
+        }, "Logout failed");
     }
 }

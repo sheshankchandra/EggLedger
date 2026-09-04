@@ -1,4 +1,6 @@
-﻿namespace EggLedger.Models.Models;
+using EggLedger.Models.Enums;
+
+namespace EggLedger.Models.Models;
 
 public class User
 {
@@ -7,13 +9,14 @@ public class User
     public string FirstName { get; set; } = null!;
     public string? LastName { get; set; }
     public string Email { get; set; } = null!;
-    public int Role { get; set; }
+    public UserRoles Role { get; set; }
     public string? Provider { get; set; }
 
     // Navigation properties
     public virtual UserPassword? UserPassword { get; set; }
     public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
-    public virtual ICollection<Transaction> Transactions { get; set; } = new List<Transaction>();
+    public virtual ICollection<Settlement> SettlementsPaid { get; set; } = new List<Settlement>();
+    public virtual ICollection<Settlement> SettlementsReceived { get; set; } = new List<Settlement>();
     public virtual ICollection<Container> Containers { get; set; } = new List<Container>();
     public virtual ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
     public virtual ICollection<UserRoom> UserRooms { get; set; } = new List<UserRoom>();

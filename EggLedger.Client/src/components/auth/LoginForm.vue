@@ -5,7 +5,7 @@
       <p class="auth-subtitle">Sign in to your account</p>
     </div>
 
-    <form @submit.prevent="handleLogin" class="form">
+    <form @submit.prevent="handleLogin" class="form" novalidate>
       <div class="form-group">
         <label for="email" class="form-label">Email</label>
         <input
@@ -13,10 +13,21 @@
           id="email"
           v-model="email"
           class="form-input"
+          :class="{ 'is-invalid': touched.email && emailError }"
+          :aria-invalid="touched.email && !!emailError"
+          aria-describedby="email-feedback"
           required
           :disabled="loading"
           placeholder="Enter your email"
+          @blur="touched.email = true"
         />
+        <small
+          v-if="touched.email && emailError"
+          id="email-feedback"
+          class="form-feedback is-invalid"
+        >
+          {{ emailError }}
+        </small>
       </div>
 
       <div class="form-group">
@@ -26,10 +37,21 @@
           id="password"
           v-model="password"
           class="form-input"
+          :class="{ 'is-invalid': touched.password && passwordError }"
+          :aria-invalid="touched.password && !!passwordError"
+          aria-describedby="password-feedback"
           required
           :disabled="loading"
           placeholder="Enter your password"
+          @blur="touched.password = true"
         />
+        <small
+          v-if="touched.password && passwordError"
+          id="password-feedback"
+          class="form-feedback is-invalid"
+        >
+          {{ passwordError }}
+        </small>
       </div>
 
       <button type="submit" class="btn btn-primary w-full" :disabled="loading">
@@ -71,7 +93,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.store'
 import authService from '@/services/auth.service'
@@ -81,6 +103,15 @@ const email = ref('')
 const password = ref('')
 const loading = ref(false)
 const error = ref('')
+const touched = reactive({ email: false, password: false })
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const emailError = computed(() => {
+  if (!email.value) return 'Email is required.'
+  if (!EMAIL_PATTERN.test(email.value)) return 'Enter a valid email address.'
+  return ''
+})
+const passwordError = computed(() => (!password.value ? 'Password is required.' : ''))
 
 // Composables
 const router = useRouter()
@@ -88,10 +119,9 @@ const authStore = useAuthStore()
 
 // Methods
 const handleLogin = async () => {
-  if (!email.value || !password.value) {
-    error.value = 'Please fill in all fields'
-    return
-  }
+  touched.email = true
+  touched.password = true
+  if (emailError.value || passwordError.value) return
 
   loading.value = true
   error.value = ''
@@ -137,13 +167,13 @@ const handleGoogleLogin = async () => {
 .auth-title {
   font-size: 1.875rem;
   font-weight: 700;
-  color: #111827;
+  color: var(--text-primary);
   margin-bottom: 0.5rem;
 }
 
 .auth-subtitle {
   font-size: 1rem;
-  color: #6b7280;
+  color: var(--text-muted);
 }
 
 .form {
@@ -158,16 +188,18 @@ const handleGoogleLogin = async () => {
   display: block;
   font-size: 0.875rem;
   font-weight: 500;
-  color: #374151;
+  color: var(--text-secondary);
   margin-bottom: 0.5rem;
 }
 
 .form-input {
   width: 100%;
   padding: 0.75rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--border-medium);
   border-radius: 0.375rem;
   font-size: 1rem;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
   transition:
     border-color 0.15s ease-in-out,
     box-shadow 0.15s ease-in-out;
@@ -175,13 +207,27 @@ const handleGoogleLogin = async () => {
 
 .form-input:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: var(--color-primary);
+  box-shadow: var(--input-focus-ring);
 }
 
 .form-input:disabled {
-  background-color: #f9fafb;
-  color: #6b7280;
+  background-color: var(--bg-tertiary);
+  color: var(--text-muted);
+}
+
+.form-input.is-invalid {
+  border-color: var(--color-danger);
+}
+
+.form-feedback {
+  display: block;
+  margin-top: 0.375rem;
+  font-size: 0.8125rem;
+}
+
+.form-feedback.is-invalid {
+  color: var(--color-danger);
 }
 
 .btn {
@@ -199,16 +245,16 @@ const handleGoogleLogin = async () => {
 }
 
 .btn-primary {
-  background-color: #3b82f6;
-  color: white;
+  background-color: var(--color-primary);
+  color: var(--text-inverse);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background-color: #2563eb;
+  background-color: var(--color-primary-hover);
 }
 
 .btn-primary:disabled {
-  background-color: #9ca3af;
+  background-color: var(--color-gray-400);
   cursor: not-allowed;
 }
 
@@ -219,10 +265,10 @@ const handleGoogleLogin = async () => {
 .btn-google {
   width: 100%;
   padding: 0.75rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--border-medium);
   border-radius: 0.375rem;
-  background-color: white;
-  color: #374151;
+  background-color: var(--bg-primary);
+  color: var(--text-secondary);
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s ease-in-out;
@@ -233,7 +279,7 @@ const handleGoogleLogin = async () => {
 }
 
 .btn-google:hover:not(:disabled) {
-  background-color: #f9fafb;
+  background-color: var(--bg-tertiary);
 }
 
 .btn-google:disabled {
@@ -259,29 +305,17 @@ const handleGoogleLogin = async () => {
   left: 0;
   right: 0;
   height: 1px;
-  background-color: #e5e7eb;
+  background-color: var(--border-light);
   z-index: 1;
 }
 
 .divider span {
   position: relative;
-  background-color: white;
+  background-color: var(--bg-primary);
   padding: 0 1rem;
-  color: #6b7280;
+  color: var(--text-muted);
   font-size: 0.875rem;
   z-index: 2;
-}
-
-.alert {
-  padding: 0.75rem;
-  border-radius: 0.375rem;
-  margin-top: 1rem;
-}
-
-.alert-error {
-  background-color: #fef2f2;
-  color: #dc2626;
-  border: 1px solid #fecaca;
 }
 
 .spinner {
@@ -297,28 +331,5 @@ const handleGoogleLogin = async () => {
   to {
     transform: rotate(360deg);
   }
-}
-
-.auth-switch {
-  text-align: center;
-  margin-top: 1.5rem;
-}
-
-.auth-switch p {
-  color: #6b7280;
-  font-size: 0.875rem;
-}
-
-.link-button {
-  background: none;
-  border: none;
-  color: #3b82f6;
-  text-decoration: underline;
-  cursor: pointer;
-  font-size: inherit;
-}
-
-.link-button:hover {
-  color: #2563eb;
 }
 </style>

@@ -1,4 +1,4 @@
-﻿using EggLedger.DTO.Order;
+using EggLedger.DTO.Order;
 using EggLedger.Models.Models;
 using FluentResults;
 
@@ -9,7 +9,7 @@ public interface IOrderService
     Task<Result<string>> CreateStockOrderAsync(Guid userId, int roomCode, StockOrderDto dto, CancellationToken cancellationToken = default);
     Task<Result<ConsumeOrderResultDto>> CreateConsumeOrderAsync(Guid userId, int roomCode, ConsumeOrderDto dto, CancellationToken cancellationToken = default);
     Task<Result<OrderDto>> GetOrderByIdAsync(Guid orderId, CancellationToken cancellationToken = default);
-    Task<Result<List<OrderDto>>> GetOrdersByUserAsync(Guid userId, CancellationToken cancellationToken = default);
+    Task<Result<List<OrderDto>>> GetOrdersByUserAsync(Guid userId, int roomCode, int page = 1, int pageSize = 20, CancellationToken cancellationToken = default);
     Task<Result<List<OrderDto>>> GetOrdersByContainerAsync(Guid containerId, CancellationToken cancellationToken = default);
     OrderDto MapToOrderDto(Order order);
 }

@@ -7,7 +7,7 @@
     <RoomIndicator />
 
     <!-- Profile Content -->
-    <main class="main-content">
+    <main class="page-shell">
       <ProfileComponent />
     </main>
   </div>
@@ -15,16 +15,16 @@
 
 <script setup>
 import { onMounted } from 'vue'
-import { useAuthStore } from '@/stores/auth.store'
+import { useRoomStore } from '@/stores/room.store'
 import NavigationHeader from '@/components/common/NavigationHeader.vue'
 import RoomIndicator from '@/components/room/RoomIndicator.vue'
 import ProfileComponent from '@/components/profile/ProfileComponent.vue'
 
-const authStore = useAuthStore()
+const roomStore = useRoomStore()
 
-// Load user data and rooms when component mounts
+// Load the user's rooms when component mounts
 onMounted(async () => {
-  await authStore.fetchUserRooms()
+  await roomStore.fetchUserRooms()
 })
 </script>
 
@@ -32,11 +32,5 @@ onMounted(async () => {
 .profile-view {
   min-height: 100vh;
   background: var(--bg-secondary);
-}
-
-.main-content {
-  max-width: var(--container-max-width);
-  margin: 0 auto;
-  padding: var(--spacing-xl);
 }
 </style>

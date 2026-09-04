@@ -70,7 +70,7 @@ watchEffect(() => {
   align-items: center;
   justify-content: center;
   padding: 1rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
   position: relative;
   overflow: hidden;
 }
@@ -86,9 +86,9 @@ watchEffect(() => {
 }
 
 .accounts-card {
-  background: white;
+  background: var(--bg-primary);
   border-radius: 1rem;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  box-shadow: var(--shadow-xl);
   padding: 2.5rem;
   width: 100%;
   max-width: 480px;
@@ -104,7 +104,7 @@ watchEffect(() => {
 .brand-title {
   font-size: 2.5rem;
   font-weight: 800;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -113,13 +113,13 @@ watchEffect(() => {
 
 .brand-subtitle {
   font-size: 1rem;
-  color: #6b7280;
+  color: var(--text-secondary);
   font-weight: 400;
 }
 
 .mode-toggle {
   display: flex;
-  background-color: #f3f4f6;
+  background-color: var(--bg-tertiary);
   border-radius: 0.5rem;
   padding: 0.25rem;
   margin-bottom: 2rem;
@@ -132,19 +132,19 @@ watchEffect(() => {
   background: none;
   border-radius: 0.375rem;
   font-weight: 500;
-  color: #6b7280;
+  color: var(--text-secondary);
   cursor: pointer;
   transition: all 0.2s ease-in-out;
 }
 
 .mode-tab.active {
-  background-color: white;
-  color: #3b82f6;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  background-color: var(--bg-primary);
+  color: var(--color-primary);
+  box-shadow: var(--shadow-sm);
 }
 
 .mode-tab:hover:not(.active) {
-  color: #374151;
+  color: var(--text-primary);
 }
 
 .form-container {

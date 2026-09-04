@@ -10,20 +10,20 @@
 <script setup>
 import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth.store'
+import { useRoomStore } from '@/stores/room.store'
 import NavigationHeader from '@/components/common/NavigationHeader.vue'
 import DashboardComponent from '@/components/dashboard/DashboardComponent.vue'
 
 const router = useRouter()
-const authStore = useAuthStore()
+const roomStore = useRoomStore()
 
-// Load user data and rooms when component mounts
+// Load user's rooms when component mounts
 onMounted(async () => {
-  await authStore.fetchUserRooms()
+  await roomStore.fetchUserRooms()
 })
 
 const handleRoomSelected = (roomCode) => {
-  sessionStorage.setItem('selectedRoomCode', roomCode)
+  roomStore.selectRoom(roomCode)
   router.push('/room')
 }
 </script>

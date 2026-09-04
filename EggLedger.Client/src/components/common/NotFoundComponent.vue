@@ -19,18 +19,18 @@ export default {
 .not-found {
   text-align: center;
   margin-top: 60px;
-  font-family: sans-serif;
-  color: #333;
+  font-family: var(--font-family-sans);
+  color: var(--text-primary);
 }
 .not-found h1 {
   font-size: 3rem;
-  color: #d9534f;
+  color: var(--color-danger);
 }
 .not-found p {
   font-size: 1.2rem;
 }
 .not-found a {
-  color: #0275d8;
+  color: var(--color-primary);
   text-decoration: none;
 }
 .not-found a:hover {

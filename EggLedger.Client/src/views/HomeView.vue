@@ -24,7 +24,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
   padding: 2rem;
   position: relative;
 }
@@ -78,7 +78,7 @@
 
 .btn-primary {
   background-color: white;
-  color: #667eea;
+  color: var(--color-primary);
 }
 
 .btn-primary:hover {
@@ -95,7 +95,7 @@
 
 .btn-secondary:hover {
   background-color: white;
-  color: #667eea;
+  color: var(--color-primary);
   transform: translateY(-2px);
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
 }

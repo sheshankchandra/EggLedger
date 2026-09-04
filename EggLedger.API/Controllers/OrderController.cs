@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading;
@@ -129,13 +129,15 @@ public class OrderController : ControllerBase
 
     // GET: egg-ledger-api/{roomCode}/orders/user/{userId}
     [HttpGet("user/{requestUserId:guid}")]
-    public async Task<IActionResult> GetOrdersByUser([FromRoute] int roomCode, [FromRoute] Guid requestUserId, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetOrdersByUser([FromRoute] int roomCode, [FromRoute] Guid requestUserId, [FromQuery] int page, [FromQuery] int pageSize, CancellationToken cancellationToken)
     {
         try
         {
             _logger.LogInformation("Received request to retrieve a User '{UserId}' Order information.", requestUserId);
 
-            var result = await _orderService.GetOrdersByUserAsync(requestUserId, cancellationToken);
+            var effectivePage = page <= 0 ? 1 : page;
+            var effectivePageSize = pageSize <= 0 ? 20 : pageSize;
+            var result = await _orderService.GetOrdersByUserAsync(requestUserId, roomCode, effectivePage, effectivePageSize, cancellationToken);
 
             if (result is { IsSuccess: true, Value: not null })
             {

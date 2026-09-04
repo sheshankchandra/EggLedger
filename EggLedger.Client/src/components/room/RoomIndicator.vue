@@ -1,35 +1,23 @@
 <template>
-  <div class="room-indicator" v-if="selectedRoom">
+  <div class="room-indicator" v-if="roomStore.selectedRoom">
     <div>
       <span class="indicator-label">Current room</span>
-      <strong>{{ selectedRoom.roomName }}</strong>
-      <span class="room-code">{{ selectedRoom.roomCode }}</span>
+      <strong>{{ roomStore.selectedRoom.roomName }}</strong>
+      <span class="room-code">{{ roomStore.selectedRoom.roomCode }}</span>
     </div>
     <button @click="switchRoom" class="switch-button" type="button">Switch room</button>
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth.store'
+import { useRoomStore } from '@/stores/room.store'
 
 const router = useRouter()
-const authStore = useAuthStore()
-
-const selectedRoomCode = computed(() => {
-  return sessionStorage.getItem('selectedRoomCode')
-})
-
-const selectedRoom = computed(() => {
-  if (!selectedRoomCode.value) return null
-  // Convert stored room code to number to match the data type from API
-  const roomCodeToFind = Number(selectedRoomCode.value)
-  return authStore.getUserRooms.find((room) => room.roomCode === roomCodeToFind) || null
-})
+const roomStore = useRoomStore()
 
 const switchRoom = () => {
-  sessionStorage.removeItem('selectedRoomCode')
+  roomStore.clearSelectedRoom()
   router.push('/')
 }
 </script>

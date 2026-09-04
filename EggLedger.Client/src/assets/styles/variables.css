@@ -1,5 +1,5 @@
 :root {
-  /* Brand and semantic colors */
+  /* Brand and semantic colors (light theme) */
   --color-primary: #176b52;
   --color-primary-hover: #115440;
   --color-primary-light: #e7f5ef;
@@ -7,12 +7,16 @@
   --color-secondary-hover: #24476d;
   --color-success: #18794e;
   --color-success-hover: #11633f;
+  --color-success-light: #e7f5ef;
   --color-danger: #c9363e;
   --color-danger-hover: #a72c33;
+  --color-danger-light: #fbe4e5;
   --color-warning: #a86108;
   --color-warning-hover: #884d05;
+  --color-warning-light: #faf0dc;
   --color-info: #315b8a;
   --color-info-hover: #24476d;
+  --color-info-light: #e6eef7;
 
   /* Neutral Colors */
   --color-white: #ffffff;
@@ -45,6 +49,12 @@
   --border-medium: #c8d5ce;
   --border-dark: var(--color-gray-400);
 
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(20, 38, 31, 0.06);
+  --shadow-md: 0 8px 24px rgba(20, 38, 31, 0.08);
+  --shadow-lg: 0 16px 40px rgba(20, 38, 31, 0.12);
+  --shadow-xl: 0 24px 64px rgba(20, 38, 31, 0.18);
+
   /* Spacing */
   --spacing-xs: 0.25rem;
   --spacing-sm: 0.5rem;
@@ -60,12 +70,6 @@
   --radius-lg: 14px;
   --radius-xl: 18px;
   --radius-2xl: 24px;
-
-  /* Shadows */
-  --shadow-sm: 0 1px 2px rgba(20, 38, 31, 0.06);
-  --shadow-md: 0 8px 24px rgba(20, 38, 31, 0.08);
-  --shadow-lg: 0 16px 40px rgba(20, 38, 31, 0.12);
-  --shadow-xl: 0 24px 64px rgba(20, 38, 31, 0.18);
 
   /* Typography */
   --font-family-sans:
@@ -120,4 +124,91 @@
   --btn-padding-sm: 0.5rem 1rem;
   --btn-padding-md: 0.75rem 1.5rem;
   --btn-padding-lg: 1rem 2rem;
+}
+
+/* Explicit dark theme (user toggled, persisted in localStorage - see theme.store.js) */
+[data-theme='dark'] {
+  --color-primary: #2f9d78;
+  --color-primary-hover: #3dbb90;
+  --color-primary-light: #16332a;
+  --color-secondary: #5b8ec7;
+  --color-secondary-hover: #75a3d6;
+  --color-success: #2fa968;
+  --color-success-hover: #3dc47c;
+  --color-success-light: #16332a;
+  --color-danger: #e0616a;
+  --color-danger-hover: #e87d85;
+  --color-danger-light: #3a1e20;
+  --color-warning: #d68f2e;
+  --color-warning-hover: #e0a24e;
+  --color-warning-light: #3a2c14;
+  --color-info: #5b8ec7;
+  --color-info-hover: #75a3d6;
+  --color-info-light: #1a2a3a;
+
+  --bg-primary: #141f1a;
+  --bg-secondary: #0a120f;
+  --bg-tertiary: #1b2921;
+  --bg-overlay: rgba(0, 0, 0, 0.68);
+
+  --text-primary: #e8f0ec;
+  --text-secondary: #9fb3aa;
+  --text-muted: #7d8b86;
+  --text-inverse: #ffffff;
+
+  --border-light: #25352c;
+  --border-medium: #33473c;
+  --border-dark: #5b6b64;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.24);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.32);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.4);
+  --shadow-xl: 0 24px 64px rgba(0, 0, 0, 0.48);
+
+  --input-focus-ring: 0 0 0 3px rgba(47, 157, 120, 0.24);
+}
+
+/* Same dark values, applied automatically when the OS prefers dark and the user hasn't
+   explicitly chosen a theme (data-theme="light" is the explicit opt-out of this). */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --color-primary: #2f9d78;
+    --color-primary-hover: #3dbb90;
+    --color-primary-light: #16332a;
+    --color-secondary: #5b8ec7;
+    --color-secondary-hover: #75a3d6;
+    --color-success: #2fa968;
+    --color-success-hover: #3dc47c;
+    --color-success-light: #16332a;
+    --color-danger: #e0616a;
+    --color-danger-hover: #e87d85;
+    --color-danger-light: #3a1e20;
+    --color-warning: #d68f2e;
+    --color-warning-hover: #e0a24e;
+    --color-warning-light: #3a2c14;
+    --color-info: #5b8ec7;
+    --color-info-hover: #75a3d6;
+    --color-info-light: #1a2a3a;
+
+    --bg-primary: #141f1a;
+    --bg-secondary: #0a120f;
+    --bg-tertiary: #1b2921;
+    --bg-overlay: rgba(0, 0, 0, 0.68);
+
+    --text-primary: #e8f0ec;
+    --text-secondary: #9fb3aa;
+    --text-muted: #7d8b86;
+    --text-inverse: #ffffff;
+
+    --border-light: #25352c;
+    --border-medium: #33473c;
+    --border-dark: #5b6b64;
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.24);
+    --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.32);
+    --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.4);
+    --shadow-xl: 0 24px 64px rgba(0, 0, 0, 0.48);
+
+    --input-focus-ring: 0 0 0 3px rgba(47, 157, 120, 0.24);
+  }
 }

@@ -1,8 +1,9 @@
-﻿using EggLedger.Data;
+using EggLedger.Data;
 using EggLedger.DTO.Room;
 using EggLedger.DTO.User;
 using EggLedger.Models.Enums;
 using EggLedger.Models.Models;
+using EggLedger.Services.Extensions;
 using EggLedger.Services.Interfaces;
 using FluentResults;
 using Microsoft.EntityFrameworkCore;
@@ -25,7 +26,7 @@ public class RoomService : IRoomService
 
     public async Task<Result<int>> CreateRoomAsync(Guid userId, CreateRoomDto dto, CancellationToken cancellationToken = default)
     {
-        try
+        return await _logger.ExecuteAsync(async () =>
         {
             var room = new Room()
             {
@@ -54,22 +55,12 @@ public class RoomService : IRoomService
             _logger.LogInformation("New Room {RoomName} Created: {RoomId}", room.RoomName, room.RoomId);
 
             return Result.Ok(room.RoomCode);
-        }
-        catch (OperationCanceledException ex)
-        {
-            _logger.LogInformation(ex, "CreateRoomAsync was canceled for userId {UserId}", userId);
-            return Result.Fail("Operation was canceled.");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred in CreateRoomAsync for userId {UserId}", userId);
-            return Result.Fail("An error occurred while creating the room.");
-        }
+        }, "An error occurred while creating the room.");
     }
 
     public async Task<Result<int>> JoinRoomAsync(Guid userId, int roomCode, CancellationToken cancellationToken = default)
     {
-        try
+        return await _logger.ExecuteAsync(async () =>
         {
             var room = await _context.Rooms
                 .Include(room => room.UserRooms)
@@ -88,11 +79,9 @@ public class RoomService : IRoomService
                 return Result.Fail("User already in room");
             }
 
-            if (!room.IsPublic)
-            {
-                _logger.LogWarning("Room is not Public, code '{RoomCode}'", roomCode);
-                return Result.Fail("Room is not Public");
-            }
+            // IsPublic only controls discoverability (a future "browse open rooms" listing).
+            // Knowing the room code is the actual authorization to join, for both Private and
+            // Open rooms - a Private room must still be joinable by whoever it's shared with.
 
             var userRoom = new UserRoom
             {
@@ -109,23 +98,16 @@ public class RoomService : IRoomService
             _logger.LogInformation("User {UserId} successfully joined Room {RoomName}", userId, room.RoomName);
 
             return Result.Ok(roomCode);
-        }
-        catch (OperationCanceledException ex)
-        {
-            _logger.LogInformation(ex, "JoinRoomAsync was canceled for userId {UserId}, roomCode {RoomCode}", userId, roomCode);
-            return Result.Fail("Operation was canceled.");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred in JoinRoomAsync for userId {UserId}, roomCode {RoomCode}", userId, roomCode);
-            return Result.Fail("An error occurred while joining the room.");
-        }
+        }, "An error occurred while joining the room.");
     }
 
-    public async Task<Result<List<UserSummaryDto>>> GetAllRoomUsersAsync(int roomCode, CancellationToken cancellationToken = default)
+    public async Task<Result<List<UserSummaryDto>>> GetAllRoomUsersAsync(int roomCode, int page = 1, int pageSize = 50, CancellationToken cancellationToken = default)
     {
-        try
+        return await _logger.ExecuteAsync(async () =>
         {
+            page = Math.Max(1, page);
+            pageSize = Math.Clamp(pageSize, 1, 200);
+
             var room = await _context.Rooms
                 .Where(r => r.RoomCode == roomCode && r.Status == RoomStatus.Active)
                 .FirstOrDefaultAsync(cancellationToken);
@@ -138,6 +120,9 @@ public class RoomService : IRoomService
             var users = await _context.Users.AsNoTracking()
                 .Include(u => u.UserRooms)
                 .Where(u => u.UserRooms.Any(ur => ur.RoomId == room.RoomId))
+                .OrderBy(u => u.FirstName)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .Select(u => new UserSummaryDto
                 {
                     UserId = u.UserId,
@@ -148,22 +133,12 @@ public class RoomService : IRoomService
                 .ToListAsync(cancellationToken);
 
             return Result.Ok(users);
-        }
-        catch (OperationCanceledException ex)
-        {
-            _logger.LogInformation(ex, "GetAllRoomUsersAsync was canceled for roomCode {RoomCode}", roomCode);
-            return Result.Fail("Operation was canceled.");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred in GetAllRoomUsersAsync for roomCode {RoomCode}", roomCode);
-            return Result.Fail("An error occurred while retrieving room users.");
-        }
+        }, "An error occurred while retrieving room users.");
     }
 
     public async Task<Result<string>> UpdateRoomPublicStatusAsync(UpdateRoomPublicStatusDto dto, CancellationToken cancellationToken = default)
     {
-        try
+        return await _logger.ExecuteAsync(async () =>
         {
             UserRoom? userRoom = await _context.UserRooms
                 .Include(ur => ur.Room)
@@ -198,22 +173,12 @@ public class RoomService : IRoomService
 
             await _context.SaveChangesAsync(cancellationToken);
             return Result.Ok("Room visibility updated successfully");
-        }
-        catch (OperationCanceledException ex)
-        {
-            _logger.LogInformation(ex, "UpdateRoomPublicStatusAsync was canceled for roomId {RoomId}", dto.RoomId);
-            return Result.Fail("Operation was canceled.");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while updating room visibility for RoomId {RoomId}", dto.RoomId);
-            return Result.Fail("Unexpected error occurred while updating the room's public status");
-        }
+        }, "Unexpected error occurred while updating the room's public status");
     }
 
     public async Task<Result<List<RoomDto>>> GetAllUserRoomsAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        try
+        return await _logger.ExecuteAsync(async () =>
         {
             var userRooms = await _context.UserRooms
                 .AsNoTracking()
@@ -243,22 +208,12 @@ public class RoomService : IRoomService
 
             _logger.LogInformation("Retrieved {Count} active rooms for user {UserId}", userRooms.Count, userId);
             return Result.Ok(userRooms);
-        }
-        catch (OperationCanceledException ex)
-        {
-            _logger.LogInformation(ex, "GetAllUserRoomsAsync was canceled for userId {UserId}", userId);
-            return Result.Fail("Operation was canceled.");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while getting rooms for user {UserId}", userId);
-            return Result.Fail("Failed to retrieve user rooms");
-        }
+        }, "Failed to retrieve user rooms");
     }
 
     public async Task<Result<RoomDto>> GetRoomByCodeAsync(int roomCode, CancellationToken cancellationToken = default)
     {
-        try
+        return await _logger.ExecuteAsync(async () =>
         {
             var room = await _context.Rooms
                 .AsNoTracking()
@@ -294,22 +249,12 @@ public class RoomService : IRoomService
 
             _logger.LogInformation("Retrieved room {RoomCode}", roomCode);
             return Result.Ok(room);
-        }
-        catch (OperationCanceledException ex)
-        {
-            _logger.LogInformation(ex, "GetRoomByCodeAsync was canceled for roomCode {RoomCode}", roomCode);
-            return Result.Fail("Operation was canceled.");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while retrieving room {RoomCode}", roomCode);
-            return Result.Fail("Failed to retrieve room");
-        }
+        }, "Failed to retrieve room");
     }
 
     public async Task<Result<int>> DeleteRoomAsync(int roomCode, Guid userId, CancellationToken cancellationToken = default)
     {
-        try
+        return await _logger.ExecuteAsync(async () =>
         {
             // Single query to get room with user validation
             var roomWithUserValidation = await _context.Rooms
@@ -347,7 +292,7 @@ public class RoomService : IRoomService
             // Check for active orders that would be affected
             if (roomWithUserValidation.ActiveOrderDetailsCount > 0)
             {
-                _logger.LogWarning("Cannot archive room {RoomCode} - has {Count} active order details", 
+                _logger.LogWarning("Cannot archive room {RoomCode} - has {Count} active order details",
                     roomCode, roomWithUserValidation.ActiveOrderDetailsCount);
                 return Result.Fail("Cannot archive room with active orders. Please complete or cancel all orders first.");
             }
@@ -396,22 +341,12 @@ public class RoomService : IRoomService
                 roomCode, containersToArchive.Count, userRoomsToRemove.Count);
 
             return Result.Ok(totalAffectedRows);
-        }
-        catch (OperationCanceledException)
-        {
-            _logger.LogInformation("DeleteRoomAsync was canceled for room code {RoomCode}", roomCode);
-            return Result.Fail<int>("Operation was canceled");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while archiving room with code {RoomCode}", roomCode);
-            return Result.Fail<int>("An error occurred while archiving the room");
-        }
+        }, "An error occurred while archiving the room");
     }
 
     public async Task<Result<string>> EditRoomNameAsync(Guid userId, Guid roomId, string newRoomName, CancellationToken cancellationToken = default)
     {
-        try
+        return await _logger.ExecuteAsync(async () =>
         {
             var userRoom = await _context.UserRooms
                 .Include(ur => ur.Room)
@@ -447,22 +382,12 @@ public class RoomService : IRoomService
             _logger.LogInformation("Room name updated for Room '{RoomId}' to '{RoomName}' by User '{UserId}'", roomId, newRoomName, userId);
 
             return Result.Ok("Room name updated successfully");
-        }
-        catch (OperationCanceledException ex)
-        {
-            _logger.LogInformation(ex, "EditRoomNameAsync was canceled for roomId {RoomId}", roomId);
-            return Result.Fail("Operation was canceled.");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while editing room name for RoomId {RoomId}", roomId);
-            return Result.Fail("Unexpected error occurred while editing the room name");
-        }
+        }, "Unexpected error occurred while editing the room name");
     }
 
     public async Task<Result<string>> RemoveRoomMemberAsync(Guid adminUserId, Guid roomId, Guid memberUserId, CancellationToken cancellationToken = default)
     {
-        try
+        return await _logger.ExecuteAsync(async () =>
         {
             var adminUserRoom = await _context.UserRooms
                 .Include(ur => ur.Room)
@@ -503,22 +428,12 @@ public class RoomService : IRoomService
             _logger.LogInformation("User '{MemberUserId}' removed from room '{RoomId}' by admin '{AdminUserId}'", memberUserId, roomId, adminUserId);
 
             return Result.Ok("Member removed from the room successfully");
-        }
-        catch (OperationCanceledException ex)
-        {
-            _logger.LogInformation(ex, "RemoveRoomMemberAsync was canceled for roomId {RoomId}", roomId);
-            return Result.Fail("Operation was canceled.");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while removing member from room '{RoomId}'", roomId);
-            return Result.Fail("Unexpected error occurred while removing the member from the room");
-        }
+        }, "Unexpected error occurred while removing the member from the room");
     }
 
     public async Task<Result<string>> EditRoomStatusAsync(Guid userId, Guid roomId, RoomStatus newStatus, CancellationToken cancellationToken = default)
     {
-        try
+        return await _logger.ExecuteAsync(async () =>
         {
             var userRoom = await _context.UserRooms
                 .Include(ur => ur.Room)
@@ -548,16 +463,6 @@ public class RoomService : IRoomService
             _logger.LogInformation("Room status updated for Room '{RoomId}' to '{Status}' by User '{UserId}'", roomId, newStatus, userId);
 
             return Result.Ok("Room status updated successfully");
-        }
-        catch (OperationCanceledException ex)
-        {
-            _logger.LogInformation(ex, "EditRoomStatusAsync was canceled for roomId {RoomId}", roomId);
-            return Result.Fail("Operation was canceled.");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while editing room status for RoomId {RoomId}", roomId);
-            return Result.Fail("Unexpected error occurred while editing the room status");
-        }
+        }, "Unexpected error occurred while editing the room status");
     }
 }

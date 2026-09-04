@@ -1,4 +1,6 @@
-﻿namespace EggLedger.DTO.User;
+using EggLedger.Models.Enums;
+
+namespace EggLedger.DTO.User;
 
 public class UserUpdateDto
 {
@@ -6,5 +8,9 @@ public class UserUpdateDto
     public string? LastName { get; set; }
     public string? Email { get; set; }
     public string? Password { get; set; }
-    public int? Role { get; set; }
+
+    /// <summary>
+    /// Only an Admin caller may set this; the controller rejects the request otherwise.
+    /// </summary>
+    public UserRoles? Role { get; set; }
 }

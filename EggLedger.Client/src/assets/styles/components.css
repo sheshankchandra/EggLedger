@@ -373,25 +373,25 @@
 }
 
 .alert-success {
-  background: var(--color-primary-light);
+  background: var(--color-success-light);
   color: var(--color-success);
-  border-color: var(--color-primary);
+  border-color: var(--color-success);
 }
 
 .alert-error {
-  background: #fed7d7;
+  background: var(--color-danger-light);
   color: var(--color-danger);
   border-color: var(--color-danger);
 }
 
 .alert-warning {
-  background: #fef5e7;
+  background: var(--color-warning-light);
   color: var(--color-warning);
   border-color: var(--color-warning);
 }
 
 .alert-info {
-  background: #e3f2fd;
+  background: var(--color-info-light);
   color: var(--color-info);
   border-color: var(--color-info);
 }

@@ -14,7 +14,7 @@ public class AuthEndpointsTests : IClassFixture<EggLedgerWebApplicationFactory>
     {
         email = $"user_{Guid.NewGuid():N}@example.com";
         password = "Password123!";
-        return new { firstName = "Test", lastName = "User", email, password, role = 0 };
+        return new { firstName = "Test", lastName = "User", email, password };
     }
 
     private static string? RefreshCookieValue(HttpResponseMessage response)

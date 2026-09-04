@@ -17,7 +17,7 @@ namespace EggLedger.Data.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.7")
+                .HasAnnotation("ProductVersion", "10.0.11")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -242,19 +242,20 @@ namespace EggLedger.Data.Migrations
                     b.ToTable("Rooms");
                 });
 
-            modelBuilder.Entity("EggLedger.Models.Models.Transaction", b =>
+            modelBuilder.Entity("EggLedger.Models.Models.Settlement", b =>
                 {
-                    b.Property<Guid>("TransactionId")
+                    b.Property<Guid>("SettlementId")
                         .HasColumnType("uuid");
 
-                    b.Property<int>("Amount")
-                        .HasColumnType("integer");
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime>("Datestamp")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid>("OrderId")
-                        .HasColumnType("uuid");
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
                     b.Property<Guid>("PayerId")
                         .HasColumnType("uuid");
@@ -262,23 +263,18 @@ namespace EggLedger.Data.Migrations
                     b.Property<Guid>("ReceiverId")
                         .HasColumnType("uuid");
 
-                    b.Property<int>("Status")
-                        .HasColumnType("integer");
-
-                    b.Property<Guid?>("UserId")
+                    b.Property<Guid>("RoomId")
                         .HasColumnType("uuid");
 
-                    b.HasKey("TransactionId");
-
-                    b.HasIndex("OrderId");
+                    b.HasKey("SettlementId");
 
                     b.HasIndex("PayerId");
 
                     b.HasIndex("ReceiverId");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("RoomId");
 
-                    b.ToTable("Transactions");
+                    b.ToTable("Settlements");
                 });
 
             modelBuilder.Entity("EggLedger.Models.Models.User", b =>
@@ -423,37 +419,33 @@ namespace EggLedger.Data.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("EggLedger.Models.Models.Transaction", b =>
+            modelBuilder.Entity("EggLedger.Models.Models.Settlement", b =>
                 {
-                    b.HasOne("EggLedger.Models.Models.Order", "Order")
-                        .WithMany("Transactions")
-                        .HasForeignKey("OrderId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("EggLedger.Models.Models.User", "Payer")
-                        .WithMany()
+                        .WithMany("SettlementsPaid")
                         .HasForeignKey("PayerId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
-                        .HasConstraintName("FK_Transaction_Payer");
+                        .HasConstraintName("FK_Settlement_Payer");
 
                     b.HasOne("EggLedger.Models.Models.User", "Receiver")
-                        .WithMany()
+                        .WithMany("SettlementsReceived")
                         .HasForeignKey("ReceiverId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
-                        .HasConstraintName("FK_Transaction_Receiver");
+                        .HasConstraintName("FK_Settlement_Receiver");
 
-                    b.HasOne("EggLedger.Models.Models.User", null)
-                        .WithMany("Transactions")
-                        .HasForeignKey("UserId");
-
-                    b.Navigation("Order");
+                    b.HasOne("EggLedger.Models.Models.Room", "Room")
+                        .WithMany("Settlements")
+                        .HasForeignKey("RoomId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("Payer");
 
                     b.Navigation("Receiver");
+
+                    b.Navigation("Room");
                 });
 
             modelBuilder.Entity("EggLedger.Models.Models.UserPassword", b =>
@@ -494,13 +486,13 @@ namespace EggLedger.Data.Migrations
             modelBuilder.Entity("EggLedger.Models.Models.Order", b =>
                 {
                     b.Navigation("OrderDetails");
-
-                    b.Navigation("Transactions");
                 });
 
             modelBuilder.Entity("EggLedger.Models.Models.Room", b =>
                 {
                     b.Navigation("Containers");
+
+                    b.Navigation("Settlements");
 
                     b.Navigation("UserRooms");
                 });
@@ -513,7 +505,9 @@ namespace EggLedger.Data.Migrations
 
                     b.Navigation("RefreshTokens");
 
-                    b.Navigation("Transactions");
+                    b.Navigation("SettlementsPaid");
+
+                    b.Navigation("SettlementsReceived");
 
                     b.Navigation("UserPassword");
 

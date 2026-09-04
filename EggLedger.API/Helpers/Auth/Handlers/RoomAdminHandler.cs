@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using EggLedger.API.Helpers.Auth.Requirements;
@@ -29,7 +29,7 @@ public class RoomAdminHandler : AuthorizationHandler<RoomAdminRequirement>
         var userIdClaim = context.User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (!Guid.TryParse(userIdClaim, out var userId))
         {
-            _logger.LogWarning("RoomMemberHandler: Invalid or missing user ID claim.");
+            _logger.LogWarning("RoomAdminHandler: Invalid or missing user ID claim.");
             return;
         }
 
@@ -38,7 +38,7 @@ public class RoomAdminHandler : AuthorizationHandler<RoomAdminRequirement>
 
         if (!int.TryParse(roomCodeStr, out var roomCode))
         {
-            _logger.LogWarning("RoomMemberHandler: Invalid or missing roomCode in route.");
+            _logger.LogWarning("RoomAdminHandler: Invalid or missing roomCode in route.");
             return;
         }
 

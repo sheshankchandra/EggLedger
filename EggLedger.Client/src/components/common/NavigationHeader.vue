@@ -18,6 +18,14 @@
           <span aria-hidden="true">○</span>
           <span>Profile</span>
         </router-link>
+        <button
+          @click="themeStore.toggleTheme()"
+          class="theme-toggle"
+          type="button"
+          :aria-label="themeStore.isDark ? 'Switch to light theme' : 'Switch to dark theme'"
+        >
+          <span aria-hidden="true">{{ themeStore.isDark ? '☀' : '☾' }}</span>
+        </button>
         <button @click="handleLogout" class="logout-button" type="button" aria-label="Sign out">
           <span aria-hidden="true">↪</span>
           <span class="logout-label">Sign out</span>
@@ -30,19 +38,14 @@
 <script setup>
 import { computed } from 'vue'
 import { useAuthStore } from '@/stores/auth.store'
+import { useRoomStore } from '@/stores/room.store'
+import { useThemeStore } from '@/stores/theme.store'
 
 const authStore = useAuthStore()
+const roomStore = useRoomStore()
+const themeStore = useThemeStore()
 
-const selectedRoomCode = computed(() => {
-  return sessionStorage.getItem('selectedRoomCode')
-})
-
-const selectedRoom = computed(() => {
-  if (!selectedRoomCode.value) return null
-  // Convert stored room code to number to match the data type from API
-  const roomCodeToFind = Number(selectedRoomCode.value)
-  return authStore.getUserRooms.find((room) => room.roomCode === roomCodeToFind) || null
-})
+const selectedRoom = computed(() => roomStore.selectedRoom)
 
 const handleLogout = () => {
   authStore.logout()
@@ -55,7 +58,7 @@ const handleLogout = () => {
   top: 0;
   z-index: var(--z-sticky);
   min-height: var(--header-height);
-  background: rgba(255, 255, 255, 0.94);
+  background: color-mix(in srgb, var(--bg-primary) 94%, transparent);
   border-bottom: 1px solid var(--border-light);
   backdrop-filter: blur(14px);
 }
@@ -103,7 +106,8 @@ const handleLogout = () => {
 
 .nav-link,
 .nav-btn,
-.logout-button {
+.logout-button,
+.theme-toggle {
   display: inline-flex;
   min-height: 42px;
   align-items: center;
@@ -121,9 +125,18 @@ const handleLogout = () => {
 
 .nav-link:hover,
 .nav-btn:hover,
-.logout-button:hover {
+.logout-button:hover,
+.theme-toggle:hover {
   background: var(--bg-tertiary);
   color: var(--text-primary);
+}
+
+.theme-toggle {
+  min-width: 42px;
+  justify-content: center;
+  cursor: pointer;
+  background: transparent;
+  font-size: var(--font-size-lg);
 }
 
 .nav-link.active,
