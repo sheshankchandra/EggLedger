@@ -1,190 +1,242 @@
 <template>
-  <div class="room-selection-container">
-    <div class="header">
-      <h2 v-if="isNewUser">Hey, {{ authStore.getUser?.name || 'User' }}! 👋</h2>
-      <h2 v-else>Welcome back, {{ authStore.getUser?.name || 'User' }}! 👋</h2>
-      <p>Choose a room to enter or create/join a new one.</p>
-    </div>
-
-    <!-- User's Rooms -->
-    <div class="rooms-section">
-      <h3>Your Rooms</h3>
-      <div v-if="authStore.getUserRooms.length === 0" class="no-rooms">
-        <p>You're not in any rooms yet.</p>
-        <button @click="showLobby = true" class="btn btn-primary">Create or Join Room</button>
+  <section class="dashboard">
+    <header class="dashboard-hero">
+      <div>
+        <p class="eyebrow">{{ isNewUser ? 'Welcome to EggLedger' : 'Good to see you again' }}</p>
+        <h1>{{ greeting }}, {{ firstName }}</h1>
+        <p>Choose a room to manage shared stock, or create a new space for your household.</p>
       </div>
+      <button @click="openLobby('create')" class="btn btn-primary" type="button">
+        <span aria-hidden="true">＋</span>
+        New room
+      </button>
+    </header>
+
+    <section aria-labelledby="rooms-heading">
+      <div class="section-heading">
+        <div>
+          <h2 id="rooms-heading">Your rooms</h2>
+          <p>{{ roomSummary }}</p>
+        </div>
+        <button @click="openLobby('join')" class="text-button" type="button">
+          Join with a code
+        </button>
+      </div>
+
+      <div v-if="authStore.isLoadingRooms" class="rooms-grid" aria-label="Loading rooms">
+        <div v-for="index in 3" :key="index" class="room-card room-card-skeleton"></div>
+      </div>
+
+      <div v-else-if="rooms.length === 0" class="empty-state">
+        <div class="empty-icon" aria-hidden="true">⌂</div>
+        <h3>Create your first shared room</h3>
+        <p>Invite your household, track purchases, and keep shared stock visible to everyone.</p>
+        <div class="empty-actions">
+          <button @click="openLobby('create')" class="btn btn-primary" type="button">
+            Create a room
+          </button>
+          <button @click="openLobby('join')" class="btn btn-secondary" type="button">
+            Join a room
+          </button>
+        </div>
+      </div>
+
       <div v-else class="rooms-grid">
-        <div
-          v-for="room in authStore.getUserRooms"
+        <button
+          v-for="room in rooms"
           :key="room.roomId"
           class="room-card"
+          type="button"
           @click="selectRoom(room.roomCode)"
         >
-          <div class="room-header">
-            <h4>{{ room.roomName }}</h4>
-            <span class="room-code">{{ room.roomCode }}</span>
-          </div>
-          <div class="room-info">
-            <p><strong>Members:</strong> {{ room.memberCount || 0 }}</p>
-            <p><strong>Created:</strong> {{ formatDate(room.createdAt) }}</p>
-          </div>
-          <div class="room-stats">
-            <span class="stat"> 🥚 {{ room.totalEggs || 0 }} eggs </span>
-            <span class="stat"> 📦 {{ room.containerCount || 0 }} containers </span>
-          </div>
-        </div>
+          <span class="room-card-top">
+            <span class="room-avatar" aria-hidden="true">{{ roomInitials(room.roomName) }}</span>
+            <span class="room-code">Code {{ room.roomCode }}</span>
+          </span>
+          <span class="room-name">{{ room.roomName }}</span>
+          <span class="room-meta">
+            <span>{{ room.memberCount || 0 }} members</span>
+            <span>{{ formatDate(room.createdAt) }}</span>
+          </span>
+          <span class="room-stat-grid">
+            <span>
+              <strong>{{ room.totalEggs || 0 }}</strong>
+              {{ resource.plural }} available
+            </span>
+            <span>
+              <strong>{{ room.containerCount || 0 }}</strong>
+              active {{ resource.inventoryPlural }}
+            </span>
+          </span>
+          <span class="open-room">Open room <span aria-hidden="true">→</span></span>
+        </button>
       </div>
-    </div>
+    </section>
 
-    <!-- Actions -->
-    <div class="actions-section">
-      <h3>Other Options</h3>
-      <div class="actions-grid">
-        <div @click="showLobby = true" class="action-card">
-          <div class="action-icon">🚀</div>
-          <h4>Create New Room</h4>
-          <p>Start a fresh room for your group</p>
-        </div>
-        <div @click="showLobby = true" class="action-card">
-          <div class="action-icon">🚪</div>
-          <h4>Join Another Room</h4>
-          <p>Enter a room with an invitation code</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Lobby Modal -->
-    <div v-if="showLobby" class="modal">
-      <div class="modal-content">
+    <div v-if="showLobby" class="modal" @click.self="closeLobby">
+      <div
+        class="modal-content lobby-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="lobby-title"
+      >
         <div class="modal-header">
-          <h3>Create or Join Room</h3>
-          <button @click="showLobby = false" class="close-btn">×</button>
+          <div>
+            <p class="eyebrow">Room setup</p>
+            <h2 id="lobby-title" class="modal-title">Create or join a room</h2>
+          </div>
+          <button @click="closeLobby" class="close-btn" type="button" aria-label="Close">×</button>
+        </div>
+
+        <div class="lobby-tabs" role="tablist" aria-label="Room setup method">
+          <button
+            :class="{ active: lobbyMode === 'create' }"
+            type="button"
+            role="tab"
+            :aria-selected="lobbyMode === 'create'"
+            @click="lobbyMode = 'create'"
+          >
+            Create room
+          </button>
+          <button
+            :class="{ active: lobbyMode === 'join' }"
+            type="button"
+            role="tab"
+            :aria-selected="lobbyMode === 'join'"
+            @click="lobbyMode = 'join'"
+          >
+            Join room
+          </button>
         </div>
 
         <div class="modal-body">
-          <div class="lobby-options">
-            <!-- Create Room -->
-            <div class="lobby-section">
-              <h4>🚀 Create New Room</h4>
-              <form @submit.prevent="handleCreateRoom">
-                <div class="form-group">
-                  <label class="form-label">Room Name</label>
-                  <input
-                    v-model="createForm.roomName"
-                    type="text"
-                    placeholder="e.g., The Eggvengers"
-                    class="form-input"
-                    required
-                  />
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Visibility</label>
-                  <div class="radio-group">
-                    <label>
-                      <input
-                        type="radio"
-                        v-model="createForm.isPublic"
-                        :value="false"
-                        name="visibility"
-                      />
-                      <span>🔒 Private</span>
-                    </label>
-                    <label>
-                      <input
-                        type="radio"
-                        v-model="createForm.isPublic"
-                        :value="true"
-                        name="visibility"
-                      />
-                      <span>🌍 Public</span>
-                    </label>
-                  </div>
-                </div>
-                <button type="submit" :disabled="loading" class="btn btn-primary">
-                  {{ loading ? 'Creating...' : 'Create Room' }}
-                </button>
-              </form>
+          <form v-if="lobbyMode === 'create'" @submit.prevent="handleCreateRoom">
+            <div class="form-group">
+              <label for="room-name" class="form-label">Room name</label>
+              <input
+                id="room-name"
+                v-model.trim="createForm.roomName"
+                type="text"
+                maxlength="80"
+                placeholder="For example, Green Street Flat"
+                class="form-input"
+                required
+              />
+              <small class="field-hint">Use a name your household will recognize.</small>
             </div>
+            <fieldset class="form-group">
+              <legend class="form-label">Who can join?</legend>
+              <div class="visibility-options">
+                <label :class="{ selected: !createForm.isPublic }">
+                  <input v-model="createForm.isPublic" type="radio" :value="false" />
+                  <span><strong>Private</strong><small>Only people with the code</small></span>
+                </label>
+                <label :class="{ selected: createForm.isPublic }">
+                  <input v-model="createForm.isPublic" type="radio" :value="true" />
+                  <span><strong>Open</strong><small>Discoverable to others</small></span>
+                </label>
+              </div>
+            </fieldset>
+            <button type="submit" :disabled="loading" class="btn btn-primary submit-button">
+              {{ loading ? 'Creating room…' : 'Create room' }}
+            </button>
+          </form>
 
-            <!-- Join Room -->
-            <div class="lobby-section">
-              <h4>🚪 Join Existing Room</h4>
-              <form @submit.prevent="handleJoinRoom">
-                <div class="form-group">
-                  <label class="form-label">6-Digit Room Code</label>
-                  <input
-                    v-model="joinForm.roomCode"
-                    type="text"
-                    placeholder="e.g., 123456"
-                    maxlength="6"
-                    pattern="\d{6}"
-                    required
-                    class="form-input room-code-input"
-                  />
-                </div>
-                <button type="submit" :disabled="loading" class="btn btn-primary">
-                  {{ loading ? 'Joining...' : 'Join Room' }}
-                </button>
-              </form>
+          <form v-else @submit.prevent="handleJoinRoom">
+            <div class="form-group">
+              <label for="room-code" class="form-label">Six-digit room code</label>
+              <input
+                id="room-code"
+                v-model.trim="joinForm.roomCode"
+                type="text"
+                inputmode="numeric"
+                autocomplete="one-time-code"
+                placeholder="000000"
+                maxlength="6"
+                pattern="\d{6}"
+                required
+                class="form-input room-code-input"
+              />
+              <small class="field-hint">Ask a room member to share the code with you.</small>
             </div>
-          </div>
+            <button type="submit" :disabled="loading" class="btn btn-primary submit-button">
+              {{ loading ? 'Joining room…' : 'Join room' }}
+            </button>
+          </form>
         </div>
       </div>
     </div>
 
-    <!-- Notification -->
-    <div v-if="notification.message" :class="['notification', notification.type]">
+    <div
+      v-if="notification.message"
+      :class="['notification', notification.type]"
+      role="status"
+      aria-live="polite"
+    >
       {{ notification.message }}
     </div>
-  </div>
+  </section>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
+import { resourceConfig as resource } from '@/config/resource.config'
 import { useAuthStore } from '@/stores/auth.store'
 import roomService from '@/services/room.service'
 
 const emit = defineEmits(['room-selected'])
-
 const authStore = useAuthStore()
 const showLobby = ref(false)
+const lobbyMode = ref('create')
 const loading = ref(false)
 const isNewUser = ref(false)
-
 let abortController = new AbortController()
 
-// Fetch user rooms when component mounts
+const rooms = computed(() => authStore.getUserRooms || [])
+const firstName = computed(() => authStore.getUser?.name?.trim().split(/\s+/)[0] || 'there')
+const greeting = computed(() => {
+  const hour = new Date().getHours()
+  if (hour < 12) return 'Good morning'
+  if (hour < 18) return 'Good afternoon'
+  return 'Good evening'
+})
+const roomSummary = computed(() => {
+  if (rooms.value.length === 0) return 'Your shared spaces will appear here.'
+  return `${rooms.value.length} ${rooms.value.length === 1 ? 'room' : 'rooms'} ready to open`
+})
+
+const createForm = reactive({ roomName: '', isPublic: false })
+const joinForm = reactive({ roomCode: '' })
+const notification = reactive({ message: '', type: 'success' })
+
 onMounted(async () => {
   await authStore.fetchUserRooms()
   isNewUser.value = authStore.getIsNewUser
 })
 
-const createForm = reactive({
-  roomName: '',
-  isPublic: false,
-})
-
-const joinForm = reactive({
-  roomCode: '',
-})
-
-const notification = reactive({
-  message: '',
-  type: 'success',
-})
-
-// emit the selected room to the main component
-const selectRoom = (room) => {
-  emit('room-selected', room)
+const openLobby = (mode) => {
+  lobbyMode.value = mode
+  showLobby.value = true
 }
 
+const closeLobby = () => {
+  if (!loading.value) showLobby.value = false
+}
+
+const selectRoom = (roomCode) => emit('room-selected', roomCode)
+const roomInitials = (name) =>
+  (name || 'Room')
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((word) => word[0])
+    .join('')
+    .toUpperCase()
+
 const formatDate = (dateString) => {
-  if (!dateString) return 'Unknown'
-  try {
-    return new Date(dateString).toLocaleDateString()
-  } catch {
-    return 'Unknown'
-  }
+  if (!dateString) return 'Recently created'
+  const date = new Date(dateString)
+  if (Number.isNaN(date.getTime())) return 'Recently created'
+  return new Intl.DateTimeFormat(undefined, { month: 'short', year: 'numeric' }).format(date)
 }
 
 const showNotification = (message, type = 'success', duration = 5000) => {
@@ -195,46 +247,36 @@ const showNotification = (message, type = 'success', duration = 5000) => {
   }, duration)
 }
 
-const handleCreateRoom = async () => {
-  if (loading.value) return
-
+const startRequest = () => {
   abortController.abort()
   abortController = new AbortController()
   loading.value = true
+  return abortController.signal
+}
 
+const errorMessage = (error, fallback) => {
+  if (Array.isArray(error.response?.data)) return error.response.data.join(', ')
+  if (typeof error.response?.data === 'string') return error.response.data
+  return error.response?.data?.message || fallback
+}
+
+const handleCreateRoom = async () => {
+  if (loading.value) return
+  const signal = startRequest()
   try {
     const response = await roomService.createRoom(
-      {
-        roomName: createForm.roomName,
-        isOpen: createForm.isPublic,
-      },
-      abortController.signal,
+      { roomName: createForm.roomName, isOpen: createForm.isPublic },
+      signal,
     )
-
-    if (response.isSuccess) {
-      showNotification('Room created successfully!', 'success')
-      // emit the selected room to the main component
-      selectRoom(response.value)
-      showLobby.value = false
-
-      // Reset form
-      createForm.roomName = ''
-      createForm.isPublic = false
-    } else {
-      throw new Error(response.value || 'Failed to create room.')
-    }
+    if (!response.isSuccess) throw new Error(response.value || 'Failed to create room.')
+    showNotification('Room created successfully.')
+    selectRoom(response.value.roomCode ?? response.value)
+    showLobby.value = false
+    createForm.roomName = ''
+    createForm.isPublic = false
   } catch (error) {
     if (error.name === 'AbortError' || error.code === 'ERR_CANCELED') return
-
-    let errorMessage = 'Could not create the room. Please try again.'
-    if (Array.isArray(error.response?.data)) {
-      errorMessage = error.response.data.join(', ')
-    } else if (typeof error.response?.data === 'string') {
-      errorMessage = error.response.data
-    } else if (error.response?.data?.message) {
-      errorMessage = error.response.data.message
-    }
-    showNotification(errorMessage, 'error')
+    showNotification(errorMessage(error, 'Could not create the room. Please try again.'), 'error')
   } finally {
     loading.value = false
   }
@@ -242,39 +284,23 @@ const handleCreateRoom = async () => {
 
 const handleJoinRoom = async () => {
   if (!/^\d{6}$/.test(joinForm.roomCode)) {
-    showNotification('Please enter a valid 6-digit room code.', 'error')
+    showNotification('Enter a valid six-digit room code.', 'error')
     return
   }
-
-  abortController.abort()
-  abortController = new AbortController()
-  loading.value = true
-
+  const signal = startRequest()
   try {
-    const response = await roomService.joinRoom(joinForm.roomCode, abortController.signal)
-
-    if (response.isSuccess) {
-      showNotification('Joined room successfully!', 'success')
-      // emit the selected room to the main component
-      selectRoom(joinForm.roomCode)
-
-      showLobby.value = false
-      joinForm.roomCode = ''
-    } else {
-      throw new Error(response.value || 'Failed to join room.')
-    }
+    const response = await roomService.joinRoom(joinForm.roomCode, signal)
+    if (!response.isSuccess) throw new Error(response.value || 'Failed to join room.')
+    showNotification('You joined the room.')
+    selectRoom(joinForm.roomCode)
+    showLobby.value = false
+    joinForm.roomCode = ''
   } catch (error) {
     if (error.name === 'AbortError' || error.code === 'ERR_CANCELED') return
-
-    let errorMessage = 'Could not join the room. Please check the code and try again.'
-    if (Array.isArray(error.response?.data)) {
-      errorMessage = error.response.data.join(', ')
-    } else if (typeof error.response?.data === 'string') {
-      errorMessage = error.response.data
-    } else if (error.response?.data?.message) {
-      errorMessage = error.response.data.message
-    }
-    showNotification(errorMessage, 'error')
+    showNotification(
+      errorMessage(error, 'Could not join the room. Check the code and try again.'),
+      'error',
+    )
   } finally {
     loading.value = false
   }
@@ -282,256 +308,330 @@ const handleJoinRoom = async () => {
 </script>
 
 <style scoped>
-.room-selection-container {
-  max-width: var(--container-max-width);
-  margin: var(--spacing-xl) auto;
+.dashboard {
+  display: grid;
+  gap: var(--spacing-2xl);
+}
+
+.dashboard-hero,
+.section-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: var(--spacing-lg);
+}
+
+.dashboard-hero {
   padding: var(--spacing-xl);
+  background: linear-gradient(135deg, #123e32, var(--color-primary));
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-lg);
+  color: var(--text-inverse);
 }
 
-.header {
-  text-align: center;
-  margin-bottom: var(--spacing-2xl);
-}
-
-.header h2 {
-  font-size: var(--font-size-3xl);
-  font-weight: var(--font-weight-semibold);
-  color: var(--text-primary);
+.dashboard-hero h1 {
   margin-bottom: var(--spacing-sm);
+  color: inherit;
+  font-size: clamp(2rem, 4vw, 3rem);
+  letter-spacing: -0.04em;
 }
 
-.header p {
-  font-size: var(--font-size-lg);
-  color: var(--text-secondary);
+.dashboard-hero p:not(.eyebrow) {
+  max-width: 650px;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.78);
 }
 
-.rooms-section {
-  margin-bottom: var(--spacing-2xl);
+.dashboard-hero .eyebrow {
+  color: #b8ead8;
 }
 
-.rooms-section h3 {
-  font-size: var(--font-size-2xl);
+.dashboard-hero .btn {
+  flex-shrink: 0;
+  background: var(--color-white);
+  color: var(--color-primary);
+}
+
+.section-heading {
   margin-bottom: var(--spacing-lg);
-  color: var(--text-primary);
 }
 
-.no-rooms {
-  text-align: center;
-  padding: var(--spacing-xl);
-  background: var(--bg-tertiary);
-  border-radius: var(--radius-lg);
+.section-heading h2 {
+  margin-bottom: var(--spacing-xs);
+}
+
+.section-heading p {
+  margin: 0;
+}
+
+.text-button {
+  border: 0;
+  background: transparent;
+  color: var(--color-primary);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
 }
 
 .rooms-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 290px), 1fr));
   gap: var(--spacing-lg);
 }
 
 .room-card {
-  background: var(--bg-primary);
-  border-radius: var(--radius-xl);
+  display: flex;
+  min-height: 260px;
+  flex-direction: column;
   padding: var(--spacing-lg);
-  box-shadow: var(--shadow-md);
-  border: 2px solid transparent;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-xl);
+  background: var(--bg-primary);
+  box-shadow: var(--shadow-sm);
+  color: var(--text-primary);
+  text-align: left;
   cursor: pointer;
-  transition: all var(--transition-slow);
+  transition:
+    border-color var(--transition-normal),
+    box-shadow var(--transition-normal),
+    transform var(--transition-normal);
 }
 
 .room-card:hover {
-  border-color: var(--color-primary);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
+  border-color: rgba(23, 107, 82, 0.4);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-3px);
 }
 
-.room-header {
+.room-card-top,
+.room-meta,
+.room-stat-grid,
+.open-room {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: var(--spacing-md);
 }
 
-.room-header h4 {
-  margin: 0;
-  color: var(--text-primary);
-  font-size: var(--font-size-xl);
+.room-card-top {
+  justify-content: space-between;
+}
+
+.room-avatar {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border-radius: var(--radius-lg);
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  font-weight: var(--font-weight-bold);
 }
 
 .room-code {
-  background: var(--color-primary-light);
-  color: var(--color-secondary);
-  padding: var(--spacing-xs) var(--spacing-sm);
-  border-radius: var(--radius-md);
+  color: var(--text-muted);
   font-family: var(--font-family-mono);
-  font-size: var(--font-size-sm);
-}
-
-.room-info {
-  margin-bottom: var(--spacing-md);
-}
-
-.room-info p {
-  margin: var(--spacing-xs) 0;
-  color: var(--text-secondary);
-  font-size: var(--font-size-sm);
-}
-
-.room-stats {
-  display: flex;
-  gap: var(--spacing-md);
-}
-
-.stat {
-  background: var(--bg-tertiary);
-  padding: var(--spacing-xs) var(--spacing-sm);
-  border-radius: var(--radius-md);
   font-size: var(--font-size-xs);
+}
+
+.room-name {
+  margin-top: var(--spacing-lg);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+}
+
+.room-meta {
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-xs);
   color: var(--text-muted);
-}
-
-.actions-section h3 {
-  font-size: var(--font-size-2xl);
-  margin-bottom: var(--spacing-lg);
-  color: var(--text-primary);
-}
-
-.actions-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: var(--spacing-lg);
-}
-
-.action-card {
-  background: var(--bg-primary);
-  border-radius: var(--radius-xl);
-  padding: var(--spacing-xl);
-  text-align: center;
-  color: inherit;
-  box-shadow: var(--shadow-md);
-  border: 2px solid transparent;
-  cursor: pointer;
-  transition: all var(--transition-slow);
-}
-
-.action-card:hover {
-  border-color: var(--color-warning);
-  transform: translateY(-2px);
-  text-decoration: none;
-  color: inherit;
-}
-
-.action-icon {
-  font-size: var(--font-size-3xl);
-  margin-bottom: var(--spacing-md);
-}
-
-.action-card h4 {
-  margin: 0 0 var(--spacing-sm) 0;
-  color: var(--text-primary);
-}
-
-.action-card p {
-  margin: 0;
-  color: var(--text-secondary);
   font-size: var(--font-size-sm);
 }
 
-.lobby-options {
-  display: grid;
-  gap: var(--spacing-xl);
+.room-stat-grid {
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-lg);
 }
 
-.lobby-section {
+.room-stat-grid > span {
+  flex: 1;
+  padding: var(--spacing-sm);
+  border-radius: var(--radius-md);
   background: var(--bg-tertiary);
-  padding: var(--spacing-lg);
-  border-radius: var(--radius-lg);
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
 }
 
-.lobby-section h4 {
-  margin: 0 0 var(--spacing-md) 0;
-  color: var(--text-primary);
-}
-
-.form-group {
-  margin-bottom: var(--spacing-md);
-}
-
-.form-group label {
+.room-stat-grid strong {
   display: block;
+  color: var(--text-primary);
+  font-size: var(--font-size-lg);
+}
+
+.open-room {
+  justify-content: space-between;
+  margin-top: auto;
+  padding-top: var(--spacing-lg);
+  color: var(--color-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+.room-card-skeleton {
+  border-color: transparent;
+  background: linear-gradient(90deg, #edf2ef 25%, #f8faf9 50%, #edf2ef 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+  cursor: default;
+}
+
+.empty-state {
+  padding: var(--spacing-2xl) var(--spacing-lg);
+  border: 1px dashed var(--border-medium);
+  border-radius: var(--radius-xl);
+  background: rgba(255, 255, 255, 0.64);
+  text-align: center;
+}
+
+.empty-state h3 {
   margin-bottom: var(--spacing-sm);
-  font-weight: var(--font-weight-medium);
+}
+
+.empty-state p {
+  max-width: 520px;
+  margin: 0 auto var(--spacing-lg);
+}
+
+.empty-icon {
+  display: grid;
+  width: 56px;
+  height: 56px;
+  margin: 0 auto var(--spacing-md);
+  place-items: center;
+  border-radius: 50%;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  font-size: var(--font-size-2xl);
+}
+
+.empty-actions {
+  display: flex;
+  justify-content: center;
+  gap: var(--spacing-sm);
+}
+
+.lobby-modal {
+  max-width: 560px;
+}
+
+.lobby-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin: var(--spacing-md) var(--spacing-lg) 0;
+  padding: var(--spacing-xs);
+  border-radius: var(--radius-md);
+  background: var(--bg-tertiary);
+}
+
+.lobby-tabs button {
+  padding: var(--spacing-sm);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+}
+
+.lobby-tabs button.active {
+  background: var(--bg-primary);
+  box-shadow: var(--shadow-sm);
+  color: var(--color-primary);
+}
+
+.field-hint {
+  display: block;
+  margin-top: var(--spacing-xs);
   color: var(--text-muted);
 }
 
-.form-group input[type='text'] {
-  width: 100%;
+.visibility-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-sm);
+}
+
+.visibility-options label {
+  display: flex;
   padding: var(--spacing-md);
   border: 1px solid var(--border-medium);
   border-radius: var(--radius-md);
-  box-sizing: border-box;
-  font-size: var(--font-size-lg);
-  background: var(--bg-primary);
-}
-
-.radio-group {
-  display: flex;
-  gap: var(--spacing-md);
-  border: 1px solid var(--border-medium);
-  border-radius: var(--radius-md);
-  padding: var(--spacing-xs);
-}
-
-.radio-group label {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--spacing-sm);
-  border-radius: var(--radius-md);
   cursor: pointer;
-  transition:
-    background-color var(--transition-fast),
-    color var(--transition-fast);
 }
 
-.radio-group input[type='radio'] {
-  display: none;
+.visibility-options label.selected {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
 }
 
-.radio-group input[type='radio']:checked + span {
-  color: white;
+.visibility-options input {
+  margin-right: var(--spacing-sm);
 }
 
-.radio-group label:has(input[value='false']:checked) {
-  background-color: var(--color-secondary);
+.visibility-options span,
+.visibility-options small {
+  display: block;
 }
 
-.radio-group label:has(input[value='true']:checked) {
-  background-color: var(--color-success);
+.visibility-options small {
+  margin-top: var(--spacing-xs);
+  color: var(--text-muted);
 }
 
 .room-code-input {
   text-align: center;
-  font-size: var(--font-size-lg);
-  letter-spacing: 0.5rem;
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-2xl);
+  letter-spacing: 0.35em;
 }
 
-.notification {
-  position: fixed;
-  top: var(--spacing-md);
-  right: var(--spacing-md);
-  padding: var(--spacing-md) var(--spacing-lg);
-  border-radius: var(--radius-md);
-  color: white;
-  font-weight: var(--font-weight-semibold);
-  z-index: 1000;
+.submit-button {
+  width: 100%;
 }
 
-.notification.success {
-  background: var(--color-success);
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
 }
 
-.notification.error {
-  background: var(--color-danger);
+@media (max-width: 640px) {
+  .dashboard {
+    gap: var(--spacing-xl);
+  }
+
+  .dashboard-hero,
+  .section-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .dashboard-hero {
+    padding: var(--spacing-lg);
+  }
+
+  .dashboard-hero .btn {
+    width: 100%;
+  }
+
+  .section-heading {
+    gap: var(--spacing-sm);
+  }
+
+  .text-button {
+    align-self: flex-start;
+    padding: 0;
+  }
+
+  .visibility-options,
+  .empty-actions {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+  }
 }
 </style>

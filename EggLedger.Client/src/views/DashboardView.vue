@@ -1,13 +1,7 @@
 <template>
   <div class="dashboard-view">
-    <!-- Navigation Header -->
     <NavigationHeader />
-
-    <!-- Current Room Indicator -->
-    <RoomIndicator />
-
-    <!-- Dashboard Content -->
-    <main class="main-content">
+    <main class="page-shell">
       <DashboardComponent @room-selected="handleRoomSelected" />
     </main>
   </div>
@@ -18,7 +12,6 @@ import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.store'
 import NavigationHeader from '@/components/common/NavigationHeader.vue'
-import RoomIndicator from '@/components/room/RoomIndicator.vue'
 import DashboardComponent from '@/components/dashboard/DashboardComponent.vue'
 
 const router = useRouter()
@@ -38,12 +31,5 @@ const handleRoomSelected = (roomCode) => {
 <style scoped>
 .dashboard-view {
   min-height: 100vh;
-  background: var(--bg-secondary);
-}
-
-.main-content {
-  max-width: var(--container-max-width);
-  margin: 0 auto;
-  padding: var(--spacing-xl);
 }
 </style>

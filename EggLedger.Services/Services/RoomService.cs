@@ -227,9 +227,15 @@ public class RoomService : IRoomService
                     IsOpen = ur.Room.IsPublic,
                     AdminUserId = ur.IsAdmin ? userId : null,
                     CreateAt = ur.Room.CreatedAt,
-                    ContainerCount = _context.Containers.Count(c => c.RoomId == ur.Room.RoomId && c.Status != ContainerStatus.Archived),
+                    ContainerCount = _context.Containers.Count(c =>
+                        c.RoomId == ur.Room.RoomId &&
+                        c.Status == ContainerStatus.Available &&
+                        c.RemainingQuantity > 0),
                     TotalEggs = _context.Containers
-                        .Where(c => c.RoomId == ur.Room.RoomId && c.Status != ContainerStatus.Archived)
+                        .Where(c =>
+                            c.RoomId == ur.Room.RoomId &&
+                            c.Status == ContainerStatus.Available &&
+                            c.RemainingQuantity > 0)
                         .Sum(c => c.RemainingQuantity),
                     MemberCount = _context.UserRooms.Count(ur2 => ur2.RoomId == ur.Room.RoomId)
                 })
@@ -266,9 +272,15 @@ public class RoomService : IRoomService
                     IsOpen = r.IsPublic,
                     AdminUserId = r.UserRooms.Where(ur => ur.IsAdmin).Select(ur => ur.UserId).FirstOrDefault(),
                     CreateAt = r.CreatedAt,
-                    ContainerCount = _context.Containers.Count(c => c.RoomId == r.RoomId && c.Status != ContainerStatus.Archived),
+                    ContainerCount = _context.Containers.Count(c =>
+                        c.RoomId == r.RoomId &&
+                        c.Status == ContainerStatus.Available &&
+                        c.RemainingQuantity > 0),
                     TotalEggs = _context.Containers
-                        .Where(c => c.RoomId == r.RoomId && c.Status != ContainerStatus.Archived)
+                        .Where(c =>
+                            c.RoomId == r.RoomId &&
+                            c.Status == ContainerStatus.Available &&
+                            c.RemainingQuantity > 0)
                         .Sum(c => c.RemainingQuantity),
                     MemberCount = _context.UserRooms.Count(ur2 => ur2.RoomId == r.RoomId)
                 })

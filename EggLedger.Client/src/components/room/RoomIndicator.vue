@@ -1,11 +1,11 @@
 <template>
   <div class="room-indicator" v-if="selectedRoom">
-    <span
-      >Current Room: <strong>{{ selectedRoom.roomName }}</strong> ({{
-        selectedRoom.roomCode
-      }})</span
-    >
-    <button @click="switchRoom" class="btn btn-warning btn-sm">Switch Room</button>
+    <div>
+      <span class="indicator-label">Current room</span>
+      <strong>{{ selectedRoom.roomName }}</strong>
+      <span class="room-code">{{ selectedRoom.roomCode }}</span>
+    </div>
+    <button @click="switchRoom" class="switch-button" type="button">Switch room</button>
   </div>
 </template>
 
@@ -36,12 +36,46 @@ const switchRoom = () => {
 
 <style scoped>
 .room-indicator {
-  background: var(--color-primary-light);
-  padding: var(--spacing-sm) var(--spacing-xl);
+  width: min(100% - 2rem, var(--container-max-width));
+  margin: var(--spacing-md) auto 0;
+  padding: var(--spacing-sm) var(--spacing-md);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  max-width: var(--container-max-width);
-  margin: 0 auto;
+  gap: var(--spacing-md);
+  background: var(--color-primary-light);
+  border: 1px solid rgba(23, 107, 82, 0.14);
+  border-radius: var(--radius-lg);
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.indicator-label {
+  margin-right: var(--spacing-sm);
+}
+
+.room-code {
+  margin-left: var(--spacing-sm);
+  color: var(--color-primary);
+  font-family: var(--font-family-mono);
+}
+
+.switch-button {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border: 0;
+  background: transparent;
+  color: var(--color-primary);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+}
+
+@media (max-width: 520px) {
+  .room-indicator {
+    width: min(100% - 1.25rem, var(--container-max-width));
+  }
+
+  .indicator-label {
+    display: none;
+  }
 }
 </style>
