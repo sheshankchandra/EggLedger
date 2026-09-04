@@ -128,6 +128,36 @@ public class UserController : ControllerBase
         }
     }
 
+    // POST: egg-ledger-api/user/{id}/change-password
+    // Self-only (not admin-on-behalf-of): requires knowledge of the current password.
+    [HttpPost("{id}/change-password")]
+    public async Task<IActionResult> ChangePassword(Guid id, [FromBody] ChangePasswordDto dto, CancellationToken cancellationToken)
+    {
+        var callerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!Guid.TryParse(callerId, out var parsedId) || parsedId != id)
+            return Forbid();
+
+        try
+        {
+            var result = await _userService.ChangePasswordAsync(id, dto, cancellationToken);
+            if (result.IsSuccess)
+                return Ok(new { message = "Password changed successfully" });
+            if (result.Errors.Any(e => e.Message == "User not found"))
+                return NotFound();
+            return BadRequest(result.Errors.Select(e => e.Message));
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("Request was canceled by the client for ChangePassword, id: {Id}", id);
+            return StatusCode(499, "Client closed request.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unhandled exception in ChangePassword for id: {Id}", id);
+            return StatusCode(500, "An unexpected error occurred.");
+        }
+    }
+
     // DELETE: egg-ledger-api/user/{id}
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteUser(Guid id, CancellationToken cancellationToken)

@@ -47,34 +47,14 @@
       </EmptyState>
 
       <div v-else class="rooms-grid">
-        <button
+        <RoomCard
           v-for="room in rooms"
           :key="room.roomId"
-          class="room-card"
-          type="button"
-          @click="selectRoom(room.roomCode)"
-        >
-          <span class="room-card-top">
-            <span class="room-avatar" aria-hidden="true">{{ roomInitials(room.roomName) }}</span>
-            <span class="room-code">Code {{ room.roomCode }}</span>
-          </span>
-          <span class="room-name">{{ room.roomName }}</span>
-          <span class="room-meta">
-            <span>{{ room.memberCount || 0 }} members</span>
-            <span>{{ formatDate(room.createdAt) }}</span>
-          </span>
-          <span class="room-stat-grid">
-            <span>
-              <strong>{{ room.totalEggs || 0 }}</strong>
-              {{ resource.plural }} available
-            </span>
-            <span>
-              <strong>{{ room.containerCount || 0 }}</strong>
-              active {{ resource.inventoryPlural }}
-            </span>
-          </span>
-          <span class="open-room">Open room <span aria-hidden="true">→</span></span>
-        </button>
+          :room="room"
+          :resource="resource"
+          :date-label="formatDate(room.createdAt)"
+          @select="selectRoom"
+        />
       </div>
     </section>
 
@@ -193,6 +173,7 @@ import Modal from '@/components/common/BaseModal.vue'
 import LoadingSkeleton from '@/components/common/LoadingSkeleton.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import Toast from '@/components/common/ToastNotification.vue'
+import RoomCard from '@/components/common/RoomCard.vue'
 
 const emit = defineEmits(['room-selected'])
 const authStore = useAuthStore()
@@ -249,13 +230,6 @@ const closeLobby = () => {
 }
 
 const selectRoom = (roomCode) => emit('room-selected', roomCode)
-const roomInitials = (name) =>
-  (name || 'Room')
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((word) => word[0])
-    .join('')
-    .toUpperCase()
 
 const formatDate = (dateString) => {
   if (!dateString) return 'Recently created'
@@ -392,100 +366,6 @@ const handleJoinRoom = async () => {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 290px), 1fr));
   gap: var(--spacing-lg);
-}
-
-.room-card {
-  display: flex;
-  min-height: 260px;
-  flex-direction: column;
-  padding: var(--spacing-lg);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-xl);
-  background: var(--bg-primary);
-  box-shadow: var(--shadow-sm);
-  color: var(--text-primary);
-  text-align: left;
-  cursor: pointer;
-  transition:
-    border-color var(--transition-normal),
-    box-shadow var(--transition-normal),
-    transform var(--transition-normal);
-}
-
-.room-card:hover {
-  border-color: rgba(23, 107, 82, 0.4);
-  box-shadow: var(--shadow-md);
-  transform: translateY(-3px);
-}
-
-.room-card-top,
-.room-meta,
-.room-stat-grid,
-.open-room {
-  display: flex;
-  align-items: center;
-}
-
-.room-card-top {
-  justify-content: space-between;
-}
-
-.room-avatar {
-  display: grid;
-  width: 44px;
-  height: 44px;
-  place-items: center;
-  border-radius: var(--radius-lg);
-  background: var(--color-primary-light);
-  color: var(--color-primary);
-  font-weight: var(--font-weight-bold);
-}
-
-.room-code {
-  color: var(--text-muted);
-  font-family: var(--font-family-mono);
-  font-size: var(--font-size-xs);
-}
-
-.room-name {
-  margin-top: var(--spacing-lg);
-  font-size: var(--font-size-xl);
-  font-weight: var(--font-weight-bold);
-}
-
-.room-meta {
-  gap: var(--spacing-md);
-  margin-top: var(--spacing-xs);
-  color: var(--text-muted);
-  font-size: var(--font-size-sm);
-}
-
-.room-stat-grid {
-  gap: var(--spacing-sm);
-  margin-top: var(--spacing-lg);
-}
-
-.room-stat-grid > span {
-  flex: 1;
-  padding: var(--spacing-sm);
-  border-radius: var(--radius-md);
-  background: var(--bg-tertiary);
-  color: var(--text-secondary);
-  font-size: var(--font-size-xs);
-}
-
-.room-stat-grid strong {
-  display: block;
-  color: var(--text-primary);
-  font-size: var(--font-size-lg);
-}
-
-.open-room {
-  justify-content: space-between;
-  margin-top: auto;
-  padding-top: var(--spacing-lg);
-  color: var(--color-primary);
-  font-weight: var(--font-weight-semibold);
 }
 
 .lobby-modal {

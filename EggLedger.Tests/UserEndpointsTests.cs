@@ -97,4 +97,69 @@ public class UserEndpointsTests : IClassFixture<EggLedgerWebApplicationFactory>
 
         Assert.Equal(0, role); // UserRoles.User
     }
+
+    [Fact]
+    public async Task ChangePassword_AsSelf_WithCorrectCurrentPassword_AllowsLoginWithNewPassword()
+    {
+        var client = _factory.CreateClient();
+        var user = await EggLedgerTestHelpers.RegisterAsync(client);
+
+        var request = new HttpRequestMessage(HttpMethod.Post, $"/egg-ledger-api/user/{user.UserId}/change-password")
+            .WithAuth(user.AccessToken);
+        request.Content = JsonContent.Create(new { currentPassword = "Password123!", newPassword = "NewPassword456!" });
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var loginResponse = await client.PostAsJsonAsync("/egg-ledger-api/auth/login", new { email = user.Email, password = "NewPassword456!" });
+        Assert.Equal(HttpStatusCode.OK, loginResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task ChangePassword_WithWrongCurrentPassword_ReturnsBadRequestAndLeavesPasswordUnchanged()
+    {
+        var client = _factory.CreateClient();
+        var user = await EggLedgerTestHelpers.RegisterAsync(client);
+
+        var request = new HttpRequestMessage(HttpMethod.Post, $"/egg-ledger-api/user/{user.UserId}/change-password")
+            .WithAuth(user.AccessToken);
+        request.Content = JsonContent.Create(new { currentPassword = "WrongPassword!", newPassword = "NewPassword456!" });
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var loginResponse = await client.PostAsJsonAsync("/egg-ledger-api/auth/login", new { email = user.Email, password = "Password123!" });
+        Assert.Equal(HttpStatusCode.OK, loginResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task ChangePassword_AsAnotherUser_ReturnsForbidden()
+    {
+        // Unlike profile GET/PUT, changing a password is self-only - even an Admin should not be
+        // able to change it on someone else's behalf without knowing their current password.
+        var client = _factory.CreateClient();
+        var userA = await EggLedgerTestHelpers.RegisterAsync(client);
+        var userB = await EggLedgerTestHelpers.RegisterAsync(client);
+
+        var request = new HttpRequestMessage(HttpMethod.Post, $"/egg-ledger-api/user/{userB.UserId}/change-password")
+            .WithAuth(userA.AccessToken);
+        request.Content = JsonContent.Create(new { currentPassword = "Password123!", newPassword = "NewPassword456!" });
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ChangePassword_NewPasswordTooShort_ReturnsBadRequest()
+    {
+        var client = _factory.CreateClient();
+        var user = await EggLedgerTestHelpers.RegisterAsync(client);
+
+        var request = new HttpRequestMessage(HttpMethod.Post, $"/egg-ledger-api/user/{user.UserId}/change-password")
+            .WithAuth(user.AccessToken);
+        request.Content = JsonContent.Create(new { currentPassword = "Password123!", newPassword = "abc" });
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
 }

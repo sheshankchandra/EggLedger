@@ -147,6 +147,51 @@ public class UserService : IUserService
         }, "An error occurred while updating the user.");
     }
 
+    public async Task<Result> ChangePasswordAsync(Guid id, ChangePasswordDto dto, CancellationToken cancellationToken = default)
+    {
+        return await _logger.ExecuteAsync(async () =>
+        {
+            var user = await _context.Users.FindAsync(new object[] { id }, cancellationToken);
+            if (user == null)
+            {
+                _logger.LogWarning("Attempted to change password for non-existent user: {UserId}", id);
+                return Result.Fail("User not found");
+            }
+
+            var userPassword = await _context.UserPasswords
+                .FirstOrDefaultAsync(up => up.UserId == id, cancellationToken);
+
+            if (userPassword == null)
+            {
+                _logger.LogWarning("Attempted to change password for Google-linked account: {UserId}", id);
+                return Result.Fail("This account uses Google Sign-In and has no password to change.");
+            }
+
+            PasswordVerificationResult verification;
+            try
+            {
+                verification = _passwordHasher.VerifyHashedPassword(user, userPassword.PasswordHash, dto.CurrentPassword);
+            }
+            catch (FormatException ex)
+            {
+                _logger.LogError(ex, "Password verification failed while changing password for user {UserId}", id);
+                return Result.Fail("Error occurred while verifying. Please try again later");
+            }
+
+            if (verification == PasswordVerificationResult.Failed)
+            {
+                _logger.LogWarning("Password change failed for user {UserId}: current password incorrect.", id);
+                return Result.Fail("Current password is incorrect");
+            }
+
+            userPassword.PasswordHash = _passwordHasher.HashPassword(user, dto.NewPassword);
+            await _context.SaveChangesAsync(cancellationToken);
+
+            _logger.LogInformation("Password changed successfully for user {UserId}", id);
+            return Result.Ok();
+        }, "An error occurred while changing the password.");
+    }
+
     public async Task<Result> DeleteUserAsync(Guid id, CancellationToken cancellationToken = default)
     {
         return await _logger.ExecuteAsync(async () =>

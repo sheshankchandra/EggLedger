@@ -1,176 +1,208 @@
 <template>
-  <div class="profile-container">
-    <div class="profile-header">
-      <h2>User Profile</h2>
-      <p>Manage your account settings and room memberships</p>
-    </div>
+  <div class="profile-workspace">
+    <header class="profile-header">
+      <div class="profile-identity">
+        <span class="profile-avatar" aria-hidden="true">{{ initials }}</span>
+        <div>
+          <p class="eyebrow">Your account</p>
+          <h1>{{ user?.name || 'Profile' }}</h1>
+          <p class="profile-email">{{ user?.email }}</p>
+        </div>
+      </div>
+      <span v-if="user" class="role-badge">{{ getRoleName(user.role) }}</span>
+    </header>
 
-    <div v-if="loading" class="card text-center p-5">
-      <p class="text-secondary">Loading profile...</p>
-    </div>
+    <LoadingSkeleton v-if="loading" :count="1" height="140px" aria-label="Loading profile" />
     <div v-if="error" class="alert alert-error">{{ error }}</div>
 
-    <div v-if="user" class="profile-content">
-      <!-- User Information -->
-      <div class="profile-section">
-        <h3>Personal Information</h3>
-        <div class="info-grid">
-          <div class="info-item">
-            <label class="form-label">Full Name</label>
-            <span>{{ user.name }}</span>
-          </div>
-          <div class="info-item">
-            <label class="form-label">Email</label>
-            <span>{{ user.email }}</span>
-          </div>
-          <div class="info-item">
-            <label class="form-label">User ID</label>
-            <span class="user-id">{{ user.userId }}</span>
-          </div>
-          <div class="info-item">
-            <label class="form-label">Role</label>
-            <span>{{ getRoleName(user.role) }}</span>
-          </div>
+    <template v-if="user">
+      <!-- Statistics -->
+      <section class="summary-grid" aria-label="Your stats">
+        <div class="summary-card summary-card-primary">
+          <span>Rooms joined</span>
+          <strong>{{ roomStore.userRooms.length }}</strong>
+          <small>Shared spaces you're part of</small>
         </div>
-      </div>
+        <div class="summary-card">
+          <span>Active {{ resource.inventoryPlural }}</span>
+          <strong>{{ totalContainers }}</strong>
+          <small>Across every room</small>
+        </div>
+        <div class="summary-card">
+          <span>{{ resource.displayName }} tracked</span>
+          <strong>{{ totalEggs }}</strong>
+          <small>Total {{ resource.plural }} you've stocked</small>
+        </div>
+        <div class="summary-card">
+          <span>Rooms you admin</span>
+          <strong>{{ adminRooms }}</strong>
+          <small>Owner-level access</small>
+        </div>
+      </section>
 
       <!-- Room Memberships -->
-      <div class="profile-section">
-        <h3>Room Memberships</h3>
-        <div v-if="roomStore.userRooms.length === 0" class="card text-center p-5">
-          <p class="text-secondary">You're not a member of any rooms yet.</p>
-        </div>
-        <div v-else class="rooms-list">
-          <div v-for="room in roomStore.userRooms" :key="room.roomId" class="room-item">
-            <div class="room-info">
-              <h4>{{ room.roomName }}</h4>
-              <span class="room-code">{{ room.roomCode }}</span>
-            </div>
-            <div class="room-details">
-              <span class="room-stat">🥚 {{ room.totalEggs || 0 }} eggs</span>
-              <span class="room-stat">📦 {{ room.containerCount || 0 }} containers</span>
-              <span class="room-stat">👥 {{ room.memberCount || 0 }} members</span>
-            </div>
-            <div class="room-meta">
-              <span class="join-date">Joined: {{ formatDate(room.joinedAt) }}</span>
-              <span v-if="room.adminUserId === user.userId" class="admin-badge">Admin</span>
-            </div>
+      <section class="profile-section" aria-labelledby="rooms-heading">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Memberships</p>
+            <h2 id="rooms-heading">Your rooms</h2>
           </div>
+          <button
+            type="button"
+            class="btn btn-secondary btn-sm"
+            @click="refreshRooms"
+            :disabled="refreshing"
+          >
+            {{ refreshing ? 'Refreshing…' : 'Refresh' }}
+          </button>
         </div>
-      </div>
+
+        <EmptyState
+          v-if="roomStore.userRooms.length === 0"
+          icon="🏠"
+          title="No rooms yet"
+          description="Join or create a room from the dashboard to start tracking shared inventory."
+        >
+          <template #actions>
+            <router-link to="/" class="btn btn-primary">Go to dashboard</router-link>
+          </template>
+        </EmptyState>
+
+        <div v-else class="rooms-grid">
+          <RoomCard
+            v-for="room in roomStore.userRooms"
+            :key="room.roomId"
+            :room="room"
+            :resource="resource"
+            :is-admin="room.adminUserId === user.userId"
+            :date-label="`Joined ${formatDate(room.joinedAt)}`"
+            @select="goToRoom"
+          />
+        </div>
+      </section>
 
       <!-- My Containers -->
-      <div class="profile-section">
-        <h3>My Containers {{ selectedRoom ? `in ${selectedRoom.roomName}` : '' }}</h3>
+      <section class="profile-section" aria-labelledby="containers-heading">
         <div v-if="!selectedRoom" class="card text-center p-5">
-          <p class="text-secondary mb-4">No room selected.</p>
-          <router-link to="/" class="btn btn-primary">Select Room</router-link>
-        </div>
-        <div v-else-if="loadingContainers" class="card text-center p-5">
-          <p class="text-secondary">Loading...</p>
-        </div>
-        <div v-else-if="userContainers.length === 0" class="card text-center p-5">
-          <p class="text-secondary">
-            No containers found. Stock some eggs to create your first container!
+          <p class="text-secondary mb-4">
+            Select a room to see your {{ resource.inventoryPlural }} there.
           </p>
+          <router-link to="/" class="btn btn-primary">Select a room</router-link>
         </div>
-        <div v-else class="containers-list">
-          <div
-            v-for="container in userContainers"
-            :key="container.containerId"
-            class="container-item"
-          >
-            <div class="container-header">
-              <h4>{{ container.containerName }}</h4>
-            </div>
-            <div class="container-stats">
-              <span class="stat-value"
-                >{{ container.remainingQuantity }}/{{ container.totalQuantity }} eggs</span
-              >
-              <span class="stat-value">{{ formatDate(container.purchaseDateTime) }}</span>
-            </div>
-            <div class="container-actions">
-              <button @click="viewContainerDetails(container)" class="btn btn-info btn-sm">
-                View Details
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+        <InventoryGrid
+          v-else
+          :containers="userContainers"
+          :loading="loadingContainers"
+          :resource="resource"
+          :current-user-id="user.userId"
+          :heading="`My ${resource.inventoryPlural} in ${selectedRoom.roomName}`"
+          empty-title="Nothing stocked here yet"
+          :empty-description="`Purchases you make in ${selectedRoom.roomName} will show up here.`"
+          @select="viewContainerDetails"
+        />
+      </section>
 
       <!-- Account Actions -->
-      <div class="profile-section">
-        <h3>Account Actions</h3>
+      <section class="profile-section" aria-labelledby="account-heading">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Account</p>
+            <h2 id="account-heading">Settings</h2>
+          </div>
+        </div>
         <div class="actions-grid">
-          <button @click="refreshProfile" :disabled="refreshing" class="btn btn-secondary">
-            {{ refreshing ? 'Refreshing...' : 'Refresh Profile' }}
+          <button
+            type="button"
+            @click="refreshProfile"
+            :disabled="refreshing"
+            class="btn btn-secondary"
+          >
+            {{ refreshing ? 'Refreshing…' : 'Refresh profile' }}
           </button>
-          <button @click="refreshRooms" :disabled="refreshing" class="btn btn-secondary">
-            {{ refreshing ? 'Refreshing...' : 'Refresh Rooms' }}
-          </button>
-          <button @click="showChangePassword = true" class="btn btn-primary">
-            Change Password
+          <button type="button" @click="openChangePassword" class="btn btn-primary">
+            Change password
           </button>
         </div>
-      </div>
-
-      <!-- Statistics -->
-      <div class="profile-section">
-        <h3>Your Statistics</h3>
-        <div class="stats-grid">
-          <div class="stat-card">
-            <div class="stat-number">{{ roomStore.userRooms.length }}</div>
-            <div class="stat-label">Rooms Joined</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-number">{{ totalContainers }}</div>
-            <div class="stat-label">Total Containers</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-number">{{ totalEggs }}</div>
-            <div class="stat-label">Total Eggs</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-number">{{ adminRooms }}</div>
-            <div class="stat-label">Admin of Rooms</div>
-          </div>
-        </div>
-      </div>
-    </div>
+      </section>
+    </template>
 
     <!-- Change Password Modal -->
-    <div v-if="showChangePassword" class="modal">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h3 class="modal-title">Change Password</h3>
-          <button @click="showChangePassword = false" class="close-btn">×</button>
+    <Modal v-if="showChangePassword" title="Change password" @close="closeChangePassword">
+      <form @submit.prevent="handleChangePassword" novalidate>
+        <div class="form-group">
+          <label for="current-password" class="form-label">Current password</label>
+          <input
+            id="current-password"
+            v-model="passwordForm.current"
+            type="password"
+            class="form-input"
+            :class="{ 'is-invalid': passwordTouched.current && currentPasswordError }"
+            :aria-invalid="passwordTouched.current && !!currentPasswordError"
+            aria-describedby="current-password-feedback"
+            required
+            :disabled="changingPassword"
+            @blur="passwordTouched.current = true"
+          />
+          <small
+            v-if="passwordTouched.current && currentPasswordError"
+            id="current-password-feedback"
+            class="form-feedback is-invalid"
+          >
+            {{ currentPasswordError }}
+          </small>
         </div>
-        <div class="modal-body">
-          <form @submit.prevent="handleChangePassword">
-            <div class="form-group">
-              <label class="form-label">Current Password</label>
-              <input v-model="passwordForm.current" type="password" class="form-input" required />
-            </div>
-            <div class="form-group">
-              <label class="form-label">New Password</label>
-              <input v-model="passwordForm.new" type="password" class="form-input" required />
-            </div>
-            <div class="form-group">
-              <label class="form-label">Confirm New Password</label>
-              <input v-model="passwordForm.confirm" type="password" class="form-input" required />
-            </div>
-            <div class="modal-footer">
-              <button type="button" @click="showChangePassword = false" class="btn btn-secondary">
-                Cancel
-              </button>
-              <button type="submit" :disabled="changingPassword" class="btn btn-primary">
-                {{ changingPassword ? 'Changing...' : 'Change Password' }}
-              </button>
-            </div>
-          </form>
+        <div class="form-group">
+          <label for="new-password" class="form-label">New password</label>
+          <input
+            id="new-password"
+            v-model="passwordForm.new"
+            type="password"
+            class="form-input"
+            :class="{ 'is-invalid': passwordTouched.new && newPasswordError }"
+            :aria-invalid="passwordTouched.new && !!newPasswordError"
+            aria-describedby="new-password-feedback"
+            required
+            :disabled="changingPassword"
+            @blur="passwordTouched.new = true"
+          />
+          <small
+            v-if="passwordTouched.new && newPasswordError"
+            id="new-password-feedback"
+            class="form-feedback is-invalid"
+          >
+            {{ newPasswordError }}
+          </small>
         </div>
-      </div>
-    </div>
+        <div class="form-group">
+          <label for="confirm-password" class="form-label">Confirm new password</label>
+          <input
+            id="confirm-password"
+            v-model="passwordForm.confirm"
+            type="password"
+            class="form-input"
+            :class="{ 'is-invalid': passwordTouched.confirm && confirmPasswordError }"
+            :aria-invalid="passwordTouched.confirm && !!confirmPasswordError"
+            aria-describedby="confirm-password-feedback"
+            required
+            :disabled="changingPassword"
+            @blur="passwordTouched.confirm = true"
+          />
+          <small
+            v-if="passwordTouched.confirm && confirmPasswordError"
+            id="confirm-password-feedback"
+            class="form-feedback is-invalid"
+          >
+            {{ confirmPasswordError }}
+          </small>
+        </div>
+
+        <div v-if="passwordFormError" class="alert alert-error">{{ passwordFormError }}</div>
+
+        <button type="submit" :disabled="changingPassword" class="btn btn-primary submit-button">
+          {{ changingPassword ? 'Changing…' : 'Change password' }}
+        </button>
+      </form>
+    </Modal>
 
     <!-- Notification -->
     <Toast :notification="notification" />
@@ -184,7 +216,15 @@ import { useAuthStore } from '@/stores/auth.store'
 import { useRoomStore } from '@/stores/room.store'
 import { useInventoryStore } from '@/stores/inventory.store'
 import { useNotification } from '@/composables/useNotification'
+import { errorMessage, isCanceled } from '@/utils/httpError'
+import { resourceConfig as resource } from '@/config/resource.config'
+import userService from '@/services/user.service'
 import Toast from '@/components/common/ToastNotification.vue'
+import Modal from '@/components/common/BaseModal.vue'
+import EmptyState from '@/components/common/EmptyState.vue'
+import LoadingSkeleton from '@/components/common/LoadingSkeleton.vue'
+import RoomCard from '@/components/common/RoomCard.vue'
+import InventoryGrid from '@/components/room/InventoryGrid.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -196,6 +236,7 @@ const error = ref(null)
 const refreshing = ref(false)
 const showChangePassword = ref(false)
 const changingPassword = ref(false)
+const passwordFormError = ref(null)
 const loadingContainers = ref(false)
 const userContainers = ref([])
 
@@ -204,9 +245,23 @@ const passwordForm = reactive({
   new: '',
   confirm: '',
 })
+const passwordTouched = reactive({
+  current: false,
+  new: false,
+  confirm: false,
+})
 
 const user = computed(() => authStore.getUser)
 const selectedRoom = computed(() => roomStore.selectedRoom)
+
+const initials = computed(() =>
+  (user.value?.name || 'You')
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((word) => word[0])
+    .join('')
+    .toUpperCase(),
+)
 
 const totalContainers = computed(() => {
   return roomStore.userRooms.reduce((total, room) => total + (room.containerCount || 0), 0)
@@ -219,6 +274,27 @@ const totalEggs = computed(() => {
 const adminRooms = computed(() => {
   return roomStore.userRooms.filter((room) => room.adminUserId === user.value?.userId).length
 })
+
+const currentPasswordError = computed(() => {
+  if (!passwordForm.current) return 'Current password is required'
+  return ''
+})
+
+const newPasswordError = computed(() => {
+  if (!passwordForm.new) return 'New password is required'
+  if (passwordForm.new.length < 6) return 'New password must be at least 6 characters'
+  return ''
+})
+
+const confirmPasswordError = computed(() => {
+  if (!passwordForm.confirm) return 'Please confirm your new password'
+  if (passwordForm.confirm !== passwordForm.new) return 'Passwords do not match'
+  return ''
+})
+
+const passwordFormValid = computed(
+  () => !currentPasswordError.value && !newPasswordError.value && !confirmPasswordError.value,
+)
 
 const getRoleName = (role) => {
   switch (role) {
@@ -268,30 +344,42 @@ const refreshRooms = async () => {
   }
 }
 
-const handleChangePassword = async () => {
-  if (passwordForm.new !== passwordForm.confirm) {
-    showNotification('New passwords do not match', 'error')
-    return
-  }
+const goToRoom = (roomCode) => {
+  roomStore.selectRoom(roomCode)
+  router.push('/room')
+}
 
-  if (passwordForm.new.length < 6) {
-    showNotification('New password must be at least 6 characters', 'error')
-    return
-  }
+const openChangePassword = () => {
+  passwordForm.current = ''
+  passwordForm.new = ''
+  passwordForm.confirm = ''
+  passwordTouched.current = false
+  passwordTouched.new = false
+  passwordTouched.confirm = false
+  passwordFormError.value = null
+  showChangePassword.value = true
+}
+
+const closeChangePassword = () => {
+  if (!changingPassword.value) showChangePassword.value = false
+}
+
+const handleChangePassword = async () => {
+  passwordTouched.current = true
+  passwordTouched.new = true
+  passwordTouched.confirm = true
+  passwordFormError.value = null
+
+  if (!passwordFormValid.value) return
 
   changingPassword.value = true
   try {
-    // You'll need to implement this in your auth service
-    // await authService.changePassword(passwordForm.current, passwordForm.new)
+    await userService.changePassword(user.value.userId, passwordForm.current, passwordForm.new)
     showNotification('Password changed successfully!')
     showChangePassword.value = false
-
-    // Reset form
-    passwordForm.current = ''
-    passwordForm.new = ''
-    passwordForm.confirm = ''
   } catch (err) {
-    showNotification('Failed to change password', 'error')
+    if (isCanceled(err)) return
+    passwordFormError.value = errorMessage(err, 'Failed to change password')
     console.error(err)
   } finally {
     changingPassword.value = false
@@ -308,9 +396,8 @@ const viewContainerDetails = (container) => {
       name: 'container-detail',
       params: { containerId: container.containerId },
     })
-  } catch (error) {
-    console.error('Error navigating to container details:', error)
-    console.log('Container object:', container)
+  } catch (err) {
+    console.error('Error navigating to container details:', err)
   }
 }
 
@@ -326,7 +413,7 @@ const fetchUserContainers = async () => {
     userContainers.value =
       (await inventoryStore.searchMyContainers(selectedRoom.value.roomCode, user.value.name)) || []
   } catch (err) {
-    if (err.name === 'AbortError') return
+    if (isCanceled(err)) return
     console.error('Error fetching containers:', err)
     showNotification('Failed to load containers', 'error')
   } finally {
@@ -361,323 +448,178 @@ watch(selectedRoom, async (newRoom, oldRoom) => {
 </script>
 
 <style scoped>
-.profile-container {
-  max-width: var(--container-max-width);
-  margin: 0 auto;
-  padding: var(--spacing-xl);
+.profile-workspace {
+  display: grid;
+  gap: var(--spacing-2xl);
 }
 
 .profile-header {
-  text-align: center;
-  margin-bottom: var(--spacing-xl);
-}
-
-.profile-header h2 {
-  margin: 0 0 var(--spacing-sm) 0;
-  color: var(--text-primary);
-}
-
-.profile-header p {
-  color: var(--text-secondary);
-  margin: 0;
-}
-
-.profile-content {
   display: flex;
-  flex-direction: column;
-  gap: var(--spacing-xl);
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-lg);
+  padding: var(--spacing-xl);
+  border-radius: var(--radius-2xl);
+  background: linear-gradient(145deg, var(--bg-primary), var(--bg-tertiary));
+  border: 1px solid var(--border-light);
+  box-shadow: var(--shadow-md);
+}
+
+.profile-identity {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-lg);
+}
+
+.profile-avatar {
+  display: grid;
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: var(--radius-xl);
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+}
+
+.profile-identity h1 {
+  margin: 0;
+  font-size: clamp(1.5rem, 4vw, 2.25rem);
+  letter-spacing: -0.03em;
+}
+
+.profile-email {
+  margin: var(--spacing-xs) 0 0;
+  color: var(--text-secondary);
+}
+
+.role-badge {
+  flex-shrink: 0;
+  padding: var(--spacing-xs) var(--spacing-md);
+  border-radius: 999px;
+  background: var(--color-primary);
+  color: var(--text-inverse);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--spacing-sm);
+}
+
+.summary-card {
+  min-width: 0;
+  padding: var(--spacing-md);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--bg-primary) 72%, transparent);
+}
+
+.summary-card > span,
+.summary-card small {
+  display: block;
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.summary-card strong {
+  display: block;
+  margin-block: var(--spacing-xs);
+  font-size: var(--font-size-2xl);
+}
+
+.summary-card-primary {
+  background: var(--color-primary);
+}
+
+.summary-card-primary span,
+.summary-card-primary small {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.summary-card-primary strong {
+  color: var(--text-inverse);
 }
 
 .profile-section {
-  background: var(--bg-primary);
   padding: var(--spacing-xl);
   border-radius: var(--radius-lg);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-light);
   box-shadow: var(--shadow-sm);
 }
 
-.profile-section h3 {
-  margin: 0 0 var(--spacing-lg) 0;
-  color: var(--text-primary);
-  border-bottom: 2px solid var(--border-light);
-  padding-bottom: var(--spacing-sm);
+.section-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-lg);
 }
 
-.info-grid {
+.section-heading h2 {
+  margin: 0;
+}
+
+.rooms-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: var(--spacing-md);
-}
-
-.info-item {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-xs);
-}
-
-.info-item label {
-  font-weight: var(--font-weight-semibold);
-  color: var(--text-muted);
-  font-size: var(--font-size-sm);
-}
-
-.info-item span {
-  color: var(--text-primary);
-  font-size: var(--font-size-base);
-}
-
-.user-id {
-  font-family: var(--font-family-mono);
-  background: var(--bg-tertiary);
-  padding: var(--spacing-xs) var(--spacing-sm);
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-sm) !important;
-}
-
-.rooms-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-md);
-}
-
-.room-item {
-  background: var(--bg-tertiary);
-  padding: var(--spacing-lg);
-  border-radius: var(--radius-lg);
-  border-left: 4px solid var(--color-primary);
-}
-
-.room-info {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--spacing-sm);
-}
-
-.room-info h4 {
-  margin: 0;
-  color: var(--text-primary);
-}
-
-.room-code {
-  background: var(--color-primary-light);
-  color: var(--color-secondary);
-  padding: var(--spacing-xs) var(--spacing-sm);
-  border-radius: var(--radius-md);
-  font-family: var(--font-family-mono);
-  font-size: var(--font-size-sm);
-}
-
-.room-details {
-  display: flex;
-  gap: var(--spacing-md);
-  margin-bottom: var(--spacing-sm);
-  flex-wrap: wrap;
-}
-
-.room-stat {
-  background: var(--bg-primary);
-  padding: var(--spacing-xs) var(--spacing-sm);
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-xs);
-  color: var(--text-muted);
-}
-
-.room-meta {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: var(--font-size-sm);
-  color: var(--text-secondary);
-}
-
-.admin-badge {
-  background: var(--color-warning);
-  color: var(--text-inverse);
-  padding: var(--spacing-xs) var(--spacing-sm);
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-semibold);
-}
-
-.containers-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-md);
-}
-
-.container-item {
-  background: var(--bg-tertiary);
-  padding: var(--spacing-lg);
-  border-radius: var(--radius-lg);
-  border-left: 4px solid var(--color-warning);
-  transition: all var(--transition-normal);
-}
-
-.container-item:hover {
-  background: var(--bg-secondary);
-  transform: translateY(-1px);
-}
-
-.container-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--spacing-md);
-}
-
-.container-header h4 {
-  margin: 0;
-  color: var(--text-primary);
-  font-size: var(--font-size-lg);
-}
-
-.container-stats {
-  display: flex;
-  gap: var(--spacing-md);
-  margin-bottom: var(--spacing-md);
-  flex-wrap: wrap;
-}
-
-.stat-value {
-  background: var(--bg-primary);
-  padding: var(--spacing-sm);
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-sm);
-  color: var(--text-primary);
-}
-
-.container-actions {
-  display: flex;
-  justify-content: flex-end;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 290px), 1fr));
+  gap: var(--spacing-lg);
 }
 
 .actions-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: var(--spacing-md);
 }
 
-.btn {
-  padding: var(--spacing-md) var(--spacing-md);
-  border: none;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  font-weight: var(--font-weight-medium);
-  transition: all var(--transition-normal);
-}
-
-.btn-primary {
-  background: var(--color-primary);
-  color: var(--text-inverse);
-}
-
-.btn-primary:hover {
-  background: var(--color-primary-dark);
-}
-
-.btn-secondary {
-  background: var(--color-secondary);
-  color: var(--text-inverse);
-}
-
-.btn-secondary:hover {
-  background: var(--color-secondary-dark);
-}
-
-.btn:disabled {
-  background: var(--color-gray-400);
-  cursor: not-allowed;
-}
-
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: var(--spacing-md);
-}
-
-.stat-card {
-  background: var(--bg-tertiary);
-  padding: var(--spacing-lg);
-  border-radius: var(--radius-lg);
-  text-align: center;
-}
-
-.stat-number {
-  font-size: var(--font-size-4xl);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-primary);
-  margin-bottom: var(--spacing-sm);
-}
-
-.stat-label {
-  color: var(--text-secondary);
-  font-size: var(--font-size-sm);
-}
-
-.form-group {
-  margin-bottom: var(--spacing-md);
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: var(--spacing-sm);
-  font-weight: var(--font-weight-medium);
-  color: var(--text-muted);
-}
-
-.form-group input {
+.submit-button {
   width: 100%;
-  padding: var(--spacing-md);
-  border: 1px solid var(--border-medium);
-  border-radius: var(--radius-md);
-  box-sizing: border-box;
+  margin-top: var(--spacing-sm);
 }
 
 @media (max-width: 768px) {
-  .profile-container {
-    padding: var(--spacing-md);
+  .profile-header {
+    align-items: stretch;
+    flex-direction: column;
   }
 
-  .profile-section {
-    padding: var(--spacing-lg);
+  .role-badge {
+    align-self: flex-start;
   }
 
-  .info-grid {
-    grid-template-columns: 1fr;
+  .summary-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .section-heading {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .actions-grid {
     grid-template-columns: 1fr;
   }
+}
 
-  .stats-grid {
-    grid-template-columns: repeat(2, 1fr);
+@media (max-width: 520px) {
+  .summary-grid {
+    grid-template-columns: 1fr;
   }
 
-  .room-info {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: var(--spacing-sm);
+  .summary-card {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
   }
 
-  .room-details {
-    flex-direction: column;
-    gap: var(--spacing-sm);
-  }
-
-  .container-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: var(--spacing-sm);
-  }
-
-  .container-stats {
-    flex-direction: column;
-    gap: var(--spacing-md);
-  }
-
-  .container-actions {
-    justify-content: flex-start;
+  .summary-card strong {
+    grid-row: span 2;
+    margin: 0;
   }
 }
 </style>

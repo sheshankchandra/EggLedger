@@ -3,114 +3,115 @@
     <NavigationHeader />
     <RoomIndicator />
 
-    <div class="container-detail-container">
-      <div class="container-header">
-        <div class="header-content">
-          <div class="container-title">
-            <h2>{{ containerInfo?.containerName || 'Container Details' }}</h2>
-            <div class="breadcrumb">
-              <router-link to="/profile">Profile</router-link>
-              <span class="separator">></span>
-              <span>Container Details</span>
-            </div>
+    <main class="page-shell detail-shell">
+      <header class="detail-header">
+        <div>
+          <div class="breadcrumb">
+            <router-link to="/profile">Profile</router-link>
+            <span aria-hidden="true">/</span>
+            <span>{{ resource.inventorySingular }} details</span>
           </div>
-          <button @click="goBack" class="btn btn-secondary">← Back to Profile</button>
+          <h1>{{ containerInfo?.containerName || `Untitled ${resource.inventorySingular}` }}</h1>
         </div>
-      </div>
+        <button type="button" @click="goBack" class="btn btn-secondary">← Back to profile</button>
+      </header>
 
-      <div v-if="loading" class="card text-center p-5">
-        <p class="text-secondary">Loading container details...</p>
-      </div>
+      <LoadingSkeleton v-if="loading" :count="1" height="160px" aria-label="Loading container" />
       <div v-if="error" class="alert alert-error">{{ error }}</div>
 
-      <!-- Show orders even if container info is not available -->
-      <div v-if="!loading && !error" class="container-content">
+      <template v-if="!loading && !error">
         <!-- Container Info Section - only show if container info is available -->
-        <div v-if="containerInfo" class="info-section">
-          <h3>Container Information</h3>
-          <div class="container-info-grid">
-            <div class="info-item">
-              <label>Container Name</label>
-              <span>{{ containerInfo.containerName }}</span>
-            </div>
-            <div class="info-item">
-              <label>Owner</label>
-              <span>{{ containerInfo.buyerName }}</span>
-            </div>
-            <div class="info-item">
-              <label>Container ID</label>
-              <span>{{ containerInfo.containerId }}</span>
-            </div>
-            <div class="info-item">
-              <label>Total Capacity</label>
-              <span>{{ containerInfo.totalQuantity || 0 }} eggs</span>
-            </div>
-            <div class="info-item">
-              <label>Current Stock</label>
-              <span>{{ containerInfo.remainingQuantity || 0 }} eggs</span>
-            </div>
-            <div class="info-item">
-              <label>Created Date</label>
-              <span>{{ formatDate(containerInfo.purchaseDateTime) }}</span>
-            </div>
+        <section v-if="containerInfo" class="summary-grid" aria-label="Container summary">
+          <div class="summary-card summary-card-primary">
+            <span>Current stock</span>
+            <strong>{{ containerInfo.remainingQuantity || 0 }}</strong>
+            <small>of {{ containerInfo.totalQuantity || 0 }} {{ resource.plural }}</small>
           </div>
-        </div>
+          <div class="summary-card">
+            <span>Owner</span>
+            <strong class="summary-text">{{ containerInfo.buyerName }}</strong>
+            <small>Purchased this {{ resource.inventorySingular }}</small>
+          </div>
+          <div class="summary-card">
+            <span>Purchased</span>
+            <strong class="summary-text">{{ formatDate(containerInfo.purchaseDateTime) }}</strong>
+            <small>Creation date</small>
+          </div>
+          <div class="summary-card">
+            <span>{{ resource.inventorySingular }} ID</span>
+            <strong class="summary-code" :title="containerInfo.containerId">
+              {{ containerInfo.containerId }}
+            </strong>
+            <small>Reference code</small>
+          </div>
+        </section>
 
-        <div class="orders-section">
-          <h3>Order History</h3>
-          <div v-if="loadingOrders" class="card text-center p-5">
-            <p class="text-secondary">Loading orders...</p>
+        <section class="orders-section" aria-labelledby="orders-heading">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Activity</p>
+              <h2 id="orders-heading">Order history</h2>
+            </div>
           </div>
-          <div v-else-if="orders.length === 0" class="card text-center p-5">
-            <p class="text-secondary">No orders found for this container.</p>
-          </div>
-          <div v-else class="orders-list">
-            <div v-for="order in orders" :key="order.orderId" class="order-item">
+
+          <LoadingSkeleton
+            v-if="loadingOrders"
+            :count="3"
+            height="110px"
+            aria-label="Loading orders"
+          />
+          <EmptyState
+            v-else-if="orders.length === 0"
+            :icon="resource.icon"
+            title="No orders yet"
+            :description="`Stock or usage updates for this ${resource.inventorySingular} will show up here.`"
+          />
+          <ul v-else class="orders-list">
+            <li v-for="order in orders" :key="order.orderId" class="order-item">
               <div class="order-header">
-                <div class="order-type" :class="getOrderTypeClass(order.orderType)">
+                <span class="order-type" :class="getOrderTypeClass(order.orderType)">
                   {{ getOrderTypeDisplay(order.orderType) }}
-                </div>
-                <div class="order-date">{{ formatDateTime(order.datestamp) }}</div>
+                </span>
+                <span class="order-date">{{ formatDateTime(order.datestamp) }}</span>
               </div>
 
               <div class="order-details">
                 <div class="order-info">
-                  <div class="order-name">{{ order.orderName }}</div>
-                  <div class="order-metrics">
-                    <span class="quantity">
-                      {{ getOrderTypeSign(order.orderType) }}{{ getContainerQuantity(order) }} eggs
-                    </span>
-                    <span v-if="order.amount > 0" class="amount"
-                      >₹{{ getContainerAmount(order).toFixed(2) }}</span
+                  <span class="order-name">{{ order.orderName }}</span>
+                  <span class="order-metrics">
+                    <b
+                      >{{ getOrderTypeSign(order.orderType) }}{{ getContainerQuantity(order) }}
+                      {{ resource.plural }}</b
                     >
-                  </div>
+                    <span v-if="order.amount > 0" class="amount">
+                      ₹{{ getContainerAmount(order).toFixed(2) }}
+                    </span>
+                  </span>
                 </div>
-                <div class="order-status">
-                  Status: {{ getOrderStatusDisplay(order.orderStatus) }}
-                </div>
+                <span class="order-status">{{ getOrderStatusDisplay(order.orderStatus) }}</span>
               </div>
 
               <div
                 v-if="order.orderDetails && order.orderDetails.length > 0"
                 class="order-detail-info"
               >
-                <div
+                <span
                   v-for="detail in order.orderDetails.filter(
                     (d) => d.containerId === (containerInfo?.containerId || props.containerId),
                   )"
                   :key="detail.orderDetailId"
                   class="detail-item"
                 >
-                  <span v-if="detail.detailQuantity > 0">
+                  <template v-if="detail.detailQuantity > 0">
                     Quantity: {{ detail.detailQuantity }} | Price: ₹{{ detail.price.toFixed(2) }}
-                  </span>
-                </div>
+                  </template>
+                </span>
               </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+            </li>
+          </ul>
+        </section>
+      </template>
+    </main>
   </div>
 </template>
 
@@ -118,8 +119,11 @@
 import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useRoomStore } from '@/stores/room.store'
+import { resourceConfig as resource } from '@/config/resource.config'
 import NavigationHeader from '@/components/common/NavigationHeader.vue'
 import RoomIndicator from '@/components/room/RoomIndicator.vue'
+import EmptyState from '@/components/common/EmptyState.vue'
+import LoadingSkeleton from '@/components/common/LoadingSkeleton.vue'
 import { orderService } from '@/services/order.service'
 
 const props = defineProps({
@@ -293,34 +297,33 @@ onUnmounted(() => {
   background: var(--bg-secondary);
 }
 
-.container-detail-container {
-  max-width: var(--container-max-width);
-  margin: 0 auto;
-  padding: var(--spacing-xl);
+.detail-shell {
+  display: grid;
+  gap: var(--spacing-2xl);
 }
 
-.container-header {
-  background: var(--bg-primary);
-  border-radius: var(--radius-lg);
-  padding: var(--spacing-lg);
-  margin-bottom: var(--spacing-xl);
-  box-shadow: var(--shadow-sm);
-}
-
-.header-content {
+.detail-header {
   display: flex;
+  align-items: end;
   justify-content: space-between;
-  align-items: flex-start;
   gap: var(--spacing-lg);
+  padding: var(--spacing-xl);
+  border-radius: var(--radius-2xl);
+  background: linear-gradient(145deg, var(--bg-primary), var(--bg-tertiary));
+  border: 1px solid var(--border-light);
+  box-shadow: var(--shadow-md);
 }
 
-.container-title h2 {
-  margin: 0 0 var(--spacing-sm) 0;
-  color: var(--text-primary);
+.detail-header h1 {
+  margin: var(--spacing-sm) 0 0;
+  font-size: clamp(1.5rem, 4vw, 2.25rem);
+  letter-spacing: -0.03em;
 }
 
 .breadcrumb {
-  color: var(--text-secondary);
+  display: flex;
+  gap: var(--spacing-sm);
+  color: var(--text-muted);
   font-size: var(--font-size-sm);
 }
 
@@ -333,60 +336,84 @@ onUnmounted(() => {
   text-decoration: underline;
 }
 
-.separator {
-  margin: 0 var(--spacing-sm);
-}
-
-.container-content {
+.summary-grid {
   display: grid;
-  gap: var(--spacing-xl);
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--spacing-sm);
 }
 
-.info-section,
-.orders-section {
-  background: var(--bg-primary);
+.summary-card {
+  min-width: 0;
+  padding: var(--spacing-md);
+  border: 1px solid var(--border-light);
   border-radius: var(--radius-lg);
-  padding: var(--spacing-lg);
+  background: color-mix(in srgb, var(--bg-primary) 72%, transparent);
+}
+
+.summary-card > span,
+.summary-card small {
+  display: block;
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.summary-card strong {
+  display: block;
+  margin-block: var(--spacing-xs);
+  font-size: var(--font-size-2xl);
+}
+
+.summary-card strong.summary-text {
+  overflow: hidden;
+  font-size: var(--font-size-lg);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.summary-card-primary {
+  background: var(--color-primary);
+}
+
+.summary-card-primary span,
+.summary-card-primary small {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.summary-card-primary strong {
+  color: var(--text-inverse);
+}
+
+.summary-code {
+  display: block;
+  overflow: hidden;
+  color: var(--color-primary);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-sm) !important;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.orders-section {
+  display: grid;
+  gap: var(--spacing-lg);
+  padding: var(--spacing-xl);
+  border-radius: var(--radius-lg);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-light);
   box-shadow: var(--shadow-sm);
 }
 
-.info-section h3,
-.orders-section h3 {
-  margin: 0 0 var(--spacing-lg) 0;
-  color: var(--text-primary);
-  border-bottom: 2px solid var(--border-light);
-  padding-bottom: var(--spacing-sm);
-}
-
-.container-info-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: var(--spacing-md);
-}
-
-.info-item {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-xs);
-}
-
-.info-item label {
-  font-weight: var(--font-weight-semibold);
-  color: var(--text-muted);
-  font-size: var(--font-size-sm);
-}
-
-.info-item span {
-  color: var(--text-primary);
-  padding: var(--spacing-sm);
-  background: var(--bg-tertiary);
-  border-radius: var(--radius-md);
+.section-heading h2 {
+  margin: 0;
 }
 
 .orders-list {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-md);
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .order-item {
@@ -459,7 +486,7 @@ onUnmounted(() => {
   align-items: center;
 }
 
-.quantity {
+.order-metrics b {
   font-weight: var(--font-weight-semibold);
   font-size: var(--font-size-lg);
 }
@@ -481,22 +508,19 @@ onUnmounted(() => {
 }
 
 .detail-item {
+  display: block;
   color: var(--text-secondary);
   font-size: var(--font-size-xs);
 }
 
 @media (max-width: 768px) {
-  .container-detail-container {
-    padding: var(--spacing-md);
-  }
-
-  .header-content {
+  .detail-header {
+    align-items: stretch;
     flex-direction: column;
-    gap: var(--spacing-md);
   }
 
-  .container-info-grid {
-    grid-template-columns: 1fr;
+  .summary-grid {
+    grid-template-columns: 1fr 1fr;
   }
 
   .order-details {
@@ -509,6 +533,23 @@ onUnmounted(() => {
     flex-direction: column;
     align-items: flex-start;
     gap: var(--spacing-xs);
+  }
+}
+
+@media (max-width: 520px) {
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .summary-card {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+  }
+
+  .summary-card strong {
+    grid-row: span 2;
+    margin: 0;
   }
 }
 </style>

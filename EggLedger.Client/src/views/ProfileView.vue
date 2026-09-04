@@ -7,7 +7,7 @@
     <RoomIndicator />
 
     <!-- Profile Content -->
-    <main class="main-content">
+    <main class="page-shell">
       <ProfileComponent />
     </main>
   </div>
@@ -32,11 +32,5 @@ onMounted(async () => {
 .profile-view {
   min-height: 100vh;
   background: var(--bg-secondary);
-}
-
-.main-content {
-  max-width: var(--container-max-width);
-  margin: 0 auto;
-  padding: var(--spacing-xl);
 }
 </style>

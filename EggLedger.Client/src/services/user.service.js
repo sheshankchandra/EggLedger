@@ -17,6 +17,15 @@ export const userService = {
     return apiClient.put(`/egg-ledger-api/user/${userId}`, userData, { signal })
   },
 
+  // POST /egg-ledger-api/user/{id}/change-password
+  changePassword(userId, currentPassword, newPassword, signal) {
+    return apiClient.post(
+      `/egg-ledger-api/user/${userId}/change-password`,
+      { currentPassword, newPassword },
+      { signal },
+    )
+  },
+
   // DELETE /egg-ledger-api/user/{id}
   deleteUser(userId, signal) {
     return apiClient.delete(`/egg-ledger-api/user/${userId}`, { signal })

@@ -3,7 +3,7 @@
     <div class="section-heading">
       <div>
         <p class="eyebrow">Inventory</p>
-        <h2 id="inventory-heading">Available {{ resource.inventoryPlural }}</h2>
+        <h2 id="inventory-heading">{{ heading || `Available ${resource.inventoryPlural}` }}</h2>
       </div>
       <span v-if="!loading" class="inventory-count">
         {{ containers.length }}
@@ -22,8 +22,8 @@
     <EmptyState
       v-else-if="containers.length === 0"
       :icon="resource.icon"
-      title="No stock yet"
-      description="Add the first purchase to make shared inventory visible to everyone."
+      :title="emptyTitle"
+      :description="emptyDescription"
     />
 
     <div v-else class="inventory-grid">
@@ -64,6 +64,12 @@ defineProps({
   loading: { type: Boolean, default: false },
   resource: { type: Object, required: true },
   currentUserId: { type: String, default: null },
+  heading: { type: String, default: '' },
+  emptyTitle: { type: String, default: 'No stock yet' },
+  emptyDescription: {
+    type: String,
+    default: 'Add the first purchase to make shared inventory visible to everyone.',
+  },
 })
 
 defineEmits(['select'])
