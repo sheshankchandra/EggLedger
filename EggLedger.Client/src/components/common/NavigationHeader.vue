@@ -1,22 +1,26 @@
 <template>
   <header class="main-header">
     <div class="header-content">
-      <div @click="$router.push('/')" class="app-branding">
+      <router-link to="/dashboard" class="app-branding" aria-label="EggLedger dashboard">
         <img src="/eggledger.png" alt="EggLedger Logo" class="app-logo" />
-        <h1 class="app-title">EggLedger</h1>
-      </div>
-      <nav class="main-nav">
-        <router-link to="/" class="nav-btn" active-class="active">
-          Dashboard
+        <span class="app-title">EggLedger</span>
+      </router-link>
+      <nav class="main-nav" aria-label="Primary navigation">
+        <router-link to="/dashboard" class="nav-link" active-class="active">
+          <span aria-hidden="true">⌂</span>
+          <span>Rooms</span>
         </router-link>
         <router-link to="/room" class="nav-btn" active-class="active" v-if="selectedRoom">
-          Room
+          <span aria-hidden="true">▦</span>
+          <span class="nav-room-name">{{ selectedRoom.roomName }}</span>
         </router-link>
-        <router-link to="/profile" class="nav-btn" active-class="active">
-          Profile
+        <router-link to="/profile" class="nav-link" active-class="active">
+          <span aria-hidden="true">○</span>
+          <span>Profile</span>
         </router-link>
-        <button @click="handleLogout" class="btn btn-danger">
-          Logout
+        <button @click="handleLogout" class="logout-button" type="button" aria-label="Sign out">
+          <span aria-hidden="true">↪</span>
+          <span class="logout-label">Sign out</span>
         </button>
       </nav>
     </div>
@@ -47,15 +51,20 @@ const handleLogout = () => {
 
 <style scoped>
 .main-header {
-  background: var(--bg-primary);
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  min-height: var(--header-height);
+  background: rgba(255, 255, 255, 0.94);
   border-bottom: 1px solid var(--border-light);
-  box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(14px);
 }
 
 .header-content {
   max-width: var(--container-max-width);
   margin: 0 auto;
-  padding: var(--spacing-md) var(--spacing-xl);
+  min-height: var(--header-height);
+  padding: var(--spacing-sm) var(--spacing-xl);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -65,16 +74,20 @@ const handleLogout = () => {
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
-  cursor: pointer;
+  color: var(--text-primary);
+  text-decoration: none;
 }
 
 .app-logo {
-  height: 32px;
+  width: 38px;
+  height: 38px;
+  object-fit: contain;
 }
 
 .app-title {
-  margin: 0;
-  color: var(--text-primary);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: -0.02em;
   transition: color var(--transition-fast);
 }
 
@@ -84,43 +97,71 @@ const handleLogout = () => {
 
 .main-nav {
   display: flex;
-  gap: var(--spacing-md);
+  gap: var(--spacing-xs);
   align-items: center;
 }
 
-.nav-spacer {
-  width: var(--spacing-xl);
-}
-
-.nav-btn {
+.nav-link,
+.nav-btn,
+.logout-button {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  gap: var(--spacing-xs);
   padding: var(--spacing-sm) var(--spacing-md);
-  border: 1px solid var(--border-medium);
-  background: var(--bg-primary);
+  border: 1px solid transparent;
   border-radius: var(--radius-md);
   text-decoration: none;
-  color: var(--text-primary);
-  transition: all var(--transition-normal);
+  color: var(--text-secondary);
+  font-weight: var(--font-weight-medium);
+  transition:
+    color var(--transition-fast),
+    background-color var(--transition-fast);
 }
 
-.nav-btn:hover {
+.nav-link:hover,
+.nav-btn:hover,
+.logout-button:hover {
   background: var(--bg-tertiary);
+  color: var(--text-primary);
 }
 
+.nav-link.active,
 .nav-btn.active {
-  background: var(--color-primary);
-  color: var(--text-inverse);
-  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.logout-button {
+  background: transparent;
+  cursor: pointer;
 }
 
 @media (max-width: 768px) {
   .header-content {
-    flex-direction: column;
-    gap: var(--spacing-md);
+    padding-inline: var(--spacing-md);
   }
 
   .main-nav {
-    flex-wrap: wrap;
-    justify-content: center;
+    gap: 0;
+  }
+
+  .nav-link,
+  .nav-btn,
+  .logout-button {
+    padding-inline: var(--spacing-sm);
+    font-size: var(--font-size-sm);
+  }
+
+  .nav-room-name,
+  .logout-label {
+    max-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  .app-title {
+    display: none;
   }
 }
 </style>

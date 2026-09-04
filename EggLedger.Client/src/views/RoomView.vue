@@ -1,13 +1,8 @@
 <template>
   <div class="room-view">
-    <!-- Navigation Header -->
     <NavigationHeader />
-
-    <!-- Current Room Indicator -->
     <RoomIndicator />
-
-    <!-- Room Content -->
-    <main class="main-content">
+    <main class="page-shell">
       <div v-if="authStore.isLoadingRooms" class="card text-center p-5">
         <h2>Loading...</h2>
         <p class="text-secondary">Fetching room information...</p>
@@ -74,12 +69,5 @@ onMounted(async () => {
 <style scoped>
 .room-view {
   min-height: 100vh;
-  background: var(--bg-secondary);
-}
-
-.main-content {
-  max-width: var(--container-max-width);
-  margin: 0 auto;
-  padding: var(--spacing-xl);
 }
 </style>
