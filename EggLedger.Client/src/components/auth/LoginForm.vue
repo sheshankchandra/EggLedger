@@ -97,6 +97,7 @@ import { computed, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.store'
 import authService from '@/services/auth.service'
+import { consumeRedirect } from '@/utils/postLoginRedirect'
 
 // Reactive data
 const email = ref('')
@@ -132,7 +133,7 @@ const handleLogin = async () => {
       password: password.value,
     })
 
-    router.push('/dashboard')
+    router.push(consumeRedirect() || '/dashboard')
   } catch (err) {
     error.value = err.response.data.join(' ') || 'Login failed. Please try again.'
     console.error(err)

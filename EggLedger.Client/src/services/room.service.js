@@ -25,6 +25,34 @@ export const roomService = {
     return response.data
   },
 
+  // Get pending join requests for a room (admin only)
+  async getPendingMembers(roomCode, signal) {
+    const response = await apiClient.get(`/egg-ledger-api/room/${roomCode}/pending-members`, {
+      signal,
+    })
+    return response.data
+  },
+
+  // Approve a pending join request (admin only)
+  async approveMember(roomCode, memberUserId, signal) {
+    const response = await apiClient.post(
+      `/egg-ledger-api/room/${roomCode}/approve-member/${memberUserId}`,
+      {},
+      { signal },
+    )
+    return response.data
+  },
+
+  // Reject a pending join request (admin only)
+  async rejectMember(roomCode, memberUserId, signal) {
+    const response = await apiClient.post(
+      `/egg-ledger-api/room/${roomCode}/reject-member/${memberUserId}`,
+      {},
+      { signal },
+    )
+    return response.data
+  },
+
   // Get all users in a room
   async getAllRoomUsers(roomCode, signal) {
     const response = await apiClient.get(`/egg-ledger-api/room/${roomCode}/all`, { signal })

@@ -1,4 +1,4 @@
-﻿namespace EggLedger.DTO.Room;
+namespace EggLedger.DTO.Room;
 
 public class RoomDto
 {
@@ -11,4 +11,7 @@ public class RoomDto
     public required int? ContainerCount { get; set; }
     public required int? TotalEggs { get; set; }
     public required int? MemberCount { get; set; }
+
+    /// <summary>True when the caller's own membership in this room is still Pending approval.</summary>
+    public bool IsPending { get; set; }
 }

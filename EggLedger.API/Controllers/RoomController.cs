@@ -42,7 +42,7 @@ public class RoomController : ControllerBase
                 return Unauthorized("Invalid user identity");
             }
 
-            Result<int> result = await _roomService.JoinRoomAsync(userId, roomCode, cancellationToken);
+            Result<JoinRoomResultDto> result = await _roomService.JoinRoomAsync(userId, roomCode, cancellationToken);
 
             if (result.IsSuccess)
             {
@@ -346,6 +346,108 @@ public class RoomController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled exception in EditRoomStatus for RoomId: {RoomId}", dto.RoomId);
+            return StatusCode(500, "An unexpected error occurred.");
+        }
+    }
+
+    // GET: egg-ledger-api/room/{roomCode}/pending-members
+    [Authorize(Policy = "RoomAdmin")]
+    [HttpGet("{roomCode:int}/pending-members")]
+    public async Task<IActionResult> GetPendingMembers([FromRoute] int roomCode, CancellationToken cancellationToken)
+    {
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized("Invalid user identity");
+        }
+
+        try
+        {
+            var result = await _roomService.GetPendingMembersAsync(userId, roomCode, cancellationToken);
+            if (result.IsSuccess)
+                return Ok(result.Value);
+            if (result.Errors.Any(e => e.Message == "Room not found"))
+                return NotFound();
+            return BadRequest(result.Errors.Select(e => e.Message));
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("Request was canceled by the client for GetPendingMembers, roomCode: {RoomCode}", roomCode);
+            return StatusCode(499, "Client closed request.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unhandled exception in GetPendingMembers for roomCode: {RoomCode}", roomCode);
+            return StatusCode(500, "An unexpected error occurred.");
+        }
+    }
+
+    // POST: egg-ledger-api/room/{roomCode}/approve-member/{memberUserId}
+    [Authorize(Policy = "RoomAdmin")]
+    [HttpPost("{roomCode:int}/approve-member/{memberUserId:guid}")]
+    public async Task<IActionResult> ApproveMember([FromRoute] int roomCode, [FromRoute] Guid memberUserId, CancellationToken cancellationToken)
+    {
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized("Invalid user identity");
+        }
+
+        try
+        {
+            var result = await _roomService.ApproveMemberAsync(userId, roomCode, memberUserId, cancellationToken);
+            if (result.IsSuccess)
+            {
+                _logger.LogInformation("Member {MemberUserId} approved into room {RoomCode} by {UserId}", memberUserId, roomCode, userId);
+                return Ok(result.Value);
+            }
+            if (result.Errors.Any(e => e.Message == "Room not found" || e.Message == "No pending request found for that user"))
+                return NotFound(result.Errors.Select(e => e.Message));
+            return BadRequest(result.Errors.Select(e => e.Message));
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("Request was canceled by the client for ApproveMember, roomCode: {RoomCode}", roomCode);
+            return StatusCode(499, "Client closed request.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unhandled exception in ApproveMember for roomCode: {RoomCode}", roomCode);
+            return StatusCode(500, "An unexpected error occurred.");
+        }
+    }
+
+    // POST: egg-ledger-api/room/{roomCode}/reject-member/{memberUserId}
+    [Authorize(Policy = "RoomAdmin")]
+    [HttpPost("{roomCode:int}/reject-member/{memberUserId:guid}")]
+    public async Task<IActionResult> RejectMember([FromRoute] int roomCode, [FromRoute] Guid memberUserId, CancellationToken cancellationToken)
+    {
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized("Invalid user identity");
+        }
+
+        try
+        {
+            var result = await _roomService.RejectMemberAsync(userId, roomCode, memberUserId, cancellationToken);
+            if (result.IsSuccess)
+            {
+                _logger.LogInformation("Member {MemberUserId} rejected from room {RoomCode} by {UserId}", memberUserId, roomCode, userId);
+                return Ok(result.Value);
+            }
+            if (result.Errors.Any(e => e.Message == "Room not found" || e.Message == "No pending request found for that user"))
+                return NotFound(result.Errors.Select(e => e.Message));
+            return BadRequest(result.Errors.Select(e => e.Message));
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("Request was canceled by the client for RejectMember, roomCode: {RoomCode}", roomCode);
+            return StatusCode(499, "Client closed request.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unhandled exception in RejectMember for roomCode: {RoomCode}", roomCode);
             return StatusCode(500, "An unexpected error occurred.");
         }
     }

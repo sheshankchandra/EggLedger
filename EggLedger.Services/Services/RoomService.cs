@@ -58,7 +58,7 @@ public class RoomService : IRoomService
         }, "An error occurred while creating the room.");
     }
 
-    public async Task<Result<int>> JoinRoomAsync(Guid userId, int roomCode, CancellationToken cancellationToken = default)
+    public async Task<Result<JoinRoomResultDto>> JoinRoomAsync(Guid userId, int roomCode, CancellationToken cancellationToken = default)
     {
         return await _logger.ExecuteAsync(async () =>
         {
@@ -73,15 +73,19 @@ public class RoomService : IRoomService
                 return Result.Fail("Room not found");
             }
 
-            if (room.UserRooms.Any(ur => ur.UserId == userId))
+            var existing = room.UserRooms.FirstOrDefault(ur => ur.UserId == userId);
+            if (existing != null)
             {
-                _logger.LogError("User : {UserId} already in room : {RoomName}", userId, room.RoomName);
-                return Result.Fail("User already in room");
+                _logger.LogWarning("User : {UserId} already in room : {RoomName}", userId, room.RoomName);
+                return existing.Status == UserRoomStatus.Pending
+                    ? Result.Fail("Your request to join this room is already pending approval")
+                    : Result.Fail("User already in room");
             }
 
-            // IsPublic only controls discoverability (a future "browse open rooms" listing).
-            // Knowing the room code is the actual authorization to join, for both Private and
-            // Open rooms - a Private room must still be joinable by whoever it's shared with.
+            // Knowing the room code is enough to request joining, for both Private and Public
+            // rooms - but a Private room's request needs the admin to approve it before the new
+            // member gets any actual access (RoomMemberHandler only counts Approved rows).
+            var isPending = !room.IsPublic;
 
             var userRoom = new UserRoom
             {
@@ -89,15 +93,16 @@ public class RoomService : IRoomService
                 RoomId = room.RoomId,
                 UserId = userId,
                 IsAdmin = false,
-                JoinedAt = DateTime.UtcNow
+                JoinedAt = DateTime.UtcNow,
+                Status = isPending ? UserRoomStatus.Pending : UserRoomStatus.Approved,
             };
 
             _context.UserRooms.Add(userRoom);
             await _context.SaveChangesAsync(cancellationToken);
 
-            _logger.LogInformation("User {UserId} successfully joined Room {RoomName}", userId, room.RoomName);
+            _logger.LogInformation("User {UserId} {Verb} Room {RoomName}", userId, isPending ? "requested to join" : "successfully joined", room.RoomName);
 
-            return Result.Ok(roomCode);
+            return Result.Ok(new JoinRoomResultDto { RoomCode = roomCode, IsPending = isPending });
         }, "An error occurred while joining the room.");
     }
 
@@ -119,7 +124,7 @@ public class RoomService : IRoomService
 
             var users = await _context.Users.AsNoTracking()
                 .Include(u => u.UserRooms)
-                .Where(u => u.UserRooms.Any(ur => ur.RoomId == room.RoomId))
+                .Where(u => u.UserRooms.Any(ur => ur.RoomId == room.RoomId && ur.Status == UserRoomStatus.Approved))
                 .OrderBy(u => u.FirstName)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
@@ -192,17 +197,19 @@ public class RoomService : IRoomService
                     IsOpen = ur.Room.IsPublic,
                     AdminUserId = ur.IsAdmin ? userId : null,
                     CreateAt = ur.Room.CreatedAt,
-                    ContainerCount = _context.Containers.Count(c =>
+                    IsPending = ur.Status == UserRoomStatus.Pending,
+                    // A pending request has no visibility into room contents yet.
+                    ContainerCount = ur.Status == UserRoomStatus.Pending ? 0 : _context.Containers.Count(c =>
                         c.RoomId == ur.Room.RoomId &&
                         c.Status == ContainerStatus.Available &&
                         c.RemainingQuantity > 0),
-                    TotalEggs = _context.Containers
+                    TotalEggs = ur.Status == UserRoomStatus.Pending ? 0 : _context.Containers
                         .Where(c =>
                             c.RoomId == ur.Room.RoomId &&
                             c.Status == ContainerStatus.Available &&
                             c.RemainingQuantity > 0)
                         .Sum(c => c.RemainingQuantity),
-                    MemberCount = _context.UserRooms.Count(ur2 => ur2.RoomId == ur.Room.RoomId)
+                    MemberCount = _context.UserRooms.Count(ur2 => ur2.RoomId == ur.Room.RoomId && ur2.Status == UserRoomStatus.Approved)
                 })
                 .ToListAsync(cancellationToken);
 
@@ -237,7 +244,7 @@ public class RoomService : IRoomService
                             c.Status == ContainerStatus.Available &&
                             c.RemainingQuantity > 0)
                         .Sum(c => c.RemainingQuantity),
-                    MemberCount = _context.UserRooms.Count(ur2 => ur2.RoomId == r.RoomId)
+                    MemberCount = _context.UserRooms.Count(ur2 => ur2.RoomId == r.RoomId && ur2.Status == UserRoomStatus.Approved)
                 })
                 .FirstOrDefaultAsync(cancellationToken);
 
@@ -464,5 +471,96 @@ public class RoomService : IRoomService
 
             return Result.Ok("Room status updated successfully");
         }, "Unexpected error occurred while editing the room status");
+    }
+
+    public async Task<Result<List<PendingMemberDto>>> GetPendingMembersAsync(Guid adminUserId, int roomCode, CancellationToken cancellationToken = default)
+    {
+        return await _logger.ExecuteAsync(async () =>
+        {
+            var room = await _context.Rooms
+                .Where(r => r.RoomCode == roomCode && r.Status == RoomStatus.Active)
+                .FirstOrDefaultAsync(cancellationToken);
+            if (room == null)
+                return Result.Fail("Room not found");
+
+            var isAdmin = await _context.UserRooms.AnyAsync(
+                ur => ur.RoomId == room.RoomId && ur.UserId == adminUserId && ur.IsAdmin && ur.Status == UserRoomStatus.Approved,
+                cancellationToken);
+            if (!isAdmin)
+                return Result.Fail("Only room admin can view pending requests");
+
+            var pending = await _context.UserRooms
+                .AsNoTracking()
+                .Where(ur => ur.RoomId == room.RoomId && ur.Status == UserRoomStatus.Pending)
+                .Include(ur => ur.User)
+                .OrderBy(ur => ur.JoinedAt)
+                .ToListAsync(cancellationToken);
+
+            var dtos = pending.Select(ur => new PendingMemberDto
+            {
+                UserId = ur.UserId,
+                Name = ur.User.Name,
+                Email = ur.User.Email,
+                RequestedAt = ur.JoinedAt,
+            }).ToList();
+
+            return Result.Ok(dtos);
+        }, "An error occurred while retrieving pending join requests.");
+    }
+
+    public async Task<Result<string>> ApproveMemberAsync(Guid adminUserId, int roomCode, Guid memberUserId, CancellationToken cancellationToken = default)
+    {
+        return await _logger.ExecuteAsync(async () =>
+        {
+            var pendingRow = await GetPendingRowForAdminActionAsync(adminUserId, roomCode, memberUserId, cancellationToken);
+            if (pendingRow.IsFailed)
+                return pendingRow.ToResult();
+
+            pendingRow.Value.Status = UserRoomStatus.Approved;
+            await _context.SaveChangesAsync(cancellationToken);
+
+            _logger.LogInformation("User '{MemberUserId}' approved into room code '{RoomCode}' by admin '{AdminUserId}'", memberUserId, roomCode, adminUserId);
+            return Result.Ok("Member approved");
+        }, "An error occurred while approving the member.");
+    }
+
+    public async Task<Result<string>> RejectMemberAsync(Guid adminUserId, int roomCode, Guid memberUserId, CancellationToken cancellationToken = default)
+    {
+        return await _logger.ExecuteAsync(async () =>
+        {
+            var pendingRow = await GetPendingRowForAdminActionAsync(adminUserId, roomCode, memberUserId, cancellationToken);
+            if (pendingRow.IsFailed)
+                return pendingRow.ToResult();
+
+            // Deleted rather than flagged Rejected, so the composite (UserId, RoomId) unique
+            // index doesn't permanently block the same user from requesting to join again.
+            _context.UserRooms.Remove(pendingRow.Value);
+            await _context.SaveChangesAsync(cancellationToken);
+
+            _logger.LogInformation("User '{MemberUserId}' rejected from room code '{RoomCode}' by admin '{AdminUserId}'", memberUserId, roomCode, adminUserId);
+            return Result.Ok("Member rejected");
+        }, "An error occurred while rejecting the member.");
+    }
+
+    private async Task<Result<UserRoom>> GetPendingRowForAdminActionAsync(Guid adminUserId, int roomCode, Guid memberUserId, CancellationToken cancellationToken)
+    {
+        var room = await _context.Rooms
+            .Where(r => r.RoomCode == roomCode && r.Status == RoomStatus.Active)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (room == null)
+            return Result.Fail("Room not found");
+
+        var isAdmin = await _context.UserRooms.AnyAsync(
+            ur => ur.RoomId == room.RoomId && ur.UserId == adminUserId && ur.IsAdmin && ur.Status == UserRoomStatus.Approved,
+            cancellationToken);
+        if (!isAdmin)
+            return Result.Fail("Only room admin can manage join requests");
+
+        var pendingRow = await _context.UserRooms
+            .FirstOrDefaultAsync(ur => ur.RoomId == room.RoomId && ur.UserId == memberUserId && ur.Status == UserRoomStatus.Pending, cancellationToken);
+        if (pendingRow == null)
+            return Result.Fail("No pending request found for that user");
+
+        return Result.Ok(pendingRow);
     }
 }

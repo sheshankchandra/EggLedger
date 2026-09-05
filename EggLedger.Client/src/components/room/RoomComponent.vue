@@ -41,10 +41,67 @@
         <div class="summary-card">
           <span>Room code</span>
           <strong class="summary-code">{{ room.roomCode }}</strong>
-          <small>Share it with someone you trust</small>
+          <button type="button" class="copy-invite-link" @click="copyInviteLink">
+            {{ copied ? 'Link copied!' : 'Copy invite link' }}
+          </button>
         </div>
       </div>
     </header>
+
+    <section
+      v-if="isRoomAdmin && !room.isOpen"
+      class="pending-section"
+      aria-labelledby="pending-heading"
+    >
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Membership</p>
+          <h2 id="pending-heading">Pending join requests</h2>
+        </div>
+        <span v-if="pendingMembers.length > 0" class="pending-count">
+          {{ pendingMembers.length }}
+        </span>
+      </div>
+
+      <LoadingSkeleton
+        v-if="pendingLoading"
+        :count="1"
+        height="70px"
+        aria-label="Loading pending requests"
+      />
+      <EmptyState
+        v-else-if="pendingMembers.length === 0"
+        icon="✅"
+        title="No pending requests"
+        description="Everyone who has asked to join this room has already been approved."
+      />
+      <ul v-else class="pending-list">
+        <li v-for="member in pendingMembers" :key="member.userId" class="pending-item">
+          <div class="pending-info">
+            <strong>{{ member.name }}</strong>
+            <small>{{ member.email }} · Requested {{ formatDate(member.requestedAt) }}</small>
+          </div>
+          <div class="pending-actions">
+            <button
+              type="button"
+              class="btn btn-secondary btn-sm"
+              :disabled="processingMemberId === member.userId"
+              @click="handleRejectMember(member.userId)"
+            >
+              Reject
+            </button>
+            <button
+              type="button"
+              class="btn btn-primary btn-sm"
+              :disabled="processingMemberId === member.userId"
+              @click="handleApproveMember(member.userId)"
+            >
+              Approve
+            </button>
+          </div>
+        </li>
+      </ul>
+    </section>
 
     <section class="quick-actions" aria-labelledby="quick-actions-heading">
       <div class="section-heading">
@@ -137,6 +194,8 @@ import InventoryGrid from './InventoryGrid.vue'
 import ContainerDetailModal from './ContainerDetailModal.vue'
 import ConfirmModal from '@/components/common/ConfirmModal.vue'
 import Toast from '@/components/common/ToastNotification.vue'
+import EmptyState from '@/components/common/EmptyState.vue'
+import LoadingSkeleton from '@/components/common/LoadingSkeleton.vue'
 
 const authStore = useAuthStore()
 const roomStore = useRoomStore()
@@ -163,6 +222,7 @@ const archivingRoom = ref(false)
 const showDeleteContainerModal = ref(false)
 const containerToDelete = ref(null)
 const deletingContainer = ref(false)
+const copied = ref(false)
 
 const isRoomAdmin = computed(() => {
   const user = authStore.getUser
@@ -171,6 +231,74 @@ const isRoomAdmin = computed(() => {
   }
   return user.userId === props.room.adminUserId
 })
+
+const copyInviteLink = async () => {
+  const link = `${window.location.origin}/join?code=${props.room.roomCode}`
+  try {
+    await navigator.clipboard.writeText(link)
+    copied.value = true
+    setTimeout(() => {
+      copied.value = false
+    }, 2000)
+  } catch (err) {
+    console.error('Failed to copy invite link:', err)
+    showNotification('Could not copy link. Please copy the room code manually.', 'error')
+  }
+}
+
+const pendingMembers = ref([])
+const pendingLoading = ref(false)
+const processingMemberId = ref(null)
+
+const formatDate = (dateString) => {
+  if (!dateString) return 'recently'
+  try {
+    return new Date(dateString).toLocaleDateString()
+  } catch {
+    return 'recently'
+  }
+}
+
+const fetchPendingMembers = async () => {
+  if (!isRoomAdmin.value || props.room.isOpen) return
+  pendingLoading.value = true
+  try {
+    pendingMembers.value = await roomStore.fetchPendingMembers(props.room.roomCode)
+  } catch (err) {
+    if (isCanceled(err)) return
+    console.error('Failed to fetch pending members:', err)
+  } finally {
+    pendingLoading.value = false
+  }
+}
+
+const handleApproveMember = async (memberUserId) => {
+  processingMemberId.value = memberUserId
+  try {
+    await roomStore.approveMember(props.room.roomCode, memberUserId)
+    pendingMembers.value = pendingMembers.value.filter((m) => m.userId !== memberUserId)
+    showNotification('Member approved.')
+  } catch (err) {
+    if (isCanceled(err)) return
+    showNotification(errorMessage(err, 'Failed to approve member.'), 'error')
+  } finally {
+    processingMemberId.value = null
+  }
+}
+
+const handleRejectMember = async (memberUserId) => {
+  processingMemberId.value = memberUserId
+  try {
+    await roomStore.rejectMember(props.room.roomCode, memberUserId)
+    pendingMembers.value = pendingMembers.value.filter((m) => m.userId !== memberUserId)
+    showNotification('Request rejected.')
+  } catch (err) {
+    if (isCanceled(err)) return
+    showNotification(errorMessage(err, 'Failed to reject member.'), 'error')
+  } finally {
+    processingMemberId.value = null
+  }
+}
 
 const currentUserId = computed(() => authStore.getUser?.userId)
 
@@ -283,7 +411,10 @@ const confirmDeleteContainer = async () => {
   }
 }
 
-onMounted(() => inventoryStore.fetchContainers(props.room.roomCode))
+onMounted(() => {
+  inventoryStore.fetchContainers(props.room.roomCode)
+  fetchPendingMembers()
+})
 </script>
 
 <style scoped>
@@ -396,6 +527,22 @@ onMounted(() => inventoryStore.fetchContainers(props.room.roomCode))
   text-overflow: ellipsis;
 }
 
+.copy-invite-link {
+  margin-top: var(--spacing-xs);
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+  text-align: left;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.copy-invite-link:hover {
+  color: var(--color-primary);
+}
+
 .quick-actions {
   display: grid;
   gap: var(--spacing-lg);
@@ -410,6 +557,66 @@ onMounted(() => inventoryStore.fetchContainers(props.room.roomCode))
   color: var(--text-muted);
   font-size: var(--font-size-sm);
   text-align: right;
+}
+
+.pending-section {
+  display: grid;
+  gap: var(--spacing-lg);
+  padding: var(--spacing-xl);
+  border-radius: var(--radius-lg);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-light);
+  box-shadow: var(--shadow-sm);
+}
+
+.pending-count {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: 999px;
+  background: var(--color-warning-light);
+  color: var(--color-warning);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.pending-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pending-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+}
+
+.pending-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.pending-info strong {
+  font-size: var(--font-size-sm);
+}
+
+.pending-info small {
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.pending-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: var(--spacing-sm);
 }
 
 .action-grid {

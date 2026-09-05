@@ -158,17 +158,52 @@
           </p>
           <router-link to="/" class="btn btn-primary">Select a room</router-link>
         </div>
-        <InventoryGrid
-          v-else
-          :containers="userContainers"
-          :loading="loadingContainers"
-          :resource="resource"
-          :current-user-id="user.userId"
-          :heading="`My ${resource.inventoryPlural} in ${selectedRoom.roomName}`"
-          empty-title="Nothing stocked here yet"
-          :empty-description="`Purchases you make in ${selectedRoom.roomName} will show up here.`"
-          @select="viewContainerDetails"
-        />
+        <template v-else>
+          <InventoryGrid
+            :containers="activeContainers"
+            :loading="loadingContainers"
+            :resource="resource"
+            :current-user-id="user.userId"
+            :heading="`My active ${resource.inventoryPlural} in ${selectedRoom.roomName}`"
+            empty-title="Nothing active right now"
+            :empty-description="
+              historyContainers.length > 0
+                ? 'All caught up — check your history below for past purchases.'
+                : `Purchases you make in ${selectedRoom.roomName} will show up here.`
+            "
+            @select="viewContainerDetails"
+          />
+
+          <details v-if="!loadingContainers && historyContainers.length > 0" class="history-disclosure">
+            <summary>
+              <span>History</span>
+              <span class="history-count">{{ historyContainers.length }}</span>
+            </summary>
+            <ul class="history-list">
+              <li
+                v-for="container in historyContainers"
+                :key="container.containerId"
+                class="history-row"
+              >
+                <span class="history-icon" aria-hidden="true">{{ resource.icon }}</span>
+                <div class="history-row-info">
+                  <strong>{{ container.containerName || `Untitled ${resource.inventorySingular}` }}</strong>
+                  <small>
+                    {{ formatDate(container.purchaseDateTime) }} · {{ statusLabel(container.status) }}
+                  </small>
+                </div>
+                <span class="history-quantity">{{ container.totalQuantity }} {{ resource.plural }}</span>
+                <button
+                  type="button"
+                  class="link-button"
+                  @click="viewContainerDetails(container)"
+                >
+                  View
+                </button>
+              </li>
+            </ul>
+          </details>
+        </template>
       </section>
 
       <!-- Account Actions -->
@@ -353,6 +388,38 @@ const totalEggs = computed(() => {
 const adminRooms = computed(() => {
   return roomStore.userRooms.filter((room) => room.adminUserId === user.value?.userId).length
 })
+
+// Mirrors EggLedger.Models.Enums.ContainerStatus - enums serialize as their numeric value.
+const CONTAINER_STATUS = { AVAILABLE: 1, DEPLETED: 2, ARCHIVED: 3, SUSPENDED: 4 }
+
+const activeContainers = computed(() =>
+  userContainers.value.filter(
+    (c) => c.status === CONTAINER_STATUS.AVAILABLE && c.remainingQuantity > 0,
+  ),
+)
+
+// Depleted-through-use and archived/suspended containers, newest first - kept out of the main
+// grid so a room's full purchase history doesn't drown out what's actually available today.
+const historyContainers = computed(() =>
+  userContainers.value
+    .filter((c) => !activeContainers.value.includes(c))
+    .slice()
+    .sort((a, b) => new Date(b.purchaseDateTime) - new Date(a.purchaseDateTime)),
+)
+
+const statusLabel = (status) => {
+  switch (status) {
+    case CONTAINER_STATUS.AVAILABLE:
+    case CONTAINER_STATUS.DEPLETED:
+      return 'Consumed'
+    case CONTAINER_STATUS.ARCHIVED:
+      return 'Deleted'
+    case CONTAINER_STATUS.SUSPENDED:
+      return 'Suspended'
+    default:
+      return 'Unknown'
+  }
+}
 
 const currentPasswordError = computed(() => {
   if (!passwordForm.current) return 'Current password is required'
@@ -710,6 +777,113 @@ watch(selectedRoom, async (newRoom, oldRoom) => {
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: var(--spacing-sm);
   margin-bottom: var(--spacing-lg);
+}
+
+.history-disclosure {
+  margin-top: var(--spacing-lg);
+  border-top: 1px solid var(--border-light);
+  padding-top: var(--spacing-lg);
+}
+
+.history-disclosure summary {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  color: var(--text-secondary);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  list-style: none;
+}
+
+.history-disclosure summary::-webkit-details-marker {
+  display: none;
+}
+
+.history-disclosure summary::before {
+  content: '▸';
+  color: var(--text-muted);
+  transition: transform var(--transition-normal);
+}
+
+.history-disclosure[open] summary::before {
+  transform: rotate(90deg);
+}
+
+.history-count {
+  padding: 2px var(--spacing-sm);
+  border-radius: 999px;
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  margin: var(--spacing-md) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.history-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+}
+
+.history-icon {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: var(--radius-md);
+  background: var(--bg-tertiary);
+  font-size: var(--font-size-base);
+}
+
+.history-row-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.history-row-info strong {
+  overflow: hidden;
+  font-size: var(--font-size-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-row-info small {
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.history-quantity {
+  flex-shrink: 0;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.link-button {
+  flex-shrink: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+}
+
+.link-button:hover {
+  text-decoration: underline;
 }
 
 .actions-grid {

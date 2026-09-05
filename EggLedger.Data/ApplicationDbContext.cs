@@ -245,6 +245,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             // Property configurations
             entity.Property(e => e.IsAdmin).IsRequired();
             entity.Property(e => e.JoinedAt).IsRequired();
+            entity.Property(e => e.Status).IsRequired();
 
             // Composite unique index
             entity.HasIndex(ur => new { ur.UserId, ur.RoomId }).IsUnique();

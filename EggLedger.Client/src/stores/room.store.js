@@ -70,6 +70,18 @@ export const useRoomStore = defineStore('room', {
       return result
     },
 
+    async fetchPendingMembers(roomCode, signal) {
+      return await roomService.getPendingMembers(roomCode, signal)
+    },
+
+    async approveMember(roomCode, memberUserId, signal) {
+      await roomService.approveMember(roomCode, memberUserId, signal)
+    },
+
+    async rejectMember(roomCode, memberUserId, signal) {
+      await roomService.rejectMember(roomCode, memberUserId, signal)
+    },
+
     async deleteRoom(roomCode, signal) {
       await roomService.deleteRoom(roomCode, signal)
       this.clearSelectedRoom()

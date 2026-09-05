@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using EggLedger.API.Helpers.Auth.Requirements;
 using EggLedger.Data;
+using EggLedger.Models.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -43,7 +44,7 @@ public class RoomAdminHandler : AuthorizationHandler<RoomAdminRequirement>
         }
 
         var isMember = await _context.UserRooms
-            .AnyAsync(ur => ur.UserId == userId && ur.Room.RoomCode == roomCode && ur.IsAdmin);
+            .AnyAsync(ur => ur.UserId == userId && ur.Room.RoomCode == roomCode && ur.IsAdmin && ur.Status == UserRoomStatus.Approved);
 
         if (isMember)
         {
