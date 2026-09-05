@@ -31,7 +31,7 @@ public class ContainerService : IContainerService
         {
             var room = await _context.Rooms.FirstOrDefaultAsync(r => r.RoomCode == roomCode, cancellationToken);
             if (room == null)
-                return Result.Fail("Room not found");
+                return Result.Fail(new NotFoundError("Room not found"));
 
             var containersList = await _context.Containers
                 .AsNoTracking()
@@ -241,7 +241,7 @@ public class ContainerService : IContainerService
             var room = await _context.Rooms.FirstOrDefaultAsync(r => r.RoomCode == roomCode, cancellationToken);
             if (room == null)
             {
-                return Result.Fail("Room not found");
+                return Result.Fail(new NotFoundError("Room not found"));
             }
 
             var containers = await _context.Containers
@@ -277,7 +277,7 @@ public class ContainerService : IContainerService
             var room = await _context.Rooms.FirstOrDefaultAsync(r => r.RoomCode == roomCode, cancellationToken);
             if (room == null)
             {
-                return Result.Fail("Room not found");
+                return Result.Fail(new NotFoundError("Room not found"));
             }
 
             var containers = await _context.Containers
@@ -317,7 +317,7 @@ public class ContainerService : IContainerService
             var room = await _context.Rooms.FirstOrDefaultAsync(r => r.RoomCode == roomCode, cancellationToken);
             if (room == null)
             {
-                return Result.Fail("Room not found");
+                return Result.Fail(new NotFoundError("Room not found"));
             }
 
             var containers = await _context.Containers
@@ -356,14 +356,14 @@ public class ContainerService : IContainerService
             var room = await _context.Rooms.FirstOrDefaultAsync(r => r.RoomCode == roomCode, cancellationToken);
             if (room == null)
             {
-                return Result.Fail("Room not found");
+                return Result.Fail(new NotFoundError("Room not found"));
             }
 
             // Validate buyer exists
             var buyer = await _context.Users.FindAsync([dto.BuyerId], cancellationToken);
             if (buyer == null)
             {
-                return Result.Fail("Buyer not found");
+                return Result.Fail(new NotFoundError("Buyer not found"));
             }
 
             var container = new Container

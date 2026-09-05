@@ -1,19 +1,19 @@
-using System.Net;
-using System.Text.Json;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Npgsql;
 
 namespace EggLedger.API.Middleware;
 
+/// <summary>
+/// Last-resort handler for exceptions that escape every controller and service try/catch.
+/// Emits the same RFC 7807 ProblemDetails envelope as every other error response
+/// (see EggLedger.API.Extensions.ResultExtensions), via the framework's IProblemDetailsService
+/// so it also gets the traceId extension configured in Program.cs.
+/// </summary>
 public class GlobalExceptionHandlingMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly ILogger<GlobalExceptionHandlingMiddleware> _logger;
-
-    // Cached to avoid allocating a new options instance on every response (CA1869).
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-    };
 
     public GlobalExceptionHandlingMiddleware(RequestDelegate next, ILogger<GlobalExceptionHandlingMiddleware> logger)
     {
@@ -34,108 +34,39 @@ public class GlobalExceptionHandlingMiddleware
         }
     }
 
-    private async Task HandleExceptionAsync(HttpContext context, Exception exception)
+    private static async Task HandleExceptionAsync(HttpContext context, Exception exception)
     {
-        context.Response.ContentType = "application/json";
-
-        var response = new
+        var (statusCode, title, detail) = exception switch
         {
-            error = "An error occurred while processing your request.",
-            details = GetErrorDetails(exception),
-            timestamp = DateTime.UtcNow,
-            statusCode = 500
+            OperationCanceledException => (StatusCodes.Status400BadRequest, "Request canceled", "The operation was canceled, likely due to client disconnection or timeout."),
+            NpgsqlException => (StatusCodes.Status503ServiceUnavailable, "Database unavailable", "The database service is currently unavailable. Please try again shortly."),
+            TimeoutException => (StatusCodes.Status408RequestTimeout, "Request timeout", "The operation took too long to complete."),
+            UnauthorizedAccessException => (StatusCodes.Status401Unauthorized, "Unauthorized", "You are not authorized to access this resource."),
+            ArgumentException => (StatusCodes.Status400BadRequest, "Invalid request", exception.Message),
+            _ => (StatusCodes.Status500InternalServerError, "An unexpected error occurred", "If the problem persists, please contact support."),
         };
 
-        switch (exception)
+        context.Response.StatusCode = statusCode;
+
+        var problemDetails = new ProblemDetails
         {
-            case OperationCanceledException canceledEx:
-                _logger.LogInformation(canceledEx, "Request was canceled: {Message}", canceledEx.Message);
-                context.Response.StatusCode = (int)HttpStatusCode.BadRequest; // 400 or could use 499
-                response = new
-                {
-                    error = "The request was canceled.",
-                    details = "The operation was canceled, likely due to client disconnection or timeout.",
-                    timestamp = DateTime.UtcNow,
-                    statusCode = 400
-                };
-                break;
+            Status = statusCode,
+            Title = title,
+            Detail = detail,
+        };
 
-            case NpgsqlException npgsqlEx:
-                _logger.LogError(npgsqlEx, "Database connection error: {Message}", npgsqlEx.Message);
-                context.Response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
-                response = new
-                {
-                    error = "Database service is currently unavailable. Please ensure the database server is running and try again.",
-                    details = "Please contact your administrator or check if the database service is running.",
-                    timestamp = DateTime.UtcNow,
-                    statusCode = 503
-                };
-                break;
+        var problemDetailsService = context.RequestServices.GetService<IProblemDetailsService>();
+        var written = problemDetailsService is not null && await problemDetailsService.TryWriteAsync(new ProblemDetailsContext
+        {
+            HttpContext = context,
+            ProblemDetails = problemDetails,
+            Exception = exception,
+        });
 
-            case TimeoutException timeoutEx:
-                _logger.LogError(timeoutEx, "Request timeout: {Message}", timeoutEx.Message);
-                context.Response.StatusCode = (int)HttpStatusCode.RequestTimeout;
-                response = new
-                {
-                    error = "The request timed out. Please try again.",
-                    details = "The operation took too long to complete.",
-                    timestamp = DateTime.UtcNow,
-                    statusCode = 408
-                };
-                break;
-
-            case UnauthorizedAccessException unauthorizedEx:
-                _logger.LogWarning(unauthorizedEx, "Unauthorized access attempt: {Message}", unauthorizedEx.Message);
-                context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
-                response = new
-                {
-                    error = "You are not authorized to access this resource.",
-                    details = "Please log in with appropriate credentials.",
-                    timestamp = DateTime.UtcNow,
-                    statusCode = 401
-                };
-                break;
-
-            case ArgumentException argEx:
-                _logger.LogWarning(argEx, "Invalid argument provided: {Message}", argEx.Message);
-                context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                response = new
-                {
-                    error = "Invalid request parameters.",
-                    details = argEx.Message,
-                    timestamp = DateTime.UtcNow,
-                    statusCode = 400
-                };
-                break;
-
-            default:
-                _logger.LogError(exception, "Unhandled exception: {Message}", exception.Message);
-                context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-                response = new
-                {
-                    error = "An internal server error occurred. Please try again later.",
-                    details = "If the problem persists, please contact support.",
-                    timestamp = DateTime.UtcNow,
-                    statusCode = 500
-                };
-                break;
+        if (!written)
+        {
+            // Fallback if no writer could handle it (e.g. an unsupported Accept header).
+            await context.Response.WriteAsJsonAsync(problemDetails);
         }
-
-        var jsonResponse = JsonSerializer.Serialize(response, JsonOptions);
-
-        await context.Response.WriteAsync(jsonResponse);
-    }
-
-    private static string GetErrorDetails(Exception exception)
-    {
-        return exception switch
-        {
-            OperationCanceledException => "The request was canceled by the client or due to timeout.",
-            NpgsqlException => "Database connection failed. Please ensure PostgreSQL is running.",
-            TimeoutException => "Operation timed out. Please try again.",
-            UnauthorizedAccessException => "Access denied. Please check your credentials.",
-            ArgumentException => "Invalid request parameters provided.",
-            _ => "An unexpected error occurred."
-        };
     }
 }

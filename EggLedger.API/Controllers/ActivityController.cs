@@ -1,4 +1,4 @@
-using EggLedger.Services.Errors;
+using EggLedger.API.Extensions;
 using EggLedger.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -32,19 +32,17 @@ public class ActivityController : ControllerBase
             var result = await _activityService.GetRoomActivityAsync(roomCode, effectivePage, effectivePageSize, cancellationToken);
             if (result.IsSuccess)
                 return Ok(result.Value);
-            if (result.HasError<NotFoundError>())
-                return NotFound();
-            return StatusCode(500, result.Errors.Select(e => e.Message));
+            return this.ToProblem(result);
         }
         catch (OperationCanceledException)
         {
             _logger.LogInformation("Request was canceled by the client for GetActivity, roomCode: {RoomCode}", roomCode);
-            return StatusCode(499, "Client closed request.");
+            return Problem(detail: "Client closed request.", statusCode: 499, title: "Request canceled");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled exception in GetActivity for roomCode: {RoomCode}", roomCode);
-            return StatusCode(500, "An unexpected error occurred.");
+            return Problem(detail: "An unexpected error occurred.", statusCode: StatusCodes.Status500InternalServerError, title: "Internal server error");
         }
     }
 }

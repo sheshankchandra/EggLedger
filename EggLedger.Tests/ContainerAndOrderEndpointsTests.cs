@@ -29,6 +29,16 @@ public class ContainerAndOrderEndpointsTests : IClassFixture<EggLedgerWebApplica
         public int RemainingQuantity { get; set; }
     }
 
+    /// <summary>Asserts the response body is an RFC 7807 ProblemDetails envelope with the given status.</summary>
+    private static async Task AssertProblemDetailsAsync(HttpResponseMessage response, int expectedStatus)
+    {
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+        var json = await response.Content.ReadAsStringAsync();
+        using var doc = System.Text.Json.JsonDocument.Parse(json);
+        Assert.Equal(expectedStatus, doc.RootElement.GetProperty("status").GetInt32());
+        Assert.False(string.IsNullOrWhiteSpace(doc.RootElement.GetProperty("title").GetString()));
+    }
+
     private sealed class OrderSummary
     {
         public Guid OrderId { get; set; }
@@ -171,6 +181,7 @@ public class ContainerAndOrderEndpointsTests : IClassFixture<EggLedgerWebApplica
         var response = await client.SendAsync(request);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        await AssertProblemDetailsAsync(response, 404);
     }
 
     [Fact]
@@ -197,6 +208,7 @@ public class ContainerAndOrderEndpointsTests : IClassFixture<EggLedgerWebApplica
         var deleteResponse = await client.SendAsync(deleteRequest);
 
         Assert.Equal(HttpStatusCode.Forbidden, deleteResponse.StatusCode);
+        await AssertProblemDetailsAsync(deleteResponse, 403);
     }
 
     [Fact]
@@ -223,5 +235,6 @@ public class ContainerAndOrderEndpointsTests : IClassFixture<EggLedgerWebApplica
         var deleteResponse = await client.SendAsync(deleteRequest);
 
         Assert.Equal(HttpStatusCode.Conflict, deleteResponse.StatusCode);
+        await AssertProblemDetailsAsync(deleteResponse, 409);
     }
 }

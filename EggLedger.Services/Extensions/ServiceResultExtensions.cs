@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using EggLedger.Services.Errors;
 using FluentResults;
 using Microsoft.Extensions.Logging;
 
@@ -31,7 +32,7 @@ public static class ServiceResultExtensions
         catch (Exception ex)
         {
             logger.LogError(ex, "Error occurred in {Operation}", operationName);
-            return Result.Fail(failureMessage);
+            return Result.Fail(new UnexpectedError(failureMessage));
         }
     }
 
@@ -53,7 +54,7 @@ public static class ServiceResultExtensions
         catch (Exception ex)
         {
             logger.LogError(ex, "Error occurred in {Operation}", operationName);
-            return Result.Fail(failureMessage);
+            return Result.Fail(new UnexpectedError(failureMessage));
         }
     }
 }

@@ -38,6 +38,17 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddOpenApi("v2");
 
+// RFC 7807 ProblemDetails for every error response (controllers' Problem()/ValidationProblem()
+// calls, and the built-in [ApiController] auto-conversion of bodyless 4xx/5xx results). The
+// trace id lets a user-reported error be matched back to the exact log lines for that request.
+builder.Services.AddProblemDetails(options =>
+{
+    options.CustomizeProblemDetails = context =>
+    {
+        context.ProblemDetails.Extensions["traceId"] = context.HttpContext.TraceIdentifier;
+    };
+});
+
 // Build the application
 var app = builder.Build();
 

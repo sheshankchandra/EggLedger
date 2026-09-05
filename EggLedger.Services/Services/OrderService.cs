@@ -213,7 +213,7 @@ public class OrderService : IOrderService
                 .FirstOrDefaultAsync(o => o.OrderId == orderId, cancellationToken);
 
             if (order == null)
-                return Result.Fail("Order not found");
+                return Result.Fail(new NotFoundError("Order not found"));
 
             var dto = MapToOrderDto(order);
             return Result.Ok(dto);
@@ -230,7 +230,7 @@ public class OrderService : IOrderService
             var room = await _context.Rooms.FirstOrDefaultAsync(r => r.RoomCode == roomCode, cancellationToken);
             if (room == null)
             {
-                return Result.Fail("Room not found");
+                return Result.Fail(new NotFoundError("Room not found"));
             }
 
             // Scoped to this room: an Order's details are always drawn from containers in a

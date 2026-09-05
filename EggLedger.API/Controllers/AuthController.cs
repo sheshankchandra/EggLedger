@@ -99,12 +99,12 @@ public class AuthController : ControllerBase
                 SetRefreshTokenCookie(result.Value.RefreshToken);
                 return Ok(new { accessToken = result.Value.AccessToken, isNewRegistration = result.Value.IsNewRegistration });
             }
-            return BadRequest(result.Errors.Select(e => e.Message));
+            return this.ToProblem(result);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled exception in CreateUser");
-            return StatusCode(500, "An unexpected error occurred.");
+            return Problem(detail: "An unexpected error occurred.", statusCode: StatusCodes.Status500InternalServerError, title: "Internal server error");
         }
     }
 
@@ -116,7 +116,7 @@ public class AuthController : ControllerBase
         try
         {
             _logger.LogInformation("Login attempt for email: {Email}", dto.Email);
-            
+
             var result = await _authService.LoginAsync(dto);
             if (result.IsSuccess)
             {
@@ -124,14 +124,14 @@ public class AuthController : ControllerBase
                 SetRefreshTokenCookie(result.Value.RefreshToken);
                 return Ok(new { accessToken = result.Value.AccessToken });
             }
-            
+
             _logger.LogWarning("Failed login attempt for email: {Email}", dto.Email);
-            return BadRequest(result.Errors.Select(e => e.Message));
+            return this.ToProblem(result);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled exception in Login for email: {Email}", dto.Email);
-            return StatusCode(500, "An unexpected error occurred.");
+            return Problem(detail: "An unexpected error occurred.", statusCode: StatusCodes.Status500InternalServerError, title: "Internal server error");
         }
     }
 
@@ -159,7 +159,7 @@ public class AuthController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled exception in GoogleLogin");
-            return StatusCode(500, "An unexpected error occurred.");
+            return Problem(detail: "An unexpected error occurred.", statusCode: StatusCodes.Status500InternalServerError, title: "Internal server error");
         }
     }
 
@@ -175,7 +175,7 @@ public class AuthController : ControllerBase
             if (allowedOrigins.Length == 0)
             {
                 _logger.LogWarning("No allowed origins configured for CORS");
-                return BadRequest("CORS configuration is missing allowed origins.");
+                return Problem(detail: "CORS configuration is missing allowed origins.", statusCode: StatusCodes.Status400BadRequest, title: "Invalid request");
             }
 
             _logger.LogInformation("Processing Google OAuth callback");
@@ -185,7 +185,7 @@ public class AuthController : ControllerBase
             if (!authenticateResult.Succeeded)
             {
                 _logger.LogWarning("Google authentication failed during callback");
-                return BadRequest("Google authentication failed.");
+                return Problem(detail: "Google authentication failed.", statusCode: StatusCodes.Status400BadRequest, title: "Invalid request");
             }
 
             // Prefer the origin captured at login start; fall back to the first configured
@@ -204,7 +204,7 @@ public class AuthController : ControllerBase
             if (string.IsNullOrEmpty(email))
             {
                 _logger.LogWarning("Email claim not found in Google OAuth token");
-                return BadRequest("Email claim not found in Google token.");
+                return Problem(detail: "Email claim not found in Google token.", statusCode: StatusCodes.Status400BadRequest, title: "Invalid request");
             }
 
             _logger.LogInformation("Processing OAuth login for email: {Email} with name: {Name}", email, name);
@@ -237,7 +237,7 @@ public class AuthController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled exception in GoogleCallback");
-            return StatusCode(500, "An unexpected error occurred.");
+            return Problem(detail: "An unexpected error occurred.", statusCode: StatusCodes.Status500InternalServerError, title: "Internal server error");
         }
     }
 
@@ -251,14 +251,14 @@ public class AuthController : ControllerBase
             if (IsMissingCsrfHeader())
             {
                 _logger.LogWarning("Refresh rejected: missing CSRF header");
-                return StatusCode(StatusCodes.Status403Forbidden, "Missing required header.");
+                return Problem(detail: "Missing required header.", statusCode: StatusCodes.Status403Forbidden, title: "Forbidden");
             }
 
             var refreshToken = Request.Cookies[RefreshCookieName];
             if (string.IsNullOrEmpty(refreshToken))
             {
                 _logger.LogInformation("Refresh request with no refresh-token cookie");
-                return Unauthorized("No refresh token.");
+                return Problem(detail: "No refresh token.", statusCode: StatusCodes.Status401Unauthorized, title: "Unauthorized");
             }
 
             var tokenResponse = await _authService.RefreshTokensAsync(refreshToken);
@@ -266,7 +266,7 @@ public class AuthController : ControllerBase
             {
                 _logger.LogWarning("Refresh token rejected");
                 ClearRefreshTokenCookie();
-                return Unauthorized("Invalid refresh token.");
+                return Problem(detail: "Invalid refresh token.", statusCode: StatusCodes.Status401Unauthorized, title: "Unauthorized");
             }
 
             // Rotation: replace the cookie with the newly issued refresh token.
@@ -276,7 +276,7 @@ public class AuthController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled exception in RefreshToken");
-            return StatusCode(500, "An unexpected error occurred.");
+            return Problem(detail: "An unexpected error occurred.", statusCode: StatusCodes.Status500InternalServerError, title: "Internal server error");
         }
     }
 
@@ -290,7 +290,7 @@ public class AuthController : ControllerBase
             if (IsMissingCsrfHeader())
             {
                 _logger.LogWarning("Logout rejected: missing CSRF header");
-                return StatusCode(StatusCodes.Status403Forbidden, "Missing required header.");
+                return Problem(detail: "Missing required header.", statusCode: StatusCodes.Status403Forbidden, title: "Forbidden");
             }
 
             _logger.LogInformation("Received request to logout a user.");
@@ -309,7 +309,7 @@ public class AuthController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled exception in Logout for a user");
-            return StatusCode(500, "An unexpected error occurred.");
+            return Problem(detail: "An unexpected error occurred.", statusCode: StatusCodes.Status500InternalServerError, title: "Internal server error");
         }
     }
 }

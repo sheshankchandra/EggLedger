@@ -400,8 +400,10 @@ const confirmDeleteContainer = async () => {
     if (isCanceled(err)) return
     const message =
       err.response?.status === 409
-        ? err.response.data?.[0] ||
-          `Some ${resource.plural} have already been used from this ${resource.inventorySingular}.`
+        ? errorMessage(
+            err,
+            `Some ${resource.plural} have already been used from this ${resource.inventorySingular}.`,
+          )
         : err.response?.status === 403
           ? `Only the purchaser can delete this ${resource.inventorySingular}.`
           : `Failed to delete the ${resource.inventorySingular}.`

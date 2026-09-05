@@ -152,7 +152,7 @@ public class RoomApprovalWorkflowTests : IClassFixture<EggLedgerWebApplicationFa
     }
 
     [Fact]
-    public async Task JoinPrivateRoomTwice_SecondRequestReturnsBadRequest()
+    public async Task JoinPrivateRoomTwice_SecondRequestReturnsConflict()
     {
         var client = _factory.CreateClient();
         var owner = await EggLedgerTestHelpers.RegisterAsync(client);
@@ -163,7 +163,7 @@ public class RoomApprovalWorkflowTests : IClassFixture<EggLedgerWebApplicationFa
         var secondRequest = new HttpRequestMessage(HttpMethod.Post, $"/egg-ledger-api/room/join/{roomCode}").WithAuth(joiner.AccessToken);
         var secondResponse = await client.SendAsync(secondRequest);
 
-        Assert.Equal(HttpStatusCode.BadRequest, secondResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, secondResponse.StatusCode);
     }
 
     [Fact]

@@ -1,6 +1,6 @@
 using System.Security.Claims;
+using EggLedger.API.Extensions;
 using EggLedger.DTO.Ledger;
-using EggLedger.Services.Errors;
 using EggLedger.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -32,19 +32,17 @@ public class LedgerController : ControllerBase
             var result = await _ledgerService.GetRoomLedgerAsync(roomCode, cancellationToken);
             if (result.IsSuccess)
                 return Ok(result.Value);
-            if (result.HasError<NotFoundError>())
-                return NotFound();
-            return StatusCode(500, result.Errors.Select(e => e.Message));
+            return this.ToProblem(result);
         }
         catch (OperationCanceledException)
         {
             _logger.LogInformation("Request was canceled by the client for GetLedger, roomCode: {RoomCode}", roomCode);
-            return StatusCode(499, "Client closed request.");
+            return Problem(detail: "Client closed request.", statusCode: 499, title: "Request canceled");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled exception in GetLedger for roomCode: {RoomCode}", roomCode);
-            return StatusCode(500, "An unexpected error occurred.");
+            return Problem(detail: "An unexpected error occurred.", statusCode: StatusCodes.Status500InternalServerError, title: "Internal server error");
         }
     }
 
@@ -57,19 +55,17 @@ public class LedgerController : ControllerBase
             var result = await _ledgerService.GetSettlementHistoryAsync(roomCode, cancellationToken);
             if (result.IsSuccess)
                 return Ok(result.Value);
-            if (result.HasError<NotFoundError>())
-                return NotFound();
-            return StatusCode(500, result.Errors.Select(e => e.Message));
+            return this.ToProblem(result);
         }
         catch (OperationCanceledException)
         {
             _logger.LogInformation("Request was canceled by the client for GetSettlementHistory, roomCode: {RoomCode}", roomCode);
-            return StatusCode(499, "Client closed request.");
+            return Problem(detail: "Client closed request.", statusCode: 499, title: "Request canceled");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled exception in GetSettlementHistory for roomCode: {RoomCode}", roomCode);
-            return StatusCode(500, "An unexpected error occurred.");
+            return Problem(detail: "An unexpected error occurred.", statusCode: StatusCodes.Status500InternalServerError, title: "Internal server error");
         }
     }
 
@@ -81,7 +77,7 @@ public class LedgerController : ControllerBase
         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var receiverId))
         {
-            return Unauthorized("Invalid user identity");
+            return Problem(detail: "Invalid user identity", statusCode: StatusCodes.Status401Unauthorized, title: "Unauthorized");
         }
 
         try
@@ -93,19 +89,17 @@ public class LedgerController : ControllerBase
                 return Ok(result.Value);
             }
 
-            if (result.HasError<NotFoundError>())
-                return NotFound(result.Errors.Select(e => e.Message));
-            return BadRequest(result.Errors.Select(e => e.Message));
+            return this.ToProblem(result);
         }
         catch (OperationCanceledException)
         {
             _logger.LogInformation("Request was canceled by the client for RecordSettlement, roomCode: {RoomCode}", roomCode);
-            return StatusCode(499, "Client closed request.");
+            return Problem(detail: "Client closed request.", statusCode: 499, title: "Request canceled");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled exception in RecordSettlement for roomCode: {RoomCode}", roomCode);
-            return StatusCode(500, "An unexpected error occurred.");
+            return Problem(detail: "An unexpected error occurred.", statusCode: StatusCodes.Status500InternalServerError, title: "Internal server error");
         }
     }
 
@@ -116,7 +110,7 @@ public class LedgerController : ControllerBase
         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var callerId))
         {
-            return Unauthorized("Invalid user identity");
+            return Problem(detail: "Invalid user identity", statusCode: StatusCodes.Status401Unauthorized, title: "Unauthorized");
         }
 
         try
@@ -124,21 +118,17 @@ public class LedgerController : ControllerBase
             var result = await _ledgerService.DeleteSettlementAsync(roomCode, settlementId, callerId, cancellationToken);
             if (result.IsSuccess)
                 return Ok();
-            if (result.HasError<NotFoundError>())
-                return NotFound(result.Errors.Select(e => e.Message));
-            if (result.HasError<ForbiddenError>())
-                return Forbid();
-            return BadRequest(result.Errors.Select(e => e.Message));
+            return this.ToProblem(result);
         }
         catch (OperationCanceledException)
         {
             _logger.LogInformation("Request was canceled by the client for DeleteSettlement, roomCode: {RoomCode}", roomCode);
-            return StatusCode(499, "Client closed request.");
+            return Problem(detail: "Client closed request.", statusCode: 499, title: "Request canceled");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled exception in DeleteSettlement for roomCode: {RoomCode}", roomCode);
-            return StatusCode(500, "An unexpected error occurred.");
+            return Problem(detail: "An unexpected error occurred.", statusCode: StatusCodes.Status500InternalServerError, title: "Internal server error");
         }
     }
 }

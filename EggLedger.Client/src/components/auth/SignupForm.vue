@@ -122,6 +122,7 @@ import { computed, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.store'
 import authService from '@/services/auth.service'
+import { errorMessage } from '@/utils/httpError'
 
 // Reactive data
 const form = reactive({
@@ -196,7 +197,7 @@ const handleRegister = async () => {
       router.push('/accounts/login')
     }, 2000)
   } catch (err) {
-    error.value = err.response.data.join(' ') || 'Registration failed. Please try again.'
+    error.value = errorMessage(err, 'Registration failed. Please try again.')
   } finally {
     loading.value = false
   }
@@ -207,7 +208,7 @@ const handleGoogleRegister = async () => {
   try {
     await authService.googleLogin()
   } catch (err) {
-    error.value = err.response.data.join(' ') || 'Google registration failed. Please try again.'
+    error.value = errorMessage(err, 'Google registration failed. Please try again.')
   } finally {
     loading.value = false
   }

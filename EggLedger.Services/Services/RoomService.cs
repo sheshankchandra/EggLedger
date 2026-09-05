@@ -71,7 +71,7 @@ public class RoomService : IRoomService
             if (room == null)
             {
                 _logger.LogWarning("Active room not found, code '{RoomCode}'", roomCode);
-                return Result.Fail("Room not found");
+                return Result.Fail(new NotFoundError("Room not found"));
             }
 
             var existing = room.UserRooms.FirstOrDefault(ur => ur.UserId == userId);
@@ -79,8 +79,8 @@ public class RoomService : IRoomService
             {
                 _logger.LogWarning("User : {UserId} already in room : {RoomName}", userId, room.RoomName);
                 return existing.Status == UserRoomStatus.Pending
-                    ? Result.Fail("Your request to join this room is already pending approval")
-                    : Result.Fail("User already in room");
+                    ? Result.Fail(new ConflictError("Your request to join this room is already pending approval"))
+                    : Result.Fail(new ConflictError("User already in room"));
             }
 
             // Knowing the room code is enough to request joining, for both Private and Public
@@ -120,7 +120,7 @@ public class RoomService : IRoomService
 
             if (room == null)
             {
-                return Result.Fail("Room not found");
+                return Result.Fail(new NotFoundError("Room not found"));
             }
 
             var users = await _context.Users.AsNoTracking()
@@ -154,13 +154,13 @@ public class RoomService : IRoomService
             if (userRoom == null)
             {
                 _logger.LogError("Active room '{RoomId}' not found or user '{UserId}' is not in that room", dto.RoomId, dto.UserId);
-                return Result.Fail("Room not found or user is not in that room");
+                return Result.Fail(new NotFoundError("Room not found or user is not in that room"));
             }
 
             if (!userRoom.IsAdmin)
             {
                 _logger.LogWarning("User '{UserId}' is not admin of room '{RoomId}'", dto.UserId, dto.RoomId);
-                return Result.Fail("Only room admin can update visibility");
+                return Result.Fail(new ForbiddenError("Only room admin can update visibility"));
             }
 
             Room room = userRoom.Room;
@@ -252,7 +252,7 @@ public class RoomService : IRoomService
             if (room == null)
             {
                 _logger.LogWarning("Active room with code {RoomCode} not found", roomCode);
-                return Result.Fail<RoomDto>("Room not found");
+                return Result.Fail<RoomDto>(new NotFoundError("Room not found"));
             }
 
             _logger.LogInformation("Retrieved room {RoomCode}", roomCode);
@@ -282,19 +282,19 @@ public class RoomService : IRoomService
             if (roomWithUserValidation?.Room == null)
             {
                 _logger.LogError("Unable to find active room with code: {RoomCode}", roomCode);
-                return Result.Fail("Unable to find the Room");
+                return Result.Fail(new NotFoundError("Unable to find the Room"));
             }
 
             if (roomWithUserValidation.UserRoom == null)
             {
                 _logger.LogError("User : {UserId} not found in the Room : {RoomCode}", userId, roomCode);
-                return Result.Fail("User not found in the Room");
+                return Result.Fail(new ForbiddenError("User not found in the Room"));
             }
 
             if (!roomWithUserValidation.UserRoom.IsAdmin)
             {
                 _logger.LogError("User : {UserId} is not Admin for the Room : {RoomCode}", userId, roomCode);
-                return Result.Fail("User is not Admin for the Room");
+                return Result.Fail(new ForbiddenError("User is not Admin for the Room"));
             }
 
             // Check for active orders that would be affected
@@ -302,7 +302,7 @@ public class RoomService : IRoomService
             {
                 _logger.LogWarning("Cannot archive room {RoomCode} - has {Count} active order details",
                     roomCode, roomWithUserValidation.ActiveOrderDetailsCount);
-                return Result.Fail("Cannot archive room with active orders. Please complete or cancel all orders first.");
+                return Result.Fail(new ConflictError("Cannot archive room with active orders. Please complete or cancel all orders first."));
             }
 
             var room = roomWithUserValidation.Room;
@@ -364,13 +364,13 @@ public class RoomService : IRoomService
             if (userRoom == null)
             {
                 _logger.LogError("Active room '{RoomId}' not found or user '{UserId}' is not in that room", roomId, userId);
-                return Result.Fail("Room not found or user is not in that room");
+                return Result.Fail(new NotFoundError("Room not found or user is not in that room"));
             }
 
             if (!userRoom.IsAdmin)
             {
                 _logger.LogWarning("User '{UserId}' is not admin of room '{RoomId}'", userId, roomId);
-                return Result.Fail("Only room admin can edit the room name");
+                return Result.Fail(new ForbiddenError("Only room admin can edit the room name"));
             }
 
             var room = userRoom.Room;
@@ -405,13 +405,13 @@ public class RoomService : IRoomService
             if (adminUserRoom == null)
             {
                 _logger.LogError("Active room '{RoomId}' not found or admin user '{UserId}' is not in that room", roomId, adminUserId);
-                return Result.Fail("Room not found or admin user is not in that room");
+                return Result.Fail(new NotFoundError("Room not found or admin user is not in that room"));
             }
 
             if (!adminUserRoom.IsAdmin)
             {
                 _logger.LogWarning("User '{UserId}' is not admin of room '{RoomId}'", adminUserId, roomId);
-                return Result.Fail("Only room admin can remove members");
+                return Result.Fail(new ForbiddenError("Only room admin can remove members"));
             }
 
             if (adminUserId == memberUserId)
@@ -427,7 +427,7 @@ public class RoomService : IRoomService
             if (memberUserRoom == null)
             {
                 _logger.LogWarning("User '{MemberUserId}' not found in room '{RoomId}'", memberUserId, roomId);
-                return Result.Fail("Member not found in the room");
+                return Result.Fail(new NotFoundError("Member not found in the room"));
             }
 
             _context.UserRooms.Remove(memberUserRoom);
@@ -451,7 +451,7 @@ public class RoomService : IRoomService
             if (userRoom == null)
             {
                 _logger.LogError("Active room '{RoomId}' not found or user '{UserId}' is not in that room", roomId, userId);
-                return Result.Fail("Room not found or user is not in that room");
+                return Result.Fail(new NotFoundError("Room not found or user is not in that room"));
             }
 
             var room = userRoom.Room;
@@ -488,7 +488,7 @@ public class RoomService : IRoomService
                 ur => ur.RoomId == room.RoomId && ur.UserId == adminUserId && ur.IsAdmin && ur.Status == UserRoomStatus.Approved,
                 cancellationToken);
             if (!isAdmin)
-                return Result.Fail("Only room admin can view pending requests");
+                return Result.Fail(new ForbiddenError("Only room admin can view pending requests"));
 
             var pending = await _context.UserRooms
                 .AsNoTracking()
@@ -555,7 +555,7 @@ public class RoomService : IRoomService
             ur => ur.RoomId == room.RoomId && ur.UserId == adminUserId && ur.IsAdmin && ur.Status == UserRoomStatus.Approved,
             cancellationToken);
         if (!isAdmin)
-            return Result.Fail("Only room admin can manage join requests");
+            return Result.Fail(new ForbiddenError("Only room admin can manage join requests"));
 
         var pendingRow = await _context.UserRooms
             .FirstOrDefaultAsync(ur => ur.RoomId == room.RoomId && ur.UserId == memberUserId && ur.Status == UserRoomStatus.Pending, cancellationToken);

@@ -98,6 +98,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.store'
 import authService from '@/services/auth.service'
 import { consumeRedirect } from '@/utils/postLoginRedirect'
+import { errorMessage } from '@/utils/httpError'
 
 // Reactive data
 const email = ref('')
@@ -135,7 +136,7 @@ const handleLogin = async () => {
 
     router.push(consumeRedirect() || '/dashboard')
   } catch (err) {
-    error.value = err.response.data.join(' ') || 'Login failed. Please try again.'
+    error.value = errorMessage(err, 'Login failed. Please try again.')
     console.error(err)
   } finally {
     loading.value = false
@@ -147,7 +148,7 @@ const handleGoogleLogin = async () => {
   try {
     await authService.googleLogin()
   } catch (err) {
-    error.value = err.response.data.join(' ') || 'Google login failed. Please try again.'
+    error.value = errorMessage(err, 'Google login failed. Please try again.')
   } finally {
     loading.value = false
   }

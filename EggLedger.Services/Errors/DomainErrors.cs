@@ -35,3 +35,16 @@ public class ConflictError : Error
     {
     }
 }
+
+/// <summary>
+/// A genuinely unexpected failure (an exception was caught) rather than an expected business
+/// outcome. Used only by <see cref="Extensions.ServiceResultExtensions"/>'s catch-all so
+/// controllers can tell "the server broke" apart from "the request was invalid" - both would
+/// otherwise be indistinguishable plain <see cref="Error"/> messages. Maps to HTTP 500.
+/// </summary>
+public class UnexpectedError : Error
+{
+    public UnexpectedError(string message) : base(message)
+    {
+    }
+}
