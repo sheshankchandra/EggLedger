@@ -2,6 +2,7 @@ using EggLedger.Data;
 using EggLedger.DTO.Order;
 using EggLedger.Models.Enums;
 using EggLedger.Models.Models;
+using EggLedger.Services.Errors;
 using EggLedger.Services.Extensions;
 using EggLedger.Services.Interfaces;
 using FluentResults;
@@ -109,7 +110,7 @@ public class OrderService : IOrderService
 
             if (user == null || userRoom == null)
             {
-                return Result.Fail("User is not a member of the specified room.");
+                return Result.Fail(new NotFoundError("User is not a member of the specified room."));
             }
 
             var orderNameResult = await _helperService.GenerateOrderName(user, 2, cancellationToken);

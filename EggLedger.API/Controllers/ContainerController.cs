@@ -1,10 +1,11 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 using EggLedger.DTO.Container;
+using EggLedger.Services.Errors;
 using EggLedger.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -61,7 +62,7 @@ public class ContainerController : ControllerBase
             if (result.IsSuccess)
                 return Ok(result.Value);
 
-            if (result.Errors.Any(e => e.Message == "Container not found"))
+            if (result.HasError<NotFoundError>())
                 return NotFound();
 
             return StatusCode(500, result.Errors);
@@ -114,7 +115,7 @@ public class ContainerController : ControllerBase
             if (result.IsSuccess)
                 return Ok(result.Value);
 
-            if (result.Errors.Any(e => e.Message == "Container not found"))
+            if (result.HasError<NotFoundError>())
                 return NotFound();
 
             return BadRequest(result.Errors.Select(e => e.Message));
@@ -142,7 +143,7 @@ public class ContainerController : ControllerBase
             if (result.IsSuccess)
                 return NoContent();
 
-            if (result.Errors.Any(e => e.Message == "Container not found"))
+            if (result.HasError<NotFoundError>())
                 return NotFound();
 
             return BadRequest(result.Errors.Select(e => e.Message));
@@ -171,13 +172,13 @@ public class ContainerController : ControllerBase
             if (result.IsSuccess)
                 return NoContent();
 
-            if (result.Errors.Any(e => e.Message == "Container not found"))
+            if (result.HasError<NotFoundError>())
                 return NotFound();
 
-            if (result.Errors.Any(e => e.Message.Contains("owner", StringComparison.OrdinalIgnoreCase)))
+            if (result.HasError<ForbiddenError>())
                 return Forbid();
 
-            if (result.Errors.Any(e => e.Message.Contains("already been consumed", StringComparison.OrdinalIgnoreCase)))
+            if (result.HasError<ConflictError>())
                 return Conflict(result.Errors.Select(e => e.Message));
 
             return BadRequest(result.Errors.Select(e => e.Message));
@@ -205,7 +206,7 @@ public class ContainerController : ControllerBase
             if (result.IsSuccess)
                 return NoContent();
 
-            if (result.Errors.Any(e => e.Message == "Container not found"))
+            if (result.HasError<NotFoundError>())
                 return NotFound();
 
             return BadRequest(result.Errors.Select(e => e.Message));

@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using EggLedger.DTO.Room;
 using EggLedger.DTO.User;
+using EggLedger.Services.Errors;
 using EggLedger.Services.Interfaces;
 using FluentResults;
 using Microsoft.AspNetCore.Authorization;
@@ -366,7 +367,7 @@ public class RoomController : ControllerBase
             var result = await _roomService.GetPendingMembersAsync(userId, roomCode, cancellationToken);
             if (result.IsSuccess)
                 return Ok(result.Value);
-            if (result.Errors.Any(e => e.Message == "Room not found"))
+            if (result.HasError<NotFoundError>())
                 return NotFound();
             return BadRequest(result.Errors.Select(e => e.Message));
         }
@@ -401,7 +402,7 @@ public class RoomController : ControllerBase
                 _logger.LogInformation("Member {MemberUserId} approved into room {RoomCode} by {UserId}", memberUserId, roomCode, userId);
                 return Ok(result.Value);
             }
-            if (result.Errors.Any(e => e.Message == "Room not found" || e.Message == "No pending request found for that user"))
+            if (result.HasError<NotFoundError>())
                 return NotFound(result.Errors.Select(e => e.Message));
             return BadRequest(result.Errors.Select(e => e.Message));
         }
@@ -436,7 +437,7 @@ public class RoomController : ControllerBase
                 _logger.LogInformation("Member {MemberUserId} rejected from room {RoomCode} by {UserId}", memberUserId, roomCode, userId);
                 return Ok(result.Value);
             }
-            if (result.Errors.Any(e => e.Message == "Room not found" || e.Message == "No pending request found for that user"))
+            if (result.HasError<NotFoundError>())
                 return NotFound(result.Errors.Select(e => e.Message));
             return BadRequest(result.Errors.Select(e => e.Message));
         }

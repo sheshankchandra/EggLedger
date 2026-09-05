@@ -1,6 +1,7 @@
 using EggLedger.Data;
 using EggLedger.DTO.User;
 using EggLedger.Models.Models;
+using EggLedger.Services.Errors;
 using EggLedger.Services.Extensions;
 using EggLedger.Services.Interfaces;
 using FluentResults;
@@ -67,7 +68,7 @@ public class UserService : IUserService
             if (user == null)
             {
                 _logger.LogWarning("User not found with ID: {UserId}", id);
-                return Result.Fail("User not found");
+                return Result.Fail(new NotFoundError("User not found"));
             }
             return Result.Ok(user);
         }, "An error occurred while retrieving the user.");
@@ -81,7 +82,7 @@ public class UserService : IUserService
             if (user == null)
             {
                 _logger.LogWarning("Attempted to update non-existent user: {UserId}", id);
-                return Result.Fail("User not found");
+                return Result.Fail(new NotFoundError("User not found"));
             }
 
             var originalEmail = user.Email;
@@ -154,7 +155,7 @@ public class UserService : IUserService
             if (user == null)
             {
                 _logger.LogWarning("Attempted to change password for non-existent user: {UserId}", id);
-                return Result.Fail("User not found");
+                return Result.Fail(new NotFoundError("User not found"));
             }
 
             var userPassword = await _context.UserPasswords
@@ -199,7 +200,7 @@ public class UserService : IUserService
             if (user == null)
             {
                 _logger.LogWarning("Attempted to delete non-existent user: {UserId}", id);
-                return Result.Fail("User not found");
+                return Result.Fail(new NotFoundError("User not found"));
             }
 
             var userEmail = user.Email;

@@ -1,3 +1,4 @@
+using EggLedger.Services.Errors;
 using EggLedger.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -32,7 +33,7 @@ public class ActivityController : ControllerBase
             var result = await _activityService.GetRoomActivityAsync(roomCode, effectivePage, effectivePageSize, cancellationToken);
             if (result.IsSuccess)
                 return Ok(result.Value);
-            if (result.Errors.Any(e => e.Message == "Room not found"))
+            if (result.HasError<NotFoundError>())
                 return NotFound();
             return StatusCode(500, result.Errors.Select(e => e.Message));
         }

@@ -2,6 +2,7 @@ using EggLedger.Data;
 using EggLedger.DTO.Ledger;
 using EggLedger.Models.Enums;
 using EggLedger.Models.Models;
+using EggLedger.Services.Errors;
 using EggLedger.Services.Extensions;
 using EggLedger.Services.Interfaces;
 using FluentResults;
@@ -31,7 +32,7 @@ public class LedgerService : ILedgerService
         {
             var room = await _context.Rooms.FirstOrDefaultAsync(r => r.RoomCode == roomCode, cancellationToken);
             if (room == null)
-                return Result.Fail("Room not found");
+                return Result.Fail(new NotFoundError("Room not found"));
 
             var members = await _context.UserRooms
                 .Where(ur => ur.RoomId == room.RoomId)
@@ -157,7 +158,7 @@ public class LedgerService : ILedgerService
 
             var room = await _context.Rooms.FirstOrDefaultAsync(r => r.RoomCode == roomCode, cancellationToken);
             if (room == null)
-                return Result.Fail("Room not found");
+                return Result.Fail(new NotFoundError("Room not found"));
 
             var payerIsMember = await _context.UserRooms
                 .AnyAsync(ur => ur.RoomId == room.RoomId && ur.UserId == dto.PayerId, cancellationToken);
@@ -170,7 +171,7 @@ public class LedgerService : ILedgerService
             var receiver = await _context.Users.FirstOrDefaultAsync(u => u.UserId == receiverId, cancellationToken);
             var payer = await _context.Users.FirstOrDefaultAsync(u => u.UserId == dto.PayerId, cancellationToken);
             if (receiver == null || payer == null)
-                return Result.Fail("User not found");
+                return Result.Fail(new NotFoundError("User not found"));
 
             var settlement = new Settlement
             {
@@ -209,7 +210,7 @@ public class LedgerService : ILedgerService
         {
             var room = await _context.Rooms.FirstOrDefaultAsync(r => r.RoomCode == roomCode, cancellationToken);
             if (room == null)
-                return Result.Fail("Room not found");
+                return Result.Fail(new NotFoundError("Room not found"));
 
             // Materialize first, then project - User.Name is a computed C# property (FirstName +
             // LastName) that EF Core cannot translate into SQL.
@@ -242,17 +243,17 @@ public class LedgerService : ILedgerService
         {
             var room = await _context.Rooms.FirstOrDefaultAsync(r => r.RoomCode == roomCode, cancellationToken);
             if (room == null)
-                return Result.Fail("Room not found");
+                return Result.Fail(new NotFoundError("Room not found"));
 
             var settlement = await _context.Settlements
                 .FirstOrDefaultAsync(s => s.SettlementId == settlementId && s.RoomId == room.RoomId, cancellationToken);
             if (settlement == null)
-                return Result.Fail("Settlement not found");
+                return Result.Fail(new NotFoundError("Settlement not found"));
 
             if (settlement.ReceiverId != callerId)
             {
                 _logger.LogWarning("Rejected settlement delete: {CallerId} is not the receiver of settlement {SettlementId}", callerId, settlementId);
-                return Result.Fail("Only the person who recorded this settlement can remove it.");
+                return Result.Fail(new ForbiddenError("Only the person who recorded this settlement can remove it."));
             }
 
             _context.Settlements.Remove(settlement);

@@ -3,6 +3,7 @@ using EggLedger.DTO.Room;
 using EggLedger.DTO.User;
 using EggLedger.Models.Enums;
 using EggLedger.Models.Models;
+using EggLedger.Services.Errors;
 using EggLedger.Services.Extensions;
 using EggLedger.Services.Interfaces;
 using FluentResults;
@@ -481,7 +482,7 @@ public class RoomService : IRoomService
                 .Where(r => r.RoomCode == roomCode && r.Status == RoomStatus.Active)
                 .FirstOrDefaultAsync(cancellationToken);
             if (room == null)
-                return Result.Fail("Room not found");
+                return Result.Fail(new NotFoundError("Room not found"));
 
             var isAdmin = await _context.UserRooms.AnyAsync(
                 ur => ur.RoomId == room.RoomId && ur.UserId == adminUserId && ur.IsAdmin && ur.Status == UserRoomStatus.Approved,
@@ -548,7 +549,7 @@ public class RoomService : IRoomService
             .Where(r => r.RoomCode == roomCode && r.Status == RoomStatus.Active)
             .FirstOrDefaultAsync(cancellationToken);
         if (room == null)
-            return Result.Fail("Room not found");
+            return Result.Fail(new NotFoundError("Room not found"));
 
         var isAdmin = await _context.UserRooms.AnyAsync(
             ur => ur.RoomId == room.RoomId && ur.UserId == adminUserId && ur.IsAdmin && ur.Status == UserRoomStatus.Approved,
@@ -559,7 +560,7 @@ public class RoomService : IRoomService
         var pendingRow = await _context.UserRooms
             .FirstOrDefaultAsync(ur => ur.RoomId == room.RoomId && ur.UserId == memberUserId && ur.Status == UserRoomStatus.Pending, cancellationToken);
         if (pendingRow == null)
-            return Result.Fail("No pending request found for that user");
+            return Result.Fail(new NotFoundError("No pending request found for that user"));
 
         return Result.Ok(pendingRow);
     }

@@ -158,4 +158,70 @@ public class ContainerAndOrderEndpointsTests : IClassFixture<EggLedgerWebApplica
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
+
+    [Fact]
+    public async Task GetContainer_ForNonExistentId_ReturnsNotFound()
+    {
+        var client = _factory.CreateClient();
+        var owner = await EggLedgerTestHelpers.RegisterAsync(client);
+        var roomCode = await CreateOpenRoomAsync(client, owner.AccessToken);
+
+        var request = new HttpRequestMessage(HttpMethod.Get, $"/egg-ledger-api/room/{roomCode}/container/{Guid.NewGuid()}")
+            .WithAuth(owner.AccessToken);
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task DeleteContainer_ByNonOwner_ReturnsForbidden()
+    {
+        var client = _factory.CreateClient();
+        var owner = await EggLedgerTestHelpers.RegisterAsync(client);
+        var otherMember = await EggLedgerTestHelpers.RegisterAsync(client);
+        var roomCode = await CreateOpenRoomAsync(client, owner.AccessToken);
+
+        var joinRequest = new HttpRequestMessage(HttpMethod.Post, $"/egg-ledger-api/room/join/{roomCode}").WithAuth(otherMember.AccessToken);
+        await client.SendAsync(joinRequest);
+
+        var stockRequest = new HttpRequestMessage(HttpMethod.Post, $"/egg-ledger-api/{roomCode}/orders/stock").WithAuth(owner.AccessToken);
+        stockRequest.Content = JsonContent.Create(new { containerName = "Owner's Carton", quantity = 12, amount = 6.00m });
+        await client.SendAsync(stockRequest);
+
+        var containersRequest = new HttpRequestMessage(HttpMethod.Get, $"/egg-ledger-api/room/{roomCode}/container/all").WithAuth(owner.AccessToken);
+        var containersResponse = await client.SendAsync(containersRequest);
+        var containerId = (await containersResponse.Content.ReadFromJsonAsync<List<ContainerSummary>>())!.Single().ContainerId;
+
+        var deleteRequest = new HttpRequestMessage(HttpMethod.Delete, $"/egg-ledger-api/room/{roomCode}/container/delete/{containerId}")
+            .WithAuth(otherMember.AccessToken);
+        var deleteResponse = await client.SendAsync(deleteRequest);
+
+        Assert.Equal(HttpStatusCode.Forbidden, deleteResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task DeleteContainer_AfterConsumption_ReturnsConflict()
+    {
+        var client = _factory.CreateClient();
+        var owner = await EggLedgerTestHelpers.RegisterAsync(client);
+        var roomCode = await CreateOpenRoomAsync(client, owner.AccessToken);
+
+        var stockRequest = new HttpRequestMessage(HttpMethod.Post, $"/egg-ledger-api/{roomCode}/orders/stock").WithAuth(owner.AccessToken);
+        stockRequest.Content = JsonContent.Create(new { containerName = "Partially Eaten Carton", quantity = 12, amount = 6.00m });
+        await client.SendAsync(stockRequest);
+
+        var consumeRequest = new HttpRequestMessage(HttpMethod.Post, $"/egg-ledger-api/{roomCode}/orders/consume").WithAuth(owner.AccessToken);
+        consumeRequest.Content = JsonContent.Create(new { quantity = 2 });
+        await client.SendAsync(consumeRequest);
+
+        var containersRequest = new HttpRequestMessage(HttpMethod.Get, $"/egg-ledger-api/room/{roomCode}/container/all").WithAuth(owner.AccessToken);
+        var containersResponse = await client.SendAsync(containersRequest);
+        var containerId = (await containersResponse.Content.ReadFromJsonAsync<List<ContainerSummary>>())!.Single().ContainerId;
+
+        var deleteRequest = new HttpRequestMessage(HttpMethod.Delete, $"/egg-ledger-api/room/{roomCode}/container/delete/{containerId}")
+            .WithAuth(owner.AccessToken);
+        var deleteResponse = await client.SendAsync(deleteRequest);
+
+        Assert.Equal(HttpStatusCode.Conflict, deleteResponse.StatusCode);
+    }
 }

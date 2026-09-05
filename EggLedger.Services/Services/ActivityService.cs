@@ -1,6 +1,7 @@
 using EggLedger.Data;
 using EggLedger.DTO.Activity;
 using EggLedger.Models.Enums;
+using EggLedger.Services.Errors;
 using EggLedger.Services.Extensions;
 using EggLedger.Services.Interfaces;
 using FluentResults;
@@ -36,7 +37,7 @@ public class ActivityService : IActivityService
 
             var room = await _context.Rooms.FirstOrDefaultAsync(r => r.RoomCode == roomCode, cancellationToken);
             if (room == null)
-                return Result.Fail("Room not found");
+                return Result.Fail(new NotFoundError("Room not found"));
 
             var orders = await _context.Orders
                 .Where(o => o.OrderStatus == OrderStatus.Completed && o.OrderDetails.Any(od => od.Container.RoomId == room.RoomId))

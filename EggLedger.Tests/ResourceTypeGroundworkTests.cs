@@ -18,7 +18,7 @@ public class ResourceTypeGroundworkTests : IClassFixture<EggLedgerWebApplication
 
     public ResourceTypeGroundworkTests(EggLedgerWebApplicationFactory factory) => _factory = factory;
 
-    private async Task<int> CreateOpenRoomAsync(HttpClient client, string accessToken)
+    private static async Task<int> CreateOpenRoomAsync(HttpClient client, string accessToken)
     {
         var request = new HttpRequestMessage(HttpMethod.Post, "/egg-ledger-api/room/create/").WithAuth(accessToken);
         request.Content = JsonContent.Create(new { roomName = $"Room {Guid.NewGuid():N}", isOpen = true });

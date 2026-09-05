@@ -3,6 +3,7 @@ using EggLedger.Data;
 using EggLedger.DTO.Stats;
 using EggLedger.Models.Enums;
 using EggLedger.Models.Options;
+using EggLedger.Services.Errors;
 using EggLedger.Services.Extensions;
 using EggLedger.Services.Interfaces;
 using FluentResults;
@@ -31,7 +32,7 @@ public class StatsService : IStatsService
         {
             var userExists = await _context.Users.AnyAsync(u => u.UserId == userId, cancellationToken);
             if (!userExists)
-                return Result.Fail("User not found");
+                return Result.Fail(new NotFoundError("User not found"));
 
             var todayUtc = DateTime.SpecifyKind(DateTime.UtcNow.Date, DateTimeKind.Utc);
 

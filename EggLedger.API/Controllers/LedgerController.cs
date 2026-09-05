@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using EggLedger.DTO.Ledger;
+using EggLedger.Services.Errors;
 using EggLedger.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -32,7 +33,7 @@ public class LedgerController : ControllerBase
             var result = await _ledgerService.GetRoomLedgerAsync(roomCode, cancellationToken);
             if (result.IsSuccess)
                 return Ok(result.Value);
-            if (result.Errors.Any(e => e.Message == "Room not found"))
+            if (result.HasError<NotFoundError>())
                 return NotFound();
             return StatusCode(500, result.Errors.Select(e => e.Message));
         }
@@ -57,7 +58,7 @@ public class LedgerController : ControllerBase
             var result = await _ledgerService.GetSettlementHistoryAsync(roomCode, cancellationToken);
             if (result.IsSuccess)
                 return Ok(result.Value);
-            if (result.Errors.Any(e => e.Message == "Room not found"))
+            if (result.HasError<NotFoundError>())
                 return NotFound();
             return StatusCode(500, result.Errors.Select(e => e.Message));
         }
@@ -93,7 +94,7 @@ public class LedgerController : ControllerBase
                 return Ok(result.Value);
             }
 
-            if (result.Errors.Any(e => e.Message == "Room not found" || e.Message == "User not found"))
+            if (result.HasError<NotFoundError>())
                 return NotFound(result.Errors.Select(e => e.Message));
             return BadRequest(result.Errors.Select(e => e.Message));
         }
@@ -124,9 +125,9 @@ public class LedgerController : ControllerBase
             var result = await _ledgerService.DeleteSettlementAsync(roomCode, settlementId, callerId, cancellationToken);
             if (result.IsSuccess)
                 return Ok();
-            if (result.Errors.Any(e => e.Message == "Room not found" || e.Message == "Settlement not found"))
+            if (result.HasError<NotFoundError>())
                 return NotFound(result.Errors.Select(e => e.Message));
-            if (result.Errors.Any(e => e.Message.Contains("can remove it")))
+            if (result.HasError<ForbiddenError>())
                 return Forbid();
             return BadRequest(result.Errors.Select(e => e.Message));
         }

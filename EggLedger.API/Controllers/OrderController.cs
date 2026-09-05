@@ -4,6 +4,7 @@ using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 using EggLedger.DTO.Order;
+using EggLedger.Services.Errors;
 using EggLedger.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -74,8 +75,7 @@ public class OrderController : ControllerBase
                 return Ok(result.Value);
             }
 
-            if (result.Errors.Any(e => e.Message.Contains("not found", StringComparison.OrdinalIgnoreCase) ||
-                                       e.Message.Contains("not a member", StringComparison.OrdinalIgnoreCase)))
+            if (result.HasError<NotFoundError>())
             {
                 _logger.LogWarning("Consuming order not found.");
                 return NotFound(result.Errors.Select(e => e.Message));

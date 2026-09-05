@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using EggLedger.DTO.User;
 using EggLedger.Models.Enums;
+using EggLedger.Services.Errors;
 using EggLedger.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -81,7 +82,7 @@ public class UserController : ControllerBase
             var result = await _userService.GetUserByIdAsync(id, cancellationToken);
             if (result.IsSuccess)
                 return Ok(result.Value);
-            if (result.Errors.Any(e => e.Message == "User not found"))
+            if (result.HasError<NotFoundError>())
                 return NotFound();
             return StatusCode(500, result.Errors);
         }
@@ -114,7 +115,7 @@ public class UserController : ControllerBase
             var result = await _userService.UpdateUserAsync(id, dto, cancellationToken);
             if (result.IsSuccess)
                 return Ok(result.Value);
-            if (result.Errors.Any(e => e.Message == "User not found"))
+            if (result.HasError<NotFoundError>())
                 return NotFound();
             return BadRequest(result.Errors.Select(e => e.Message));
         }
@@ -144,7 +145,7 @@ public class UserController : ControllerBase
             var result = await _userService.ChangePasswordAsync(id, dto, cancellationToken);
             if (result.IsSuccess)
                 return Ok(new { message = "Password changed successfully" });
-            if (result.Errors.Any(e => e.Message == "User not found"))
+            if (result.HasError<NotFoundError>())
                 return NotFound();
             return BadRequest(result.Errors.Select(e => e.Message));
         }
@@ -172,7 +173,7 @@ public class UserController : ControllerBase
             var result = await _userService.DeleteUserAsync(id, cancellationToken);
             if (result.IsSuccess)
                 return Ok("User deleted successfully");
-            if (result.Errors.Any(e => e.Message == "User not found"))
+            if (result.HasError<NotFoundError>())
                 return NotFound();
             return BadRequest(result.Errors.Select(e => e.Message));
         }
@@ -233,7 +234,7 @@ public class UserController : ControllerBase
             var result = await _statsService.GetUserStatsAsync(userId, range, cancellationToken);
             if (result.IsSuccess)
                 return Ok(result.Value);
-            if (result.Errors.Any(e => e.Message == "User not found"))
+            if (result.HasError<NotFoundError>())
                 return NotFound();
             return StatusCode(500, result.Errors.Select(e => e.Message));
         }

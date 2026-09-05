@@ -2,6 +2,7 @@ using EggLedger.Data;
 using EggLedger.DTO.Container;
 using EggLedger.Models.Enums;
 using EggLedger.Models.Models;
+using EggLedger.Services.Errors;
 using EggLedger.Services.Extensions;
 using EggLedger.Services.Interfaces;
 using FluentResults;
@@ -74,7 +75,7 @@ public class ContainerService : IContainerService
             if (container == null)
             {
                 _logger.LogWarning("Container with ID {ContainerId} not found.", containerId);
-                return Result.Fail("Container not found");
+                return Result.Fail(new NotFoundError("Container not found"));
             }
 
             var summaryDto = new ContainerSummaryDto
@@ -111,7 +112,7 @@ public class ContainerService : IContainerService
             if (container == null)
             {
                 _logger.LogWarning("Container with ID {ContainerId} not found.", containerId);
-                return Result.Fail("Container not found");
+                return Result.Fail(new NotFoundError("Container not found"));
             }
 
             // Update only provided properties
@@ -155,7 +156,7 @@ public class ContainerService : IContainerService
             if (container == null)
             {
                 _logger.LogWarning("Container with ID {ContainerId} not found.", containerId);
-                return Result.Fail("Container not found");
+                return Result.Fail(new NotFoundError("Container not found"));
             }
 
             container.Status = ContainerStatus.Archived;
@@ -176,20 +177,20 @@ public class ContainerService : IContainerService
             if (container == null)
             {
                 _logger.LogWarning("Container with ID {ContainerId} not found.", containerId);
-                return Result.Fail("Container not found");
+                return Result.Fail(new NotFoundError("Container not found"));
             }
 
             if (container.BuyerId != userId)
             {
                 _logger.LogWarning("User {UserId} is not the owner of container {ContainerId}", userId, containerId);
-                return Result.Fail("Only the owner can delete this container");
+                return Result.Fail(new ForbiddenError("Only the owner can delete this container"));
             }
 
             var consumed = container.TotalQuantity - container.RemainingQuantity;
             if (consumed > 0)
             {
                 _logger.LogWarning("Container {ContainerId} has {Consumed} consumed eggs and cannot be deleted", containerId, consumed);
-                return Result.Fail($"Cannot delete: {consumed} egg(s) have already been consumed from this container.");
+                return Result.Fail(new ConflictError($"Cannot delete: {consumed} egg(s) have already been consumed from this container."));
             }
 
             var now = DateTime.UtcNow;
@@ -217,7 +218,7 @@ public class ContainerService : IContainerService
             if (container == null)
             {
                 _logger.LogWarning("Container with ID {ContainerId} not found.", containerId);
-                return Result.Fail("Container not found");
+                return Result.Fail(new NotFoundError("Container not found"));
             }
 
             container.Status = ContainerStatus.Suspended;
