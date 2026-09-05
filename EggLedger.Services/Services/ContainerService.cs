@@ -374,6 +374,7 @@ public class ContainerService : IContainerService
                 Amount = dto.Amount,
                 BuyerId = dto.BuyerId,
                 RoomId = room.RoomId,
+                ResourceTypeId = ResourceType.EggsId,
                 PurchaseDateTime = DateTime.UtcNow,
                 Status = ContainerStatus.Available,
             };

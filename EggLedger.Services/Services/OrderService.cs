@@ -69,6 +69,7 @@ public class OrderService : IOrderService
                 RemainingQuantity = dto.Quantity,
                 Amount = dto.Amount,
                 RoomId = userRoom.RoomId,
+                ResourceTypeId = ResourceType.EggsId,
             };
 
             var orderDetail = new OrderDetail
