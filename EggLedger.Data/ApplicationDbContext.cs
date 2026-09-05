@@ -9,6 +9,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Order> Orders { get; set; } = null!;
     public DbSet<OrderDetail> OrderDetails { get; set; } = null!;
     public DbSet<RefreshToken> RefreshTokens { get; set; } = null!;
+    public DbSet<ResourceType> ResourceTypes { get; set; } = null!;
     public DbSet<Room> Rooms { get; set; } = null!;
     public DbSet<Settlement> Settlements { get; set; } = null!;
     public DbSet<User> Users { get; set; } = null!;
@@ -50,6 +51,12 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
                   .WithMany(p => p.Containers) // Room has many Containers
                   .HasForeignKey(d => d.RoomId)
                   .OnDelete(DeleteBehavior.Cascade); // Deleting a Room will delete its associated Containers
+
+            // Container to ResourceType
+            entity.HasOne(d => d.ResourceType)
+                  .WithMany(p => p.Containers)
+                  .HasForeignKey(d => d.ResourceTypeId)
+                  .OnDelete(DeleteBehavior.Restrict); // Don't allow deleting a ResourceType that's still in use
         });
 
         // Configure the Order entity
@@ -132,6 +139,44 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
                   .WithMany(p => p.RefreshTokens) // User has many RefreshTokens
                   .HasForeignKey(d => d.UserId)
                   .OnDelete(DeleteBehavior.Cascade); // Deleting a User will delete their RefreshTokens
+        });
+
+        // Configure the ResourceType entity
+        modelBuilder.Entity<ResourceType>(entity =>
+        {
+            // Primary Key configuration
+            entity.HasKey(e => e.ResourceTypeId);
+            entity.Property(e => e.ResourceTypeId).ValueGeneratedNever();
+
+            // Property configurations
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.DisplayName).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Singular).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.Plural).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.InventorySingular).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.InventoryPlural).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.Icon).IsRequired().HasMaxLength(10);
+            entity.Property(e => e.IsActive).IsRequired();
+            entity.Property(e => e.CreatedAt).IsRequired();
+
+            // Add a unique index to Name to ensure uniqueness
+            entity.HasIndex(e => e.Name).IsUnique();
+
+            // Seed the single resource type the app currently supports. A future resource type
+            // is added as a plain data insert, not another migration of this shape.
+            entity.HasData(new
+            {
+                ResourceTypeId = ResourceType.EggsId,
+                Name = "eggs",
+                DisplayName = "Eggs",
+                Singular = "egg",
+                Plural = "eggs",
+                InventorySingular = "batch",
+                InventoryPlural = "batches",
+                Icon = "🥚",
+                IsActive = true,
+                CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+            });
         });
 
         // Configure the Room entity
@@ -245,6 +290,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             // Property configurations
             entity.Property(e => e.IsAdmin).IsRequired();
             entity.Property(e => e.JoinedAt).IsRequired();
+            entity.Property(e => e.Status).IsRequired();
 
             // Composite unique index
             entity.HasIndex(ur => new { ur.UserId, ur.RoomId }).IsUnique();

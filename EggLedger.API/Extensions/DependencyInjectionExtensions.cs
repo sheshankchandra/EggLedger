@@ -1,6 +1,5 @@
 using EggLedger.Services.Interfaces;
 using EggLedger.Services.Services;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace EggLedger.API.Extensions;
 
@@ -17,6 +16,8 @@ public static class DependencyInjectionExtensions
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<IRoomService, RoomService>();
         services.AddScoped<ILedgerService, LedgerService>();
+        services.AddScoped<IStatsService, StatsService>();
+        services.AddScoped<IActivityService, ActivityService>();
 
         // Background Services
         services.AddHostedService<DatabaseStartupValidationService>();

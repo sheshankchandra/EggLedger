@@ -1,13 +1,10 @@
-using System;
-using System.Linq;
 using System.Security.Claims;
-using System.Threading;
-using System.Threading.Tasks;
+using EggLedger.API.Extensions;
 using EggLedger.DTO.Order;
+using EggLedger.Services.Errors;
 using EggLedger.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 
 namespace EggLedger.API.Controllers;
 
@@ -43,17 +40,17 @@ public class OrderController : ControllerBase
             }
 
             _logger.LogWarning("Failed to stock order. Errors: {Errors}", string.Join(", ", result.Errors.Select(e => e.Message)));
-            return BadRequest(result.Errors.Select(e => e.Message));
+            return this.ToProblem(result);
         }
         catch (OperationCanceledException)
         {
             _logger.LogInformation("Request was canceled by the client for CreateStockOrder, roomCode: {RoomCode}", roomCode);
-            return StatusCode(499, "Client closed request.");
+            return Problem(detail: "Client closed request.", statusCode: 499, title: "Request canceled");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled exception in CreateStockOrder for roomCode: {RoomCode}", roomCode);
-            return StatusCode(500, "An unexpected error occurred.");
+            return Problem(detail: "An unexpected error occurred.", statusCode: StatusCodes.Status500InternalServerError, title: "Internal server error");
         }
     }
 
@@ -74,25 +71,26 @@ public class OrderController : ControllerBase
                 return Ok(result.Value);
             }
 
-            if (result.Errors.Any(e => e.Message.Contains("not found", StringComparison.OrdinalIgnoreCase) ||
-                                       e.Message.Contains("not a member", StringComparison.OrdinalIgnoreCase)))
+            if (result.HasError<NotFoundError>())
             {
                 _logger.LogWarning("Consuming order not found.");
-                return NotFound(result.Errors.Select(e => e.Message));
+            }
+            else
+            {
+                _logger.LogWarning("Failed to consume order. Errors: {Errors}", string.Join(", ", result.Errors.Select(e => e.Message)));
             }
 
-            _logger.LogWarning("Failed to consume order. Errors: {Errors}", string.Join(", ", result.Errors.Select(e => e.Message)));
-            return BadRequest(result.Errors.Select(e => e.Message));
+            return this.ToProblem(result);
         }
         catch (OperationCanceledException)
         {
             _logger.LogInformation("Request was canceled by the client for CreateConsumeOrder, roomCode: {RoomCode}", roomCode);
-            return StatusCode(499, "Client closed request.");
+            return Problem(detail: "Client closed request.", statusCode: 499, title: "Request canceled");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled exception in CreateConsumeOrder for roomCode: {RoomCode}", roomCode);
-            return StatusCode(500, "An unexpected error occurred.");
+            return Problem(detail: "An unexpected error occurred.", statusCode: StatusCodes.Status500InternalServerError, title: "Internal server error");
         }
     }
 
@@ -113,17 +111,17 @@ public class OrderController : ControllerBase
             }
 
             _logger.LogError("Failed to retrieve order information. Order ID : '{OrderId}'", orderId);
-            return NotFound(result.Errors.Select(e => e.Message));
+            return this.ToProblem(result);
         }
         catch (OperationCanceledException)
         {
             _logger.LogInformation("Request was canceled by the client for GetOrder, roomCode: {RoomCode}, orderId: {OrderId}", roomCode, orderId);
-            return StatusCode(499, "Client closed request.");
+            return Problem(detail: "Client closed request.", statusCode: 499, title: "Request canceled");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled exception in GetOrder for roomCode: {RoomCode}, orderId: {OrderId}", roomCode, orderId);
-            return StatusCode(500, "An unexpected error occurred.");
+            return Problem(detail: "An unexpected error occurred.", statusCode: StatusCodes.Status500InternalServerError, title: "Internal server error");
         }
     }
 
@@ -145,17 +143,17 @@ public class OrderController : ControllerBase
                 return Ok(result.Value);
             }
 
-            return NotFound(result.Value);
+            return this.ToProblem(result);
         }
         catch (OperationCanceledException)
         {
             _logger.LogInformation("Request was canceled by the client for GetOrdersByUser, roomCode: {RoomCode}, userId: {UserId}", roomCode, requestUserId);
-            return StatusCode(499, "Client closed request.");
+            return Problem(detail: "Client closed request.", statusCode: 499, title: "Request canceled");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled exception in GetOrdersByUser for roomCode: {RoomCode}, userId: {UserId}", roomCode, requestUserId);
-            return StatusCode(500, "An unexpected error occurred.");
+            return Problem(detail: "An unexpected error occurred.", statusCode: StatusCodes.Status500InternalServerError, title: "Internal server error");
         }
     }
 
@@ -175,17 +173,17 @@ public class OrderController : ControllerBase
                 return Ok(result.Value);
             }
 
-            return NotFound(result.Value);
+            return this.ToProblem(result);
         }
         catch (OperationCanceledException)
         {
             _logger.LogInformation("Request was canceled by the client for GetOrdersByContainer, roomCode: {RoomCode}, containerId: {ContainerId}", roomCode, containerId);
-            return StatusCode(499, "Client closed request.");
+            return Problem(detail: "Client closed request.", statusCode: 499, title: "Request canceled");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled exception in GetOrdersByContainer for roomCode: {RoomCode}, containerId: {ContainerId}", roomCode, containerId);
-            return StatusCode(500, "An unexpected error occurred.");
+            return Problem(detail: "An unexpected error occurred.", statusCode: StatusCodes.Status500InternalServerError, title: "Internal server error");
         }
     }
 }

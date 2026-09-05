@@ -1,15 +1,10 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Security.Claims;
-using System.Threading;
-using System.Threading.Tasks;
+using EggLedger.API.Extensions;
 using EggLedger.DTO.User;
 using EggLedger.Models.Enums;
 using EggLedger.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 
 namespace EggLedger.API.Controllers;
 
@@ -19,11 +14,13 @@ namespace EggLedger.API.Controllers;
 public class UserController : ControllerBase
 {
     private readonly IUserService _userService;
+    private readonly IStatsService _statsService;
     private readonly ILogger<UserController> _logger;
 
-    public UserController(IUserService userService, ILogger<UserController> logger)
+    public UserController(IUserService userService, IStatsService statsService, ILogger<UserController> logger)
     {
         _userService = userService;
+        _statsService = statsService;
         _logger = logger;
     }
 
@@ -53,17 +50,17 @@ public class UserController : ControllerBase
             var result = await _userService.GetAllUsersAsync(effectivePage, effectivePageSize, cancellationToken);
             if (result.IsSuccess)
                 return Ok(result.Value);
-            return StatusCode(500, result.Errors);
+            return this.ToProblem(result);
         }
         catch (OperationCanceledException)
         {
             _logger.LogInformation("Request was canceled by the client for GetAllUsers");
-            return StatusCode(499, "Client closed request.");
+            return Problem(detail: "Client closed request.", statusCode: 499, title: "Request canceled");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled exception in GetAllUsers");
-            return StatusCode(500, "An unexpected error occurred.");
+            return Problem(detail: "An unexpected error occurred.", statusCode: StatusCodes.Status500InternalServerError, title: "Internal server error");
         }
     }
 
@@ -72,26 +69,24 @@ public class UserController : ControllerBase
     public async Task<ActionResult<UserSummaryDto>> GetUser(Guid id, CancellationToken cancellationToken)
     {
         if (!IsSelfOrAdmin(id))
-            return Forbid();
+            return Problem(detail: "You can only access your own account.", statusCode: StatusCodes.Status403Forbidden, title: "Forbidden");
 
         try
         {
             var result = await _userService.GetUserByIdAsync(id, cancellationToken);
             if (result.IsSuccess)
                 return Ok(result.Value);
-            if (result.Errors.Any(e => e.Message == "User not found"))
-                return NotFound();
-            return StatusCode(500, result.Errors);
+            return this.ToProblem(result);
         }
         catch (OperationCanceledException)
         {
             _logger.LogInformation("Request was canceled by the client for GetUser, id: {Id}", id);
-            return StatusCode(499, "Client closed request.");
+            return Problem(detail: "Client closed request.", statusCode: 499, title: "Request canceled");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled exception in GetUser for id: {Id}", id);
-            return StatusCode(500, "An unexpected error occurred.");
+            return Problem(detail: "An unexpected error occurred.", statusCode: StatusCodes.Status500InternalServerError, title: "Internal server error");
         }
     }
 
@@ -100,31 +95,29 @@ public class UserController : ControllerBase
     public async Task<IActionResult> UpdateUser(Guid id, [FromBody] UserUpdateDto dto, CancellationToken cancellationToken)
     {
         if (!IsSelfOrAdmin(id))
-            return Forbid();
+            return Problem(detail: "You can only update your own account.", statusCode: StatusCodes.Status403Forbidden, title: "Forbidden");
 
         // Only an Admin may change a role - otherwise a user could PUT their own
         // profile with a Role and promote themselves.
         if (dto.Role.HasValue && !User.IsInRole(nameof(UserRoles.Admin)))
-            return Forbid();
+            return Problem(detail: "Only an admin can change a user's role.", statusCode: StatusCodes.Status403Forbidden, title: "Forbidden");
 
         try
         {
             var result = await _userService.UpdateUserAsync(id, dto, cancellationToken);
             if (result.IsSuccess)
                 return Ok(result.Value);
-            if (result.Errors.Any(e => e.Message == "User not found"))
-                return NotFound();
-            return BadRequest(result.Errors.Select(e => e.Message));
+            return this.ToProblem(result);
         }
         catch (OperationCanceledException)
         {
             _logger.LogInformation("Request was canceled by the client for UpdateUser, id: {Id}", id);
-            return StatusCode(499, "Client closed request.");
+            return Problem(detail: "Client closed request.", statusCode: 499, title: "Request canceled");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled exception in UpdateUser for id: {Id}", id);
-            return StatusCode(500, "An unexpected error occurred.");
+            return Problem(detail: "An unexpected error occurred.", statusCode: StatusCodes.Status500InternalServerError, title: "Internal server error");
         }
     }
 
@@ -135,26 +128,24 @@ public class UserController : ControllerBase
     {
         var callerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (!Guid.TryParse(callerId, out var parsedId) || parsedId != id)
-            return Forbid();
+            return Problem(detail: "You can only change your own password.", statusCode: StatusCodes.Status403Forbidden, title: "Forbidden");
 
         try
         {
             var result = await _userService.ChangePasswordAsync(id, dto, cancellationToken);
             if (result.IsSuccess)
                 return Ok(new { message = "Password changed successfully" });
-            if (result.Errors.Any(e => e.Message == "User not found"))
-                return NotFound();
-            return BadRequest(result.Errors.Select(e => e.Message));
+            return this.ToProblem(result);
         }
         catch (OperationCanceledException)
         {
             _logger.LogInformation("Request was canceled by the client for ChangePassword, id: {Id}", id);
-            return StatusCode(499, "Client closed request.");
+            return Problem(detail: "Client closed request.", statusCode: 499, title: "Request canceled");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled exception in ChangePassword for id: {Id}", id);
-            return StatusCode(500, "An unexpected error occurred.");
+            return Problem(detail: "An unexpected error occurred.", statusCode: StatusCodes.Status500InternalServerError, title: "Internal server error");
         }
     }
 
@@ -163,26 +154,24 @@ public class UserController : ControllerBase
     public async Task<IActionResult> DeleteUser(Guid id, CancellationToken cancellationToken)
     {
         if (!IsSelfOrAdmin(id))
-            return Forbid();
+            return Problem(detail: "You can only delete your own account.", statusCode: StatusCodes.Status403Forbidden, title: "Forbidden");
 
         try
         {
             var result = await _userService.DeleteUserAsync(id, cancellationToken);
             if (result.IsSuccess)
                 return Ok("User deleted successfully");
-            if (result.Errors.Any(e => e.Message == "User not found"))
-                return NotFound();
-            return BadRequest(result.Errors.Select(e => e.Message));
+            return this.ToProblem(result);
         }
         catch (OperationCanceledException)
         {
             _logger.LogInformation("Request was canceled by the client for DeleteUser, id: {Id}", id);
-            return StatusCode(499, "Client closed request.");
+            return Problem(detail: "Client closed request.", statusCode: 499, title: "Request canceled");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled exception in DeleteUser for id: {Id}", id);
-            return StatusCode(500, "An unexpected error occurred.");
+            return Problem(detail: "An unexpected error occurred.", statusCode: StatusCodes.Status500InternalServerError, title: "Internal server error");
         }
     }
 
@@ -195,24 +184,53 @@ public class UserController : ControllerBase
             // Get user ID from the JWT token
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
             if (userIdClaim == null)
-                return Unauthorized();
+                return Problem(detail: "Invalid user identity", statusCode: StatusCodes.Status401Unauthorized, title: "Unauthorized");
 
             var userId = Guid.Parse(userIdClaim.Value);
 
             var result = await _userService.GetUserByIdAsync(userId, cancellationToken);
             if (result.IsSuccess)
                 return Ok(result.Value);
-            return NotFound(result.Errors.Select(e => e.Message));
+            return this.ToProblem(result);
         }
         catch (OperationCanceledException)
         {
             _logger.LogInformation("Request was canceled by the client for GetProfile");
-            return StatusCode(499, "Client closed request.");
+            return Problem(detail: "Client closed request.", statusCode: 499, title: "Request canceled");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled exception in GetProfile");
-            return StatusCode(500, "An unexpected error occurred.");
+            return Problem(detail: "An unexpected error occurred.", statusCode: StatusCodes.Status500InternalServerError, title: "Internal server error");
+        }
+    }
+
+    // GET: egg-ledger-api/user/stats?range=week|month|year|max
+    [HttpGet("stats")]
+    public async Task<IActionResult> GetStats([FromQuery] StatsRange range = StatsRange.Week, CancellationToken cancellationToken = default)
+    {
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+        if (userIdClaim == null)
+            return Problem(detail: "Invalid user identity", statusCode: StatusCodes.Status401Unauthorized, title: "Unauthorized");
+
+        var userId = Guid.Parse(userIdClaim.Value);
+
+        try
+        {
+            var result = await _statsService.GetUserStatsAsync(userId, range, cancellationToken);
+            if (result.IsSuccess)
+                return Ok(result.Value);
+            return this.ToProblem(result);
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("Request was canceled by the client for GetStats");
+            return Problem(detail: "Client closed request.", statusCode: 499, title: "Request canceled");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unhandled exception in GetStats");
+            return Problem(detail: "An unexpected error occurred.", statusCode: StatusCodes.Status500InternalServerError, title: "Internal server error");
         }
     }
 }

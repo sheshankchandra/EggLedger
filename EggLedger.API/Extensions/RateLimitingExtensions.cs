@@ -1,8 +1,4 @@
-using System;
 using System.Threading.RateLimiting;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace EggLedger.API.Extensions;
 

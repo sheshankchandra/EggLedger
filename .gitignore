@@ -434,3 +434,7 @@ pnpm-debug.log*
 /SQL Helper
 # Scratch PR description (not part of the project)
 pr-body.md
+# Scratch commit message files
+commit-msg.txt
+# Generated migration scripts (dotnet ef migrations script) - a local deployment artifact
+migrate.sql

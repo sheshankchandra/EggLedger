@@ -1,9 +1,5 @@
-using System;
-using System.Threading;
-using System.Threading.Tasks;
 using EggLedger.Services.Services;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 
 namespace EggLedger.API.Controllers;
 
@@ -27,7 +23,7 @@ public class HealthController : ControllerBase
         try
         {
             var isHealthy = await _databaseService.IsAvailableAsync(cancellationToken);
-            
+
             var health = new
             {
                 status = isHealthy ? "Healthy" : "Unhealthy",
@@ -54,12 +50,12 @@ public class HealthController : ControllerBase
         catch (OperationCanceledException)
         {
             _logger.LogInformation("Request was canceled by the client for GetHealth");
-            return StatusCode(499, "Client closed request.");
+            return Problem(detail: "Client closed request.", statusCode: 499, title: "Request canceled");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled exception in GetHealth");
-            return StatusCode(500, "An unexpected error occurred.");
+            return Problem(detail: "An unexpected error occurred.", statusCode: StatusCodes.Status500InternalServerError, title: "Internal server error");
         }
     }
 
@@ -70,14 +66,14 @@ public class HealthController : ControllerBase
         try
         {
             var canConnect = await _databaseService.CanConnectAsync(cancellationToken);
-            
+
             var response = new
             {
                 status = canConnect ? "Connected" : "Disconnected",
                 canConnect = canConnect,
                 timestamp = DateTime.UtcNow,
-                message = canConnect 
-                    ? "Database is available and accepting connections." 
+                message = canConnect
+                    ? "Database is available and accepting connections."
                     : "Database is not available. Please ensure PostgreSQL is running and configured correctly."
             };
 
@@ -86,12 +82,12 @@ public class HealthController : ControllerBase
         catch (OperationCanceledException)
         {
             _logger.LogInformation("Request was canceled by the client for GetDatabaseHealth");
-            return StatusCode(499, "Client closed request.");
+            return Problem(detail: "Client closed request.", statusCode: 499, title: "Request canceled");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error checking database health");
-            
+
             var errorResponse = new
             {
                 status = "Error",

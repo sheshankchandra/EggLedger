@@ -1,7 +1,4 @@
 using EggLedger.Models.Options;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 
 namespace EggLedger.API.Extensions;
 
@@ -14,6 +11,7 @@ public static class ConfigurationExtensions
         services.Configure<GoogleAuthOptions>(configuration.GetSection(GoogleAuthOptions.SectionName));
         services.Configure<DatabaseOptions>(configuration.GetSection(DatabaseOptions.SectionName));
         services.Configure<CorsOptions>(configuration.GetSection(CorsOptions.SectionName));
+        services.Configure<NutritionOptions>(configuration.GetSection(NutritionOptions.SectionName));
 
         // Validate configuration on startup
         services.AddOptions<JwtOptions>()
@@ -33,6 +31,11 @@ public static class ConfigurationExtensions
 
         services.AddOptions<CorsOptions>()
             .Bind(configuration.GetSection(CorsOptions.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+        services.AddOptions<NutritionOptions>()
+            .Bind(configuration.GetSection(NutritionOptions.SectionName))
             .ValidateDataAnnotations()
             .ValidateOnStart();
 

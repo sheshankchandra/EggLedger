@@ -1,16 +1,11 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Security.Claims;
-using System.Threading;
-using System.Threading.Tasks;
+using EggLedger.API.Extensions;
 using EggLedger.DTO.Room;
 using EggLedger.DTO.User;
 using EggLedger.Services.Interfaces;
 using FluentResults;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 
 namespace EggLedger.API.Controllers;
 
@@ -39,10 +34,10 @@ public class RoomController : ControllerBase
             var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
             {
-                return Unauthorized("Invalid user identity");
+                return Problem(detail: "Invalid user identity", statusCode: StatusCodes.Status401Unauthorized, title: "Unauthorized");
             }
 
-            Result<int> result = await _roomService.JoinRoomAsync(userId, roomCode, cancellationToken);
+            Result<JoinRoomResultDto> result = await _roomService.JoinRoomAsync(userId, roomCode, cancellationToken);
 
             if (result.IsSuccess)
             {
@@ -51,17 +46,17 @@ public class RoomController : ControllerBase
             }
 
             _logger.LogWarning("Failed to join room. Errors: {Errors}", string.Join(", ", result.Errors.Select(e => e.Message)));
-            return BadRequest(result.Errors.Select(e => e.Message));
+            return this.ToProblem(result);
         }
         catch (OperationCanceledException)
         {
             _logger.LogInformation("Request was canceled by the client for JoinRoom, roomCode: {RoomCode}", roomCode);
-            return StatusCode(499, "Client closed request.");
+            return Problem(detail: "Client closed request.", statusCode: 499, title: "Request canceled");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled exception in JoinRoom for roomCode: {RoomCode}", roomCode);
-            return StatusCode(500, "An unexpected error occurred.");
+            return Problem(detail: "An unexpected error occurred.", statusCode: StatusCodes.Status500InternalServerError, title: "Internal server error");
         }
     }
 
@@ -77,7 +72,7 @@ public class RoomController : ControllerBase
             var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
             {
-                return Unauthorized("Invalid user identity");
+                return Problem(detail: "Invalid user identity", statusCode: StatusCodes.Status401Unauthorized, title: "Unauthorized");
             }
 
             Result<int> result = await _roomService.CreateRoomAsync(userId, dto, cancellationToken);
@@ -89,17 +84,17 @@ public class RoomController : ControllerBase
             }
 
             _logger.LogWarning("Failed to create room. Errors: {Errors}", string.Join(", ", result.Errors.Select(e => e.Message)));
-            return BadRequest(result.Errors.Select(e => e.Message));
+            return this.ToProblem(result);
         }
         catch (OperationCanceledException)
         {
             _logger.LogInformation("Request was canceled by the client for CreateRoom");
-            return StatusCode(499, "Client closed request.");
+            return Problem(detail: "Client closed request.", statusCode: 499, title: "Request canceled");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled exception in CreateRoom");
-            return StatusCode(500, "An unexpected error occurred.");
+            return Problem(detail: "An unexpected error occurred.", statusCode: StatusCodes.Status500InternalServerError, title: "Internal server error");
         }
     }
 
@@ -112,17 +107,17 @@ public class RoomController : ControllerBase
             var result = await _roomService.GetRoomByCodeAsync(roomCode, cancellationToken);
             if (result.IsSuccess)
                 return Ok(result.Value);
-            return StatusCode(500, result.Errors);
+            return this.ToProblem(result);
         }
         catch (OperationCanceledException)
         {
             _logger.LogInformation("Request was canceled by the client for GetRoomByCode, roomCode: {RoomCode}", roomCode);
-            return StatusCode(499, "Client closed request.");
+            return Problem(detail: "Client closed request.", statusCode: 499, title: "Request canceled");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled exception in GetRoomByCode for roomCode: {RoomCode}", roomCode);
-            return StatusCode(500, "An unexpected error occurred.");
+            return Problem(detail: "An unexpected error occurred.", statusCode: StatusCodes.Status500InternalServerError, title: "Internal server error");
         }
     }
 
@@ -137,17 +132,17 @@ public class RoomController : ControllerBase
             var result = await _roomService.GetAllRoomUsersAsync(roomCode, effectivePage, effectivePageSize, cancellationToken);
             if (result.IsSuccess)
                 return Ok(result.Value);
-            return StatusCode(500, result.Errors);
+            return this.ToProblem(result);
         }
         catch (OperationCanceledException)
         {
             _logger.LogInformation("Request was canceled by the client for GetAllRoomUsers, roomCode: {RoomCode}", roomCode);
-            return StatusCode(499, "Client closed request.");
+            return Problem(detail: "Client closed request.", statusCode: 499, title: "Request canceled");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled exception in GetAllRoomUsers for roomCode: {RoomCode}", roomCode);
-            return StatusCode(500, "An unexpected error occurred.");
+            return Problem(detail: "An unexpected error occurred.", statusCode: StatusCodes.Status500InternalServerError, title: "Internal server error");
         }
     }
 
@@ -161,23 +156,23 @@ public class RoomController : ControllerBase
             var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
             {
-                return Unauthorized("Invalid user identity");
+                return Problem(detail: "Invalid user identity", statusCode: StatusCodes.Status401Unauthorized, title: "Unauthorized");
             }
 
             var result = await _roomService.GetAllUserRoomsAsync(userId, cancellationToken);
             if (result.IsSuccess)
                 return Ok(result.Value);
-            return StatusCode(500, result.Errors);
+            return this.ToProblem(result);
         }
         catch (OperationCanceledException)
         {
             _logger.LogInformation("Request was canceled by the client for GetAllUserRooms");
-            return StatusCode(499, "Client closed request.");
+            return Problem(detail: "Client closed request.", statusCode: 499, title: "Request canceled");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled exception in GetAllUserRooms");
-            return StatusCode(500, "An unexpected error occurred.");
+            return Problem(detail: "An unexpected error occurred.", statusCode: StatusCodes.Status500InternalServerError, title: "Internal server error");
         }
     }
 
@@ -189,17 +184,17 @@ public class RoomController : ControllerBase
         try
         {
             var result = await _roomService.UpdateRoomPublicStatusAsync(dto, cancellationToken);
-            return result.IsSuccess ? Ok(result.Value) : BadRequest(result.Reasons);
+            return result.IsSuccess ? Ok(result.Value) : this.ToProblem(result);
         }
         catch (OperationCanceledException)
         {
             _logger.LogInformation("Request was canceled by the client for UpdateRoomIsPublicStatus");
-            return StatusCode(499, "Client closed request.");
+            return Problem(detail: "Client closed request.", statusCode: 499, title: "Request canceled");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled exception in UpdateRoomIsPublicStatus");
-            return StatusCode(500, "An unexpected error occurred.");
+            return Problem(detail: "An unexpected error occurred.", statusCode: StatusCodes.Status500InternalServerError, title: "Internal server error");
         }
     }
 
@@ -216,7 +211,7 @@ public class RoomController : ControllerBase
             if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
             {
                 _logger.LogWarning("Delete room request denied - Invalid user identity for room code: {RoomCode}", roomCode);
-                return Unauthorized("Invalid user identity");
+                return Problem(detail: "Invalid user identity", statusCode: StatusCodes.Status401Unauthorized, title: "Unauthorized");
             }
 
             var result = await _roomService.DeleteRoomAsync(roomCode, userId, ct);
@@ -228,17 +223,17 @@ public class RoomController : ControllerBase
             }
 
             _logger.LogWarning("Failed to delete room with code: {RoomCode}. Errors: {Errors}", roomCode, string.Join(", ", result.Errors.Select(e => e.Message)));
-            return BadRequest(result.Errors.Select(e => e.Message));
+            return this.ToProblem(result);
         }
         catch (OperationCanceledException)
         {
             _logger.LogInformation("Request was canceled by the client for DeleteRoom, roomCode: {RoomCode}", roomCode);
-            return StatusCode(499, "Client closed request.");
+            return Problem(detail: "Client closed request.", statusCode: 499, title: "Request canceled");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled exception in DeleteRoom for roomCode: {RoomCode}", roomCode);
-            return StatusCode(500, "An unexpected error occurred.");
+            return Problem(detail: "An unexpected error occurred.", statusCode: StatusCodes.Status500InternalServerError, title: "Internal server error");
         }
     }
 
@@ -252,7 +247,7 @@ public class RoomController : ControllerBase
             var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
             {
-                return Unauthorized("Invalid user identity");
+                return Problem(detail: "Invalid user identity", statusCode: StatusCodes.Status401Unauthorized, title: "Unauthorized");
             }
 
             var result = await _roomService.EditRoomNameAsync(userId, dto.RoomId, dto.NewRoomName, cancellationToken);
@@ -264,17 +259,17 @@ public class RoomController : ControllerBase
             }
 
             _logger.LogWarning("Failed to edit room name. Errors: {Errors}", string.Join(", ", result.Errors.Select(e => e.Message)));
-            return BadRequest(result.Errors.Select(e => e.Message));
+            return this.ToProblem(result);
         }
         catch (OperationCanceledException)
         {
             _logger.LogInformation("Request was canceled by the client for EditRoomName, RoomId: {RoomId}", dto.RoomId);
-            return StatusCode(499, "Client closed request.");
+            return Problem(detail: "Client closed request.", statusCode: 499, title: "Request canceled");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled exception in EditRoomName for RoomId: {RoomId}", dto.RoomId);
-            return StatusCode(500, "An unexpected error occurred.");
+            return Problem(detail: "An unexpected error occurred.", statusCode: StatusCodes.Status500InternalServerError, title: "Internal server error");
         }
     }
 
@@ -288,7 +283,7 @@ public class RoomController : ControllerBase
             var adminUserIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrEmpty(adminUserIdClaim) || !Guid.TryParse(adminUserIdClaim, out var adminUserId))
             {
-                return Unauthorized("Invalid user identity");
+                return Problem(detail: "Invalid user identity", statusCode: StatusCodes.Status401Unauthorized, title: "Unauthorized");
             }
 
             var result = await _roomService.RemoveRoomMemberAsync(adminUserId, dto.RoomId, dto.MemberUserId, cancellationToken);
@@ -300,17 +295,17 @@ public class RoomController : ControllerBase
             }
 
             _logger.LogWarning("Failed to remove room member. Errors: {Errors}", string.Join(", ", result.Errors.Select(e => e.Message)));
-            return BadRequest(result.Errors.Select(e => e.Message));
+            return this.ToProblem(result);
         }
         catch (OperationCanceledException)
         {
             _logger.LogInformation("Request was canceled by the client for RemoveRoomMember, RoomId: {RoomId}", dto.RoomId);
-            return StatusCode(499, "Client closed request.");
+            return Problem(detail: "Client closed request.", statusCode: 499, title: "Request canceled");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled exception in RemoveRoomMember for RoomId: {RoomId}", dto.RoomId);
-            return StatusCode(500, "An unexpected error occurred.");
+            return Problem(detail: "An unexpected error occurred.", statusCode: StatusCodes.Status500InternalServerError, title: "Internal server error");
         }
     }
 
@@ -324,7 +319,7 @@ public class RoomController : ControllerBase
             var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
             {
-                return Unauthorized("Invalid user identity");
+                return Problem(detail: "Invalid user identity", statusCode: StatusCodes.Status401Unauthorized, title: "Unauthorized");
             }
 
             var result = await _roomService.EditRoomStatusAsync(userId, dto.RoomId, dto.NewStatus, cancellationToken);
@@ -336,17 +331,113 @@ public class RoomController : ControllerBase
             }
 
             _logger.LogWarning("Failed to edit room status. Errors: {Errors}", string.Join(", ", result.Errors.Select(e => e.Message)));
-            return BadRequest(result.Errors.Select(e => e.Message));
+            return this.ToProblem(result);
         }
         catch (OperationCanceledException)
         {
             _logger.LogInformation("Request was canceled by the client for EditRoomStatus, RoomId: {RoomId}", dto.RoomId);
-            return StatusCode(499, "Client closed request.");
+            return Problem(detail: "Client closed request.", statusCode: 499, title: "Request canceled");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled exception in EditRoomStatus for RoomId: {RoomId}", dto.RoomId);
-            return StatusCode(500, "An unexpected error occurred.");
+            return Problem(detail: "An unexpected error occurred.", statusCode: StatusCodes.Status500InternalServerError, title: "Internal server error");
+        }
+    }
+
+    // GET: egg-ledger-api/room/{roomCode}/pending-members
+    [Authorize(Policy = "RoomAdmin")]
+    [HttpGet("{roomCode:int}/pending-members")]
+    public async Task<IActionResult> GetPendingMembers([FromRoute] int roomCode, CancellationToken cancellationToken)
+    {
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+        {
+            return Problem(detail: "Invalid user identity", statusCode: StatusCodes.Status401Unauthorized, title: "Unauthorized");
+        }
+
+        try
+        {
+            var result = await _roomService.GetPendingMembersAsync(userId, roomCode, cancellationToken);
+            if (result.IsSuccess)
+                return Ok(result.Value);
+            return this.ToProblem(result);
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("Request was canceled by the client for GetPendingMembers, roomCode: {RoomCode}", roomCode);
+            return Problem(detail: "Client closed request.", statusCode: 499, title: "Request canceled");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unhandled exception in GetPendingMembers for roomCode: {RoomCode}", roomCode);
+            return Problem(detail: "An unexpected error occurred.", statusCode: StatusCodes.Status500InternalServerError, title: "Internal server error");
+        }
+    }
+
+    // POST: egg-ledger-api/room/{roomCode}/approve-member/{memberUserId}
+    [Authorize(Policy = "RoomAdmin")]
+    [HttpPost("{roomCode:int}/approve-member/{memberUserId:guid}")]
+    public async Task<IActionResult> ApproveMember([FromRoute] int roomCode, [FromRoute] Guid memberUserId, CancellationToken cancellationToken)
+    {
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+        {
+            return Problem(detail: "Invalid user identity", statusCode: StatusCodes.Status401Unauthorized, title: "Unauthorized");
+        }
+
+        try
+        {
+            var result = await _roomService.ApproveMemberAsync(userId, roomCode, memberUserId, cancellationToken);
+            if (result.IsSuccess)
+            {
+                _logger.LogInformation("Member {MemberUserId} approved into room {RoomCode} by {UserId}", memberUserId, roomCode, userId);
+                return Ok(result.Value);
+            }
+            return this.ToProblem(result);
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("Request was canceled by the client for ApproveMember, roomCode: {RoomCode}", roomCode);
+            return Problem(detail: "Client closed request.", statusCode: 499, title: "Request canceled");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unhandled exception in ApproveMember for roomCode: {RoomCode}", roomCode);
+            return Problem(detail: "An unexpected error occurred.", statusCode: StatusCodes.Status500InternalServerError, title: "Internal server error");
+        }
+    }
+
+    // POST: egg-ledger-api/room/{roomCode}/reject-member/{memberUserId}
+    [Authorize(Policy = "RoomAdmin")]
+    [HttpPost("{roomCode:int}/reject-member/{memberUserId:guid}")]
+    public async Task<IActionResult> RejectMember([FromRoute] int roomCode, [FromRoute] Guid memberUserId, CancellationToken cancellationToken)
+    {
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+        {
+            return Problem(detail: "Invalid user identity", statusCode: StatusCodes.Status401Unauthorized, title: "Unauthorized");
+        }
+
+        try
+        {
+            var result = await _roomService.RejectMemberAsync(userId, roomCode, memberUserId, cancellationToken);
+            if (result.IsSuccess)
+            {
+                _logger.LogInformation("Member {MemberUserId} rejected from room {RoomCode} by {UserId}", memberUserId, roomCode, userId);
+                return Ok(result.Value);
+            }
+            return this.ToProblem(result);
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("Request was canceled by the client for RejectMember, roomCode: {RoomCode}", roomCode);
+            return Problem(detail: "Client closed request.", statusCode: 499, title: "Request canceled");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unhandled exception in RejectMember for roomCode: {RoomCode}", roomCode);
+            return Problem(detail: "An unexpected error occurred.", statusCode: StatusCodes.Status500InternalServerError, title: "Internal server error");
         }
     }
 }

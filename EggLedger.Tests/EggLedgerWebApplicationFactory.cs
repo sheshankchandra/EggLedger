@@ -33,8 +33,7 @@ public class EggLedgerWebApplicationFactory : WebApplicationFactory<Program>, IA
         Environment.SetEnvironmentVariable("Cors__PolicyName", "_myAllowSpecificOrigins");
     }
 
-    private readonly PostgreSqlContainer _db = new PostgreSqlBuilder()
-        .WithImage("postgres:15-alpine")
+    private readonly PostgreSqlContainer _db = new PostgreSqlBuilder("postgres:15-alpine")
         .WithDatabase("eggledger_test")
         .WithUsername("test")
         .WithPassword("test")

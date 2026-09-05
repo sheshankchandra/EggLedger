@@ -2,6 +2,7 @@ using EggLedger.Data;
 using EggLedger.DTO.Order;
 using EggLedger.Models.Enums;
 using EggLedger.Models.Models;
+using EggLedger.Services.Errors;
 using EggLedger.Services.Extensions;
 using EggLedger.Services.Interfaces;
 using FluentResults;
@@ -69,6 +70,7 @@ public class OrderService : IOrderService
                 RemainingQuantity = dto.Quantity,
                 Amount = dto.Amount,
                 RoomId = userRoom.RoomId,
+                ResourceTypeId = ResourceType.EggsId,
             };
 
             var orderDetail = new OrderDetail
@@ -108,7 +110,7 @@ public class OrderService : IOrderService
 
             if (user == null || userRoom == null)
             {
-                return Result.Fail("User is not a member of the specified room.");
+                return Result.Fail(new NotFoundError("User is not a member of the specified room."));
             }
 
             var orderNameResult = await _helperService.GenerateOrderName(user, 2, cancellationToken);
@@ -211,7 +213,7 @@ public class OrderService : IOrderService
                 .FirstOrDefaultAsync(o => o.OrderId == orderId, cancellationToken);
 
             if (order == null)
-                return Result.Fail("Order not found");
+                return Result.Fail(new NotFoundError("Order not found"));
 
             var dto = MapToOrderDto(order);
             return Result.Ok(dto);
@@ -228,7 +230,7 @@ public class OrderService : IOrderService
             var room = await _context.Rooms.FirstOrDefaultAsync(r => r.RoomCode == roomCode, cancellationToken);
             if (room == null)
             {
-                return Result.Fail("Room not found");
+                return Result.Fail(new NotFoundError("Room not found"));
             }
 
             // Scoped to this room: an Order's details are always drawn from containers in a
@@ -253,6 +255,7 @@ public class OrderService : IOrderService
         {
             var orders = await _context.Orders
                 .Where(o => o.OrderDetails.Any(od => od.ContainerId == containerId))
+                .OrderByDescending(o => o.Datestamp)
                 .Include(o => o.OrderDetails)
                 .ThenInclude(od => od.Container)
                 .ToListAsync(cancellationToken);

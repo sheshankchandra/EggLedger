@@ -1,14 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Security.Claims;
-using System.Threading;
-using System.Threading.Tasks;
+using EggLedger.API.Extensions;
 using EggLedger.DTO.Container;
 using EggLedger.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 
 namespace EggLedger.API.Controllers;
 
@@ -36,17 +31,17 @@ public class ContainerController : ControllerBase
             if (result.IsSuccess)
                 return Ok(result.Value);
 
-            return StatusCode(500, result.Errors);
+            return this.ToProblem(result);
         }
         catch (OperationCanceledException)
         {
             _logger.LogInformation("Request was canceled by the client for GetAllContainers, roomCode: {RoomCode}", roomCode);
-            return StatusCode(499, "Client closed request.");
+            return Problem(detail: "Client closed request.", statusCode: 499, title: "Request canceled");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled exception in GetAllContainers for roomCode: {RoomCode}", roomCode);
-            return StatusCode(500, "An unexpected error occurred.");
+            return Problem(detail: "An unexpected error occurred.", statusCode: StatusCodes.Status500InternalServerError, title: "Internal server error");
         }
     }
 
@@ -61,20 +56,17 @@ public class ContainerController : ControllerBase
             if (result.IsSuccess)
                 return Ok(result.Value);
 
-            if (result.Errors.Any(e => e.Message == "Container not found"))
-                return NotFound();
-
-            return StatusCode(500, result.Errors);
+            return this.ToProblem(result);
         }
         catch (OperationCanceledException)
         {
             _logger.LogInformation("Request was canceled by the client for GetContainer, roomCode: {RoomCode}, id: {Id}", roomCode, id);
-            return StatusCode(499, "Client closed request.");
+            return Problem(detail: "Client closed request.", statusCode: 499, title: "Request canceled");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled exception in GetContainer for roomCode: {RoomCode}, id: {Id}", roomCode, id);
-            return StatusCode(500, "An unexpected error occurred.");
+            return Problem(detail: "An unexpected error occurred.", statusCode: StatusCodes.Status500InternalServerError, title: "Internal server error");
         }
     }
 
@@ -89,17 +81,17 @@ public class ContainerController : ControllerBase
             if (result.IsSuccess)
                 return Ok(result.Value);
 
-            return BadRequest(result.Errors.Select(e => e.Message));
+            return this.ToProblem(result);
         }
         catch (OperationCanceledException)
         {
             _logger.LogInformation("Request was canceled by the client for CreateContainer, roomCode: {RoomCode}", roomCode);
-            return StatusCode(499, "Client closed request.");
+            return Problem(detail: "Client closed request.", statusCode: 499, title: "Request canceled");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled exception in CreateContainer for roomCode: {RoomCode}", roomCode);
-            return StatusCode(500, "An unexpected error occurred.");
+            return Problem(detail: "An unexpected error occurred.", statusCode: StatusCodes.Status500InternalServerError, title: "Internal server error");
         }
     }
 
@@ -114,20 +106,17 @@ public class ContainerController : ControllerBase
             if (result.IsSuccess)
                 return Ok(result.Value);
 
-            if (result.Errors.Any(e => e.Message == "Container not found"))
-                return NotFound();
-
-            return BadRequest(result.Errors.Select(e => e.Message));
+            return this.ToProblem(result);
         }
         catch (OperationCanceledException)
         {
             _logger.LogInformation("Request was canceled by the client for UpdateContainer, roomCode: {RoomCode}, id: {Id}", roomCode, id);
-            return StatusCode(499, "Client closed request.");
+            return Problem(detail: "Client closed request.", statusCode: 499, title: "Request canceled");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled exception in UpdateContainer for roomCode: {RoomCode}, id: {Id}", roomCode, id);
-            return StatusCode(500, "An unexpected error occurred.");
+            return Problem(detail: "An unexpected error occurred.", statusCode: StatusCodes.Status500InternalServerError, title: "Internal server error");
         }
     }
 
@@ -142,20 +131,17 @@ public class ContainerController : ControllerBase
             if (result.IsSuccess)
                 return NoContent();
 
-            if (result.Errors.Any(e => e.Message == "Container not found"))
-                return NotFound();
-
-            return BadRequest(result.Errors.Select(e => e.Message));
+            return this.ToProblem(result);
         }
         catch (OperationCanceledException)
         {
             _logger.LogInformation("Request was canceled by the client for ArchiveContainer, roomCode: {RoomCode}, id: {Id}", roomCode, id);
-            return StatusCode(499, "Client closed request.");
+            return Problem(detail: "Client closed request.", statusCode: 499, title: "Request canceled");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled exception in ArchiveContainer for roomCode: {RoomCode}, id: {Id}", roomCode, id);
-            return StatusCode(500, "An unexpected error occurred.");
+            return Problem(detail: "An unexpected error occurred.", statusCode: StatusCodes.Status500InternalServerError, title: "Internal server error");
         }
     }
 
@@ -171,26 +157,17 @@ public class ContainerController : ControllerBase
             if (result.IsSuccess)
                 return NoContent();
 
-            if (result.Errors.Any(e => e.Message == "Container not found"))
-                return NotFound();
-
-            if (result.Errors.Any(e => e.Message.Contains("owner", StringComparison.OrdinalIgnoreCase)))
-                return Forbid();
-
-            if (result.Errors.Any(e => e.Message.Contains("already been consumed", StringComparison.OrdinalIgnoreCase)))
-                return Conflict(result.Errors.Select(e => e.Message));
-
-            return BadRequest(result.Errors.Select(e => e.Message));
+            return this.ToProblem(result);
         }
         catch (OperationCanceledException)
         {
             _logger.LogInformation("Request was canceled by the client for DeleteContainer, roomCode: {RoomCode}, id: {Id}", roomCode, id);
-            return StatusCode(499, "Client closed request.");
+            return Problem(detail: "Client closed request.", statusCode: 499, title: "Request canceled");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled exception in DeleteContainer for roomCode: {RoomCode}, id: {Id}", roomCode, id);
-            return StatusCode(500, "An unexpected error occurred.");
+            return Problem(detail: "An unexpected error occurred.", statusCode: StatusCodes.Status500InternalServerError, title: "Internal server error");
         }
     }
 
@@ -205,20 +182,17 @@ public class ContainerController : ControllerBase
             if (result.IsSuccess)
                 return NoContent();
 
-            if (result.Errors.Any(e => e.Message == "Container not found"))
-                return NotFound();
-
-            return BadRequest(result.Errors.Select(e => e.Message));
+            return this.ToProblem(result);
         }
         catch (OperationCanceledException)
         {
             _logger.LogInformation("Request was canceled by the client for SuspendContainer, roomCode: {RoomCode}, id: {Id}", roomCode, id);
-            return StatusCode(499, "Client closed request.");
+            return Problem(detail: "Client closed request.", statusCode: 499, title: "Request canceled");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled exception in SuspendContainer for roomCode: {RoomCode}, id: {Id}", roomCode, id);
-            return StatusCode(500, "An unexpected error occurred.");
+            return Problem(detail: "An unexpected error occurred.", statusCode: StatusCodes.Status500InternalServerError, title: "Internal server error");
         }
     }
 
@@ -233,17 +207,17 @@ public class ContainerController : ControllerBase
             if (result.IsSuccess)
                 return Ok(result.Value);
 
-            return StatusCode(500, result.Errors);
+            return this.ToProblem(result);
         }
         catch (OperationCanceledException)
         {
             _logger.LogInformation("Request was canceled by the client for SearchContainers, roomCode: {RoomCode}, name: {Name}", roomCode, name);
-            return StatusCode(499, "Client closed request.");
+            return Problem(detail: "Client closed request.", statusCode: 499, title: "Request canceled");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled exception in SearchContainers for roomCode: {RoomCode}, name: {Name}", roomCode, name);
-            return StatusCode(500, "An unexpected error occurred.");
+            return Problem(detail: "An unexpected error occurred.", statusCode: StatusCodes.Status500InternalServerError, title: "Internal server error");
         }
     }
 
@@ -259,24 +233,24 @@ public class ContainerController : ControllerBase
             var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
             {
-                return Unauthorized("Invalid user identity");
+                return Problem(detail: "Invalid user identity", statusCode: StatusCodes.Status401Unauthorized, title: "Unauthorized");
             }
 
             var result = await _containerService.GetMyContainers(userId, roomCode, cancellationToken);
             if (result.IsSuccess)
                 return Ok(result.Value);
 
-            return StatusCode(500, result.Errors);
+            return this.ToProblem(result);
         }
         catch (OperationCanceledException)
         {
             _logger.LogInformation("Request was canceled by the client for GetMyContainers, roomCode: {RoomCode}", roomCode);
-            return StatusCode(499, "Client closed request.");
+            return Problem(detail: "Client closed request.", statusCode: 499, title: "Request canceled");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled exception in GetMyContainers for roomCode: {RoomCode}", roomCode);
-            return StatusCode(500, "An unexpected error occurred.");
+            return Problem(detail: "An unexpected error occurred.", statusCode: StatusCodes.Status500InternalServerError, title: "Internal server error");
         }
     }
 
@@ -291,17 +265,17 @@ public class ContainerController : ControllerBase
             if (result.IsSuccess)
                 return Ok(result.Value);
 
-            return StatusCode(500, result.Errors);
+            return this.ToProblem(result);
         }
         catch (OperationCanceledException)
         {
             _logger.LogInformation("Request was canceled by the client for GetPagedContainers, roomCode: {RoomCode}, page: {Page}, pageSize: {PageSize}", roomCode, page, pageSize);
-            return StatusCode(499, "Client closed request.");
+            return Problem(detail: "Client closed request.", statusCode: 499, title: "Request canceled");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled exception in GetPagedContainers for roomCode: {RoomCode}, page: {Page}, pageSize: {PageSize}", roomCode, page, pageSize);
-            return StatusCode(500, "An unexpected error occurred.");
+            return Problem(detail: "An unexpected error occurred.", statusCode: StatusCodes.Status500InternalServerError, title: "Internal server error");
         }
     }
 }

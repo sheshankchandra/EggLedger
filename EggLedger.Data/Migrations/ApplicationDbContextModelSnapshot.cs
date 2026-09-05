@@ -71,6 +71,9 @@ namespace EggLedger.Data.Migrations
                     b.Property<int>("RemainingQuantity")
                         .HasColumnType("integer");
 
+                    b.Property<Guid>("ResourceTypeId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid>("RoomId")
                         .HasColumnType("uuid");
 
@@ -83,6 +86,8 @@ namespace EggLedger.Data.Migrations
                     b.HasKey("ContainerId");
 
                     b.HasIndex("BuyerId");
+
+                    b.HasIndex("ResourceTypeId");
 
                     b.HasIndex("RoomId");
 
@@ -189,6 +194,75 @@ namespace EggLedger.Data.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("RefreshTokens");
+                });
+
+            modelBuilder.Entity("EggLedger.Models.Models.ResourceType", b =>
+                {
+                    b.Property<Guid>("ResourceTypeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Icon")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("InventoryPlural")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("InventorySingular")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Plural")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Singular")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.HasKey("ResourceTypeId");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("ResourceTypes");
+
+                    b.HasData(
+                        new
+                        {
+                            ResourceTypeId = new Guid("11111111-1111-1111-1111-111111111111"),
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "Eggs",
+                            Icon = "🥚",
+                            InventoryPlural = "batches",
+                            InventorySingular = "batch",
+                            IsActive = true,
+                            Name = "eggs",
+                            Plural = "eggs",
+                            Singular = "egg"
+                        });
                 });
 
             modelBuilder.Entity("EggLedger.Models.Models.Room", b =>
@@ -346,6 +420,9 @@ namespace EggLedger.Data.Migrations
                     b.Property<Guid>("RoomId")
                         .HasColumnType("uuid");
 
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
 
@@ -367,6 +444,12 @@ namespace EggLedger.Data.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("EggLedger.Models.Models.ResourceType", "ResourceType")
+                        .WithMany("Containers")
+                        .HasForeignKey("ResourceTypeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("EggLedger.Models.Models.Room", "Room")
                         .WithMany("Containers")
                         .HasForeignKey("RoomId")
@@ -374,6 +457,8 @@ namespace EggLedger.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Buyer");
+
+                    b.Navigation("ResourceType");
 
                     b.Navigation("Room");
                 });
@@ -486,6 +571,11 @@ namespace EggLedger.Data.Migrations
             modelBuilder.Entity("EggLedger.Models.Models.Order", b =>
                 {
                     b.Navigation("OrderDetails");
+                });
+
+            modelBuilder.Entity("EggLedger.Models.Models.ResourceType", b =>
+                {
+                    b.Navigation("Containers");
                 });
 
             modelBuilder.Entity("EggLedger.Models.Models.Room", b =>

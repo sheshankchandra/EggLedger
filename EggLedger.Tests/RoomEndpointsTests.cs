@@ -64,7 +64,7 @@ public class RoomEndpointsTests : IClassFixture<EggLedgerWebApplicationFactory>
     }
 
     [Fact]
-    public async Task JoinRoom_AlreadyAMember_ReturnsBadRequest()
+    public async Task JoinRoom_AlreadyAMember_ReturnsConflict()
     {
         var client = _factory.CreateClient();
         var owner = await EggLedgerTestHelpers.RegisterAsync(client);
@@ -75,11 +75,11 @@ public class RoomEndpointsTests : IClassFixture<EggLedgerWebApplicationFactory>
             .WithAuth(owner.AccessToken);
         var joinResponse = await client.SendAsync(joinRequest);
 
-        Assert.Equal(HttpStatusCode.BadRequest, joinResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, joinResponse.StatusCode);
     }
 
     [Fact]
-    public async Task JoinRoom_WithUnknownCode_ReturnsBadRequest()
+    public async Task JoinRoom_WithUnknownCode_ReturnsNotFound()
     {
         var client = _factory.CreateClient();
         var user = await EggLedgerTestHelpers.RegisterAsync(client);
@@ -88,6 +88,6 @@ public class RoomEndpointsTests : IClassFixture<EggLedgerWebApplicationFactory>
             .WithAuth(user.AccessToken);
         var joinResponse = await client.SendAsync(joinRequest);
 
-        Assert.Equal(HttpStatusCode.BadRequest, joinResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, joinResponse.StatusCode);
     }
 }

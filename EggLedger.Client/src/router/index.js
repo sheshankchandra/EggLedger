@@ -4,11 +4,14 @@ import AccountsView from '../views/AccountsView.vue'
 import DashboardView from '../views/DashboardView.vue'
 import RoomView from '../views/RoomView.vue'
 import BalancesView from '../views/BalancesView.vue'
+import RoomActivityView from '../views/RoomActivityView.vue'
 import ProfileView from '../views/ProfileView.vue'
 import GoogleCallbackView from '../views/GoogleCallbackView.vue'
 import ContainerDetailView from '../views/ContainerDetailView.vue'
+import JoinInviteView from '../views/JoinInviteView.vue'
 import NotFoundView from '../components/common/NotFoundComponent.vue'
 import { useAuthStore } from '@/stores/auth.store'
+import { rememberRedirect } from '@/utils/postLoginRedirect'
 
 const routes = [
   {
@@ -50,6 +53,12 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/room/activity',
+    name: 'room-activity',
+    component: RoomActivityView,
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/profile',
     name: 'profile',
     component: ProfileView,
@@ -63,6 +72,13 @@ const routes = [
     props: (route) => ({
       containerId: route.params.containerId,
     }),
+  },
+  {
+    path: '/join',
+    name: 'join-invite',
+    component: JoinInviteView,
+    meta: { requiresAuth: true },
+    props: (route) => ({ code: route.query.code }),
   },
   {
     path: '/:pathMatch(.*)*',
@@ -84,7 +100,9 @@ router.beforeEach((to, from, next) => {
   const authRoutes = ['accounts-login', 'accounts-signup']
 
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-    // Redirect un authenticated users from any auth required page to accounts
+    // Remember where an unauthenticated visit was headed (e.g. a shared invite link) so
+    // login can send the user back here instead of always landing on the dashboard.
+    rememberRedirect(to.fullPath)
     next('/accounts/login')
   } else if (authRoutes.includes(to.name) && authStore.isAuthenticated) {
     // Redirect authenticated users from accounts to dashboard

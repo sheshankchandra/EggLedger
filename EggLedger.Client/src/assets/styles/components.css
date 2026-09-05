@@ -43,13 +43,13 @@
 }
 
 .btn-secondary {
-  background: var(--color-gray-200);
+  background: var(--bg-tertiary);
   color: var(--text-primary);
   border: 1px solid var(--border-medium);
 }
 
 .btn-secondary:hover:not(:disabled) {
-  background: var(--color-gray-300);
+  background: var(--border-medium);
   box-shadow: var(--shadow-sm);
 }
 
@@ -126,7 +126,7 @@
 }
 
 .btn-outline-secondary:hover:not(:disabled) {
-  background: var(--color-gray-200);
+  background: var(--bg-tertiary);
   color: var(--text-primary);
 }
 
@@ -414,8 +414,9 @@
 }
 
 .badge-secondary {
-  background: var(--color-gray-300);
+  background: var(--bg-tertiary);
   color: var(--text-primary);
+  border: 1px solid var(--border-medium);
 }
 
 .badge-success {

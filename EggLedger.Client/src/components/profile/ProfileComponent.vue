@@ -40,6 +40,75 @@
         </div>
       </section>
 
+      <!-- Activity & Streaks -->
+      <section class="profile-section" aria-labelledby="activity-heading">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Activity</p>
+            <h2 id="activity-heading">Your streaks & stats</h2>
+          </div>
+          <div class="range-tabs" role="tablist" aria-label="Time range">
+            <button
+              v-for="option in rangeOptions"
+              :key="option.value"
+              type="button"
+              role="tab"
+              :aria-selected="statsStore.range === option.value"
+              :class="{ active: statsStore.range === option.value }"
+              @click="statsStore.fetchStats(option.value)"
+            >
+              {{ option.label }}
+            </button>
+          </div>
+        </div>
+
+        <div class="streak-card">
+          <span class="streak-flame" aria-hidden="true">🔥</span>
+          <div>
+            <strong>{{ statsStore.currentStreakDays }}-day streak</strong>
+            <small>Longest streak: {{ statsStore.longestStreakDays }} days</small>
+          </div>
+        </div>
+
+        <LoadingSkeleton
+          v-if="statsStore.loading"
+          :count="1"
+          height="280px"
+          aria-label="Loading stats"
+        />
+        <template v-else>
+          <div class="stats-summary-grid">
+            <div class="summary-card summary-card-primary">
+              <span>{{ resource.displayName }} eaten</span>
+              <strong>{{ statsStore.totalEggsConsumed }}</strong>
+              <small>In this period</small>
+            </div>
+            <div class="summary-card">
+              <span>Protein</span>
+              <strong>{{ statsStore.totalProteinGrams }}g</strong>
+              <small>Estimated from {{ resource.plural }} eaten</small>
+            </div>
+            <div class="summary-card">
+              <span>Calories</span>
+              <strong>{{ statsStore.totalCalories }}</strong>
+              <small>kcal in this period</small>
+            </div>
+          </div>
+
+          <EmptyState
+            v-if="statsStore.buckets.every((bucket) => bucket.eggsConsumed === 0)"
+            :icon="resource.icon"
+            title="No activity yet"
+            :description="`Record a consume order to start tracking your ${resource.plural} habit.`"
+          />
+          <StatsChart
+            v-else
+            :buckets="statsStore.buckets"
+            :aria-label="`${resource.displayName} consumed over time`"
+          />
+        </template>
+      </section>
+
       <!-- Room Memberships -->
       <section class="profile-section" aria-labelledby="rooms-heading">
         <div class="section-heading">
@@ -89,17 +158,58 @@
           </p>
           <router-link to="/" class="btn btn-primary">Select a room</router-link>
         </div>
-        <InventoryGrid
-          v-else
-          :containers="userContainers"
-          :loading="loadingContainers"
-          :resource="resource"
-          :current-user-id="user.userId"
-          :heading="`My ${resource.inventoryPlural} in ${selectedRoom.roomName}`"
-          empty-title="Nothing stocked here yet"
-          :empty-description="`Purchases you make in ${selectedRoom.roomName} will show up here.`"
-          @select="viewContainerDetails"
-        />
+        <template v-else>
+          <InventoryGrid
+            :containers="activeContainers"
+            :loading="loadingContainers"
+            :resource="resource"
+            :current-user-id="user.userId"
+            :heading="`My active ${resource.inventoryPlural} in ${selectedRoom.roomName}`"
+            empty-title="Nothing active right now"
+            :empty-description="
+              historyContainers.length > 0
+                ? 'All caught up — check your history below for past purchases.'
+                : `Purchases you make in ${selectedRoom.roomName} will show up here.`
+            "
+            @select="viewContainerDetails"
+          />
+
+          <details
+            v-if="!loadingContainers && historyContainers.length > 0"
+            class="history-disclosure"
+          >
+            <summary>
+              <span>History</span>
+              <span class="history-count">{{ historyContainers.length }}</span>
+            </summary>
+            <ul class="history-list">
+              <li
+                v-for="container in historyContainers"
+                :key="container.containerId"
+                class="history-row"
+              >
+                <span class="history-icon" aria-hidden="true">{{ resource.icon }}</span>
+                <div class="history-row-info">
+                  <strong>{{
+                    container.containerName || `Untitled ${resource.inventorySingular}`
+                  }}</strong>
+                  <small>
+                    {{ formatDate(container.purchaseDateTime) }} · {{ statusLabel(container) }}
+                    <template v-if="container.deletedAt">
+                      on {{ formatDate(container.deletedAt) }}</template
+                    >
+                  </small>
+                </div>
+                <span class="history-quantity"
+                  >{{ container.totalQuantity }} {{ resource.plural }}</span
+                >
+                <button type="button" class="link-button" @click="viewContainerDetails(container)">
+                  View
+                </button>
+              </li>
+            </ul>
+          </details>
+        </template>
       </section>
 
       <!-- Account Actions -->
@@ -225,11 +335,14 @@ import EmptyState from '@/components/common/EmptyState.vue'
 import LoadingSkeleton from '@/components/common/LoadingSkeleton.vue'
 import RoomCard from '@/components/common/RoomCard.vue'
 import InventoryGrid from '@/components/room/InventoryGrid.vue'
+import StatsChart from '@/components/profile/StatsChart.vue'
+import { useStatsStore } from '@/stores/stats.store'
 
 const router = useRouter()
 const authStore = useAuthStore()
 const roomStore = useRoomStore()
 const inventoryStore = useInventoryStore()
+const statsStore = useStatsStore()
 const { notification, showNotification } = useNotification()
 const loading = ref(false)
 const error = ref(null)
@@ -239,6 +352,13 @@ const changingPassword = ref(false)
 const passwordFormError = ref(null)
 const loadingContainers = ref(false)
 const userContainers = ref([])
+
+const rangeOptions = [
+  { value: 'Week', label: '1W' },
+  { value: 'Month', label: '1M' },
+  { value: 'Year', label: '1Y' },
+  { value: 'Max', label: 'Max' },
+]
 
 const passwordForm = reactive({
   current: '',
@@ -274,6 +394,33 @@ const totalEggs = computed(() => {
 const adminRooms = computed(() => {
   return roomStore.userRooms.filter((room) => room.adminUserId === user.value?.userId).length
 })
+
+// Mirrors EggLedger.Models.Enums.ContainerStatus - enums serialize as their numeric value.
+const CONTAINER_STATUS = { AVAILABLE: 1, DEPLETED: 2, ARCHIVED: 3, SUSPENDED: 4 }
+
+const activeContainers = computed(() =>
+  userContainers.value.filter(
+    (c) => c.status === CONTAINER_STATUS.AVAILABLE && c.remainingQuantity > 0,
+  ),
+)
+
+// Depleted-through-use and archived/suspended containers, newest first - kept out of the main
+// grid so a room's full purchase history doesn't drown out what's actually available today.
+const historyContainers = computed(() =>
+  userContainers.value
+    .filter((c) => !activeContainers.value.includes(c))
+    .slice()
+    .sort((a, b) => new Date(b.purchaseDateTime) - new Date(a.purchaseDateTime)),
+)
+
+// Consumption never actually flips Status to Depleted (only RemainingQuantity drops), so "fully
+// consumed" is derived from quantity rather than the Status field for anything not explicitly
+// Archived/Suspended by an admin action - matches ContainerDetailView's lifecycle logic.
+const statusLabel = (container) => {
+  if (container.status === CONTAINER_STATUS.ARCHIVED) return 'Archived'
+  if (container.status === CONTAINER_STATUS.SUSPENDED) return 'Suspended'
+  return 'Fully consumed'
+}
 
 const currentPasswordError = computed(() => {
   if (!passwordForm.current) return 'Current password is required'
@@ -437,6 +584,7 @@ onMounted(async () => {
 
   // Fetch user containers after profile is loaded
   await fetchUserContainers()
+  await statsStore.fetchStats('Week')
 })
 
 // Watch for changes in selected room to refresh containers
@@ -571,6 +719,174 @@ watch(selectedRoom, async (newRoom, oldRoom) => {
   gap: var(--spacing-lg);
 }
 
+.range-tabs {
+  display: flex;
+  flex-shrink: 0;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xs);
+  border-radius: var(--radius-md);
+  background: var(--bg-tertiary);
+}
+
+.range-tabs button {
+  padding: var(--spacing-xs) var(--spacing-md);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+}
+
+.range-tabs button.active {
+  background: var(--bg-primary);
+  color: var(--color-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.streak-card {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+  padding: var(--spacing-md) var(--spacing-lg);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  background: var(--bg-tertiary);
+}
+
+.streak-flame {
+  font-size: var(--font-size-2xl);
+  line-height: 1;
+}
+
+.streak-card strong {
+  display: block;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+}
+
+.streak-card small {
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.stats-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-lg);
+}
+
+.history-disclosure {
+  margin-top: var(--spacing-lg);
+  border-top: 1px solid var(--border-light);
+  padding-top: var(--spacing-lg);
+}
+
+.history-disclosure summary {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  color: var(--text-secondary);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  list-style: none;
+}
+
+.history-disclosure summary::-webkit-details-marker {
+  display: none;
+}
+
+.history-disclosure summary::before {
+  content: '▸';
+  color: var(--text-muted);
+  transition: transform var(--transition-normal);
+}
+
+.history-disclosure[open] summary::before {
+  transform: rotate(90deg);
+}
+
+.history-count {
+  padding: 2px var(--spacing-sm);
+  border-radius: 999px;
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  margin: var(--spacing-md) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.history-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+}
+
+.history-icon {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: var(--radius-md);
+  background: var(--bg-tertiary);
+  font-size: var(--font-size-base);
+}
+
+.history-row-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.history-row-info strong {
+  overflow: hidden;
+  font-size: var(--font-size-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-row-info small {
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.history-quantity {
+  flex-shrink: 0;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.link-button {
+  flex-shrink: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+}
+
+.link-button:hover {
+  text-decoration: underline;
+}
+
 .actions-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -599,6 +915,10 @@ watch(selectedRoom, async (newRoom, oldRoom) => {
   .section-heading {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .range-tabs {
+    align-self: flex-start;
   }
 
   .actions-grid {

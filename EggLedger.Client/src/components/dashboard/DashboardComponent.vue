@@ -276,11 +276,16 @@ const handleJoinRoom = async () => {
   try {
     const response = await roomStore.joinRoom(joinForm.roomCode, signal)
     if (!response.isSuccess) throw new Error(response.value || 'Failed to join room.')
-    showNotification('You joined the room.')
-    selectRoom(joinForm.roomCode)
     showLobby.value = false
     joinForm.roomCode = ''
     roomCodeTouched.value = false
+
+    if (response.value?.isPending) {
+      showNotification('Request submitted — waiting for the room admin to approve you.')
+    } else {
+      showNotification('You joined the room.')
+      selectRoom(joinForm.roomCode)
+    }
   } catch (error) {
     if (isCanceled(error)) return
     showNotification(

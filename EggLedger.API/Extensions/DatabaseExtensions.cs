@@ -1,8 +1,5 @@
-using System;
 using EggLedger.Data;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace EggLedger.API.Extensions;
 

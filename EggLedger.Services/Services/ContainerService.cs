@@ -2,6 +2,7 @@ using EggLedger.Data;
 using EggLedger.DTO.Container;
 using EggLedger.Models.Enums;
 using EggLedger.Models.Models;
+using EggLedger.Services.Errors;
 using EggLedger.Services.Extensions;
 using EggLedger.Services.Interfaces;
 using FluentResults;
@@ -30,7 +31,7 @@ public class ContainerService : IContainerService
         {
             var room = await _context.Rooms.FirstOrDefaultAsync(r => r.RoomCode == roomCode, cancellationToken);
             if (room == null)
-                return Result.Fail("Room not found");
+                return Result.Fail(new NotFoundError("Room not found"));
 
             var containersList = await _context.Containers
                 .AsNoTracking()
@@ -49,7 +50,8 @@ public class ContainerService : IContainerService
                     RoomName = c.Room.RoomName,
                     Status = c.Status,
                     Price = c.Price,
-                    CompletedDateTime = c.CompletedDateTime
+                    DeletedAt = c.DeletedAt,
+                    DeletionReason = c.DeletionReason
                 })
                 .ToListAsync(cancellationToken);
 
@@ -73,7 +75,7 @@ public class ContainerService : IContainerService
             if (container == null)
             {
                 _logger.LogWarning("Container with ID {ContainerId} not found.", containerId);
-                return Result.Fail("Container not found");
+                return Result.Fail(new NotFoundError("Container not found"));
             }
 
             var summaryDto = new ContainerSummaryDto
@@ -89,7 +91,8 @@ public class ContainerService : IContainerService
                 RoomName = container.Room.RoomName,
                 Status = container.Status,
                 Price = container.Price,
-                CompletedDateTime = container.CompletedDateTime
+                DeletedAt = container.DeletedAt,
+                DeletionReason = container.DeletionReason
             };
 
             _logger.LogInformation("Container {ContainerName} retrieved successfully.", summaryDto.ContainerName);
@@ -109,7 +112,7 @@ public class ContainerService : IContainerService
             if (container == null)
             {
                 _logger.LogWarning("Container with ID {ContainerId} not found.", containerId);
-                return Result.Fail("Container not found");
+                return Result.Fail(new NotFoundError("Container not found"));
             }
 
             // Update only provided properties
@@ -134,7 +137,8 @@ public class ContainerService : IContainerService
                 RoomName = container.Room.RoomName,
                 Status = container.Status,
                 Price = container.Price,
-                CompletedDateTime = container.CompletedDateTime
+                DeletedAt = container.DeletedAt,
+                DeletionReason = container.DeletionReason
             };
 
             _logger.LogInformation("Container {ContainerId} updated successfully.", container.ContainerId);
@@ -152,7 +156,7 @@ public class ContainerService : IContainerService
             if (container == null)
             {
                 _logger.LogWarning("Container with ID {ContainerId} not found.", containerId);
-                return Result.Fail("Container not found");
+                return Result.Fail(new NotFoundError("Container not found"));
             }
 
             container.Status = ContainerStatus.Archived;
@@ -173,20 +177,20 @@ public class ContainerService : IContainerService
             if (container == null)
             {
                 _logger.LogWarning("Container with ID {ContainerId} not found.", containerId);
-                return Result.Fail("Container not found");
+                return Result.Fail(new NotFoundError("Container not found"));
             }
 
             if (container.BuyerId != userId)
             {
                 _logger.LogWarning("User {UserId} is not the owner of container {ContainerId}", userId, containerId);
-                return Result.Fail("Only the owner can delete this container");
+                return Result.Fail(new ForbiddenError("Only the owner can delete this container"));
             }
 
             var consumed = container.TotalQuantity - container.RemainingQuantity;
             if (consumed > 0)
             {
                 _logger.LogWarning("Container {ContainerId} has {Consumed} consumed eggs and cannot be deleted", containerId, consumed);
-                return Result.Fail($"Cannot delete: {consumed} egg(s) have already been consumed from this container.");
+                return Result.Fail(new ConflictError($"Cannot delete: {consumed} egg(s) have already been consumed from this container."));
             }
 
             var now = DateTime.UtcNow;
@@ -214,7 +218,7 @@ public class ContainerService : IContainerService
             if (container == null)
             {
                 _logger.LogWarning("Container with ID {ContainerId} not found.", containerId);
-                return Result.Fail("Container not found");
+                return Result.Fail(new NotFoundError("Container not found"));
             }
 
             container.Status = ContainerStatus.Suspended;
@@ -237,7 +241,7 @@ public class ContainerService : IContainerService
             var room = await _context.Rooms.FirstOrDefaultAsync(r => r.RoomCode == roomCode, cancellationToken);
             if (room == null)
             {
-                return Result.Fail("Room not found");
+                return Result.Fail(new NotFoundError("Room not found"));
             }
 
             var containers = await _context.Containers
@@ -257,7 +261,8 @@ public class ContainerService : IContainerService
                     RoomName = container.Room.RoomName,
                     Status = container.Status,
                     Price = container.Price,
-                    CompletedDateTime = container.CompletedDateTime
+                    DeletedAt = container.DeletedAt,
+                    DeletionReason = container.DeletionReason
                 })
                 .ToListAsync(cancellationToken);
 
@@ -272,7 +277,7 @@ public class ContainerService : IContainerService
             var room = await _context.Rooms.FirstOrDefaultAsync(r => r.RoomCode == roomCode, cancellationToken);
             if (room == null)
             {
-                return Result.Fail("Room not found");
+                return Result.Fail(new NotFoundError("Room not found"));
             }
 
             var containers = await _context.Containers
@@ -292,7 +297,8 @@ public class ContainerService : IContainerService
                     RoomName = container.Room.RoomName,
                     Status = container.Status,
                     Price = container.Price,
-                    CompletedDateTime = container.CompletedDateTime
+                    DeletedAt = container.DeletedAt,
+                    DeletionReason = container.DeletionReason
                 })
                 .ToListAsync(cancellationToken);
 
@@ -311,7 +317,7 @@ public class ContainerService : IContainerService
             var room = await _context.Rooms.FirstOrDefaultAsync(r => r.RoomCode == roomCode, cancellationToken);
             if (room == null)
             {
-                return Result.Fail("Room not found");
+                return Result.Fail(new NotFoundError("Room not found"));
             }
 
             var containers = await _context.Containers
@@ -333,7 +339,8 @@ public class ContainerService : IContainerService
                     RoomName = container.Room.RoomName,
                     Status = container.Status,
                     Price = container.Price,
-                    CompletedDateTime = container.CompletedDateTime
+                    DeletedAt = container.DeletedAt,
+                    DeletionReason = container.DeletionReason
                 })
                 .ToListAsync(cancellationToken);
 
@@ -349,14 +356,14 @@ public class ContainerService : IContainerService
             var room = await _context.Rooms.FirstOrDefaultAsync(r => r.RoomCode == roomCode, cancellationToken);
             if (room == null)
             {
-                return Result.Fail("Room not found");
+                return Result.Fail(new NotFoundError("Room not found"));
             }
 
             // Validate buyer exists
             var buyer = await _context.Users.FindAsync([dto.BuyerId], cancellationToken);
             if (buyer == null)
             {
-                return Result.Fail("Buyer not found");
+                return Result.Fail(new NotFoundError("Buyer not found"));
             }
 
             var container = new Container
@@ -368,6 +375,7 @@ public class ContainerService : IContainerService
                 Amount = dto.Amount,
                 BuyerId = dto.BuyerId,
                 RoomId = room.RoomId,
+                ResourceTypeId = ResourceType.EggsId,
                 PurchaseDateTime = DateTime.UtcNow,
                 Status = ContainerStatus.Available,
             };
@@ -388,7 +396,8 @@ public class ContainerService : IContainerService
                 Status = container.Status,
                 Price = container.Price,
                 RoomName = room.RoomName,
-                CompletedDateTime = container.CompletedDateTime
+                DeletedAt = container.DeletedAt,
+                DeletionReason = container.DeletionReason
             };
 
             _logger.LogInformation("Created container {ContainerName} with ID {ContainerId} in room {RoomName}", container.ContainerName, container.ContainerId, room.RoomName);

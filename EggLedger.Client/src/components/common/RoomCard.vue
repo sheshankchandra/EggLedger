@@ -1,9 +1,10 @@
 <template>
   <component
-    :is="clickable ? 'button' : 'div'"
+    :is="effectiveClickable ? 'button' : 'div'"
     class="room-card"
-    :type="clickable ? 'button' : undefined"
-    @click="clickable && $emit('select', room.roomCode)"
+    :class="{ 'room-card-pending': room.isPending }"
+    :type="effectiveClickable ? 'button' : undefined"
+    @click="effectiveClickable && $emit('select', room.roomCode)"
   >
     <span class="room-card-top">
       <span class="room-avatar" aria-hidden="true">{{ initials }}</span>
@@ -11,13 +12,17 @@
     </span>
     <span class="room-name">
       {{ room.roomName }}
-      <span v-if="isAdmin" class="admin-badge">Admin</span>
+      <span v-if="room.isPending" class="pending-badge">Pending approval</span>
+      <span v-else-if="isAdmin" class="admin-badge">Admin</span>
     </span>
     <span class="room-meta">
       <span>{{ room.memberCount || 0 }} members</span>
       <span v-if="dateLabel">{{ dateLabel }}</span>
     </span>
-    <span class="room-stat-grid">
+    <template v-if="room.isPending">
+      <p class="pending-hint">Waiting for the room admin to approve your request to join.</p>
+    </template>
+    <span v-else class="room-stat-grid">
       <span>
         <strong>{{ room.totalEggs || 0 }}</strong>
         {{ resource.plural }} available
@@ -27,7 +32,9 @@
         active {{ resource.inventoryPlural }}
       </span>
     </span>
-    <span v-if="clickable" class="open-room">{{ ctaLabel }} <span aria-hidden="true">→</span></span>
+    <span v-if="effectiveClickable" class="open-room"
+      >{{ ctaLabel }} <span aria-hidden="true">→</span></span
+    >
   </component>
 </template>
 
@@ -44,6 +51,8 @@ const props = defineProps({
 })
 
 defineEmits(['select'])
+
+const effectiveClickable = computed(() => props.clickable && !props.room.isPending)
 
 const initials = computed(() =>
   (props.room.roomName || 'Room')
@@ -128,6 +137,25 @@ button.room-card:hover {
   color: var(--color-primary);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
+}
+
+.pending-badge {
+  padding: 2px var(--spacing-sm);
+  border-radius: 999px;
+  background: var(--color-warning-light);
+  color: var(--color-warning);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+.room-card-pending {
+  opacity: 0.85;
+}
+
+.pending-hint {
+  margin: var(--spacing-lg) 0 0;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
 }
 
 .room-meta {

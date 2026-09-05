@@ -1,14 +1,6 @@
-using System;
-using System.Linq;
-using System.Threading.Tasks;
 using EggLedger.API.Middleware;
 using EggLedger.Data;
-using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Scalar.AspNetCore;
 
 namespace EggLedger.API.Extensions;

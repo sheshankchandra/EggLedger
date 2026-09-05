@@ -1,4 +1,4 @@
-﻿using EggLedger.Models.Enums;
+using EggLedger.Models.Enums;
 
 namespace EggLedger.Models.Models;
 
@@ -16,7 +16,10 @@ public class Container : AuditableEntity
     public required int RemainingQuantity { get; set; }
     public required decimal Amount { get; set; }
     public required Guid RoomId { get; set; }
-    
+
+    /// <summary>Resource this container holds. Always <see cref="ResourceType.EggsId"/> today.</summary>
+    public required Guid ResourceTypeId { get; set; }
+
     /// <summary>
     /// Status of the container (Available, Depleted, Archived, Suspended)
     /// </summary>
@@ -42,6 +45,7 @@ public class Container : AuditableEntity
     #region Navigation properties
     public User Buyer { get; set; } = null!;
     public Room Room { get; set; } = null!;
-    public virtual ICollection<OrderDetail> OrderDetails { get; set; } = new List<OrderDetail>(); 
+    public ResourceType ResourceType { get; set; } = null!;
+    public virtual ICollection<OrderDetail> OrderDetails { get; set; } = new List<OrderDetail>();
     #endregion
 }

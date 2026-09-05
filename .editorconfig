@@ -52,6 +52,13 @@ dotnet_diagnostic.CA1873.severity = suggestion
 # CA2007: ConfigureAwait(false) — not needed in ASP.NET Core apps.
 dotnet_diagnostic.CA2007.severity = none
 
+# EF Core migrations are scaffolded, run exactly once each, and are never on a
+# hot path — CA1861's "hoist this array to a static field" advice doesn't
+# apply, and every future `dotnet ef migrations add` regenerates the same
+# pattern anyway. Scope the suppression to Migrations/ only.
+[**/Migrations/*.cs]
+dotnet_diagnostic.CA1861.severity = none
+
 [*.{js,ts,vue,json,jsonc,css,html}]
 indent_size = 2
 

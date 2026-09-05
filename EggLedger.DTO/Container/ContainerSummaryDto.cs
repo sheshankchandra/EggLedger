@@ -1,4 +1,4 @@
-﻿using EggLedger.Models.Enums;
+using EggLedger.Models.Enums;
 
 namespace EggLedger.DTO.Container;
 
@@ -15,5 +15,10 @@ public class ContainerSummaryDto
     public required string RoomName { get; set; }
     public required ContainerStatus Status { get; set; }
     public required decimal Price { get; set; }
-    public DateTime? CompletedDateTime { get; set; }
+
+    /// <summary>When the container was archived/deleted (null while still active).</summary>
+    public DateTime? DeletedAt { get; set; }
+
+    /// <summary>Why the container was archived/deleted (null while still active).</summary>
+    public string? DeletionReason { get; set; }
 }

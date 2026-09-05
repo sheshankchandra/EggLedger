@@ -357,6 +357,11 @@ img {
   display: none;
 }
 
+/* Sizing utilities */
+.w-full {
+  width: 100%;
+}
+
 /* Flex utilities */
 .flex-col {
   flex-direction: column;

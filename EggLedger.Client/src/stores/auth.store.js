@@ -3,6 +3,7 @@ import authService from '@/services/auth.service'
 import userService from '@/services/user.service'
 import router from '@/router'
 import { useRoomStore } from '@/stores/room.store'
+import { consumeRedirect } from '@/utils/postLoginRedirect'
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
@@ -121,7 +122,7 @@ export const useAuthStore = defineStore('auth', {
       const token = this.token || (await this.refreshSession())
       if (token) {
         if (!this.user) await this.fetchProfile()
-        router.push('/dashboard')
+        router.push(consumeRedirect() || '/dashboard')
       } else {
         router.push('/accounts/login')
       }
