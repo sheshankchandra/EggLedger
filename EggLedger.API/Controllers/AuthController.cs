@@ -1,7 +1,4 @@
-﻿using System;
-using System.Linq;
 using System.Security.Claims;
-using System.Threading.Tasks;
 using EggLedger.API.Extensions;
 using EggLedger.DTO.Auth;
 using EggLedger.DTO.User;
@@ -10,13 +7,8 @@ using EggLedger.Services.Interfaces;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 
 namespace EggLedger.API.Controllers;
 

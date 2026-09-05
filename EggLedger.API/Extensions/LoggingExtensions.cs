@@ -1,10 +1,6 @@
-using System;
-using System.IO;
 using System.Runtime.InteropServices;
 using log4net;
 using log4net.Config;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 
 namespace EggLedger.API.Extensions;
 

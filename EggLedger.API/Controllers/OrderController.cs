@@ -1,14 +1,9 @@
-using System;
-using System.Linq;
 using System.Security.Claims;
-using System.Threading;
-using System.Threading.Tasks;
 using EggLedger.DTO.Order;
 using EggLedger.Services.Errors;
 using EggLedger.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 
 namespace EggLedger.API.Controllers;
 
