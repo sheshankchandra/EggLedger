@@ -4,14 +4,33 @@
     <RoomIndicator />
 
     <main class="page-shell detail-shell">
-      <header class="detail-header">
+      <header
+        class="detail-header"
+        :class="{ 'detail-header-inactive': lifecycleState !== 'active' }"
+      >
         <div>
           <div class="breadcrumb">
             <router-link to="/profile">Profile</router-link>
             <span aria-hidden="true">/</span>
             <span>{{ resource.inventorySingular }} details</span>
           </div>
-          <h1>{{ containerInfo?.containerName || `Untitled ${resource.inventorySingular}` }}</h1>
+          <div class="title-row">
+            <h1>{{ containerInfo?.containerName || `Untitled ${resource.inventorySingular}` }}</h1>
+            <span
+              v-if="lifecycleState"
+              class="lifecycle-badge"
+              :class="`lifecycle-${lifecycleState}`"
+            >
+              {{ lifecycleLabel }}
+            </span>
+          </div>
+          <p v-if="containerInfo?.deletedAt" class="lifecycle-meta">
+            {{ lifecycleState === 'suspended' ? 'Suspended' : 'Archived' }} on
+            {{ formatDate(containerInfo.deletedAt) }}
+            <template v-if="containerInfo.deletionReason">
+              · {{ containerInfo.deletionReason }}</template
+            >
+          </p>
         </div>
         <button type="button" @click="goBack" class="btn btn-secondary">← Back to profile</button>
       </header>
@@ -22,7 +41,10 @@
       <template v-if="!loading && !error">
         <!-- Container Info Section - only show if container info is available -->
         <section v-if="containerInfo" class="summary-grid" aria-label="Container summary">
-          <div class="summary-card summary-card-primary">
+          <div
+            class="summary-card"
+            :class="lifecycleState === 'active' ? 'summary-card-primary' : 'summary-card-muted'"
+          >
             <span>Current stock</span>
             <strong>{{ containerInfo.remainingQuantity || 0 }}</strong>
             <small>of {{ containerInfo.totalQuantity || 0 }} {{ resource.plural }}</small>
@@ -140,6 +162,36 @@ const roomStore = useRoomStore()
 const containerInfo = computed(() => {
   const stored = sessionStorage.getItem('currentContainerInfo')
   return stored ? JSON.parse(stored) : null
+})
+
+// Mirrors EggLedger.Models.Enums.ContainerStatus - enums serialize as their numeric value.
+// Note: consumption never actually flips Status to "Depleted" (only RemainingQuantity drops),
+// so "fully consumed" must be derived from quantity, not the Status field, for anything that
+// isn't explicitly Archived/Suspended by an admin action.
+const CONTAINER_STATUS = { ARCHIVED: 3, SUSPENDED: 4 }
+
+const lifecycleState = computed(() => {
+  const info = containerInfo.value
+  if (!info) return null
+  if (info.status === CONTAINER_STATUS.ARCHIVED) return 'archived'
+  if (info.status === CONTAINER_STATUS.SUSPENDED) return 'suspended'
+  if ((info.remainingQuantity ?? 0) <= 0) return 'consumed'
+  return 'active'
+})
+
+const lifecycleLabel = computed(() => {
+  switch (lifecycleState.value) {
+    case 'archived':
+      return 'Archived'
+    case 'suspended':
+      return 'Suspended'
+    case 'consumed':
+      return 'Fully consumed'
+    case 'active':
+      return 'Active'
+    default:
+      return ''
+  }
 })
 
 const loading = ref(false) // No longer loading container info
@@ -312,12 +364,61 @@ onUnmounted(() => {
   background: linear-gradient(145deg, var(--bg-primary), var(--bg-tertiary));
   border: 1px solid var(--border-light);
   box-shadow: var(--shadow-md);
+  transition: border-color var(--transition-normal);
+}
+
+.detail-header-inactive {
+  border-left: 4px solid var(--border-dark);
 }
 
 .detail-header h1 {
-  margin: var(--spacing-sm) 0 0;
+  margin: 0;
   font-size: clamp(1.5rem, 4vw, 2.25rem);
   letter-spacing: -0.03em;
+}
+
+.title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-sm);
+}
+
+.lifecycle-badge {
+  padding: var(--spacing-xs) var(--spacing-md);
+  border-radius: 999px;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.lifecycle-active {
+  background: var(--color-success-light);
+  color: var(--color-success);
+}
+
+.lifecycle-consumed {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-medium);
+}
+
+.lifecycle-archived {
+  background: var(--color-danger-light);
+  color: var(--color-danger);
+}
+
+.lifecycle-suspended {
+  background: var(--color-warning-light);
+  color: var(--color-warning);
+}
+
+.lifecycle-meta {
+  margin: var(--spacing-sm) 0 0;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
 }
 
 .breadcrumb {
@@ -381,6 +482,10 @@ onUnmounted(() => {
 
 .summary-card-primary strong {
   color: var(--text-inverse);
+}
+
+.summary-card-muted {
+  background: var(--bg-tertiary);
 }
 
 .summary-code {

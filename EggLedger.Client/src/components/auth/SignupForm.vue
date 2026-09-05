@@ -93,7 +93,7 @@
       <span>or</span>
     </div>
 
-    <button @click="handleGoogleRegister" class="btn-google" :disabled="loading">
+    <button @click="handleGoogleRegister" class="btn btn-google" :disabled="loading">
       <svg class="google-icon" viewBox="0 0 24 24">
         <path
           fill="#4285f4"
@@ -222,170 +222,34 @@ const handleGoogleRegister = async () => {
 
 .auth-header {
   text-align: center;
-  margin-bottom: 1.2rem;
+  margin-bottom: var(--spacing-lg);
 }
 
 .auth-title {
-  font-size: 1.75rem;
-  font-weight: 700;
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
   color: var(--text-primary);
-  margin-bottom: 0.25rem;
+  margin-bottom: var(--spacing-xs);
 }
 
 .form {
-  margin-bottom: 1rem;
-}
-
-.form-group {
-  margin-bottom: 0.75rem;
-}
-
-.form-label {
-  display: block;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--text-secondary);
-  margin-bottom: 0.5rem;
-}
-
-.form-input {
-  width: 100%;
-  padding: 0.625rem 0.75rem;
-  border: 1px solid var(--border-medium);
-  border-radius: 0.375rem;
-  font-size: 0.9rem;
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
-  transition:
-    border-color 0.15s ease-in-out,
-    box-shadow 0.15s ease-in-out;
-}
-
-.form-input:focus {
-  outline: none;
-  border-color: var(--color-primary);
-  box-shadow: var(--input-focus-ring);
-}
-
-.form-input:disabled {
-  background-color: var(--bg-tertiary);
-  color: var(--text-muted);
-}
-
-.form-input.is-invalid {
-  border-color: var(--color-danger);
-}
-
-.form-feedback {
-  display: block;
-  margin-top: 0.375rem;
-  font-size: 0.8125rem;
-}
-
-.form-feedback.is-invalid {
-  color: var(--color-danger);
-}
-
-.btn {
-  padding: 0.625rem 1rem;
-  border-radius: 0.375rem;
-  font-weight: 500;
-  font-size: 0.9rem;
-  border: none;
-  cursor: pointer;
-  transition: all 0.15s ease-in-out;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-}
-
-.btn-primary {
-  background-color: var(--color-primary);
-  color: var(--text-inverse);
-}
-
-.btn-primary:hover:not(:disabled) {
-  background-color: var(--color-primary-hover);
-}
-
-.btn-primary:disabled {
-  background-color: var(--color-gray-400);
-  cursor: not-allowed;
-}
-
-.w-full {
-  width: 100%;
+  margin-bottom: var(--spacing-md);
 }
 
 .btn-google {
   width: 100%;
-  padding: 0.625rem 0.75rem;
-  border: 1px solid var(--border-medium);
-  border-radius: 0.375rem;
-  background-color: var(--bg-primary);
+  background: var(--bg-primary);
+  border-color: var(--border-medium);
   color: var(--text-secondary);
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s ease-in-out;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
 }
 
 .btn-google:hover:not(:disabled) {
-  background-color: var(--bg-tertiary);
-}
-
-.btn-google:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+  background: var(--bg-tertiary);
+  box-shadow: var(--shadow-sm);
 }
 
 .google-icon {
   width: 20px;
   height: 20px;
-}
-
-.divider {
-  position: relative;
-  text-align: center;
-  margin: 1.25rem 0;
-}
-
-.divider::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background-color: var(--border-light);
-  z-index: 1;
-}
-
-.divider span {
-  position: relative;
-  background-color: var(--bg-primary);
-  padding: 0 1rem;
-  color: var(--text-muted);
-  font-size: 0.875rem;
-  z-index: 2;
-}
-
-.spinner {
-  width: 20px;
-  height: 20px;
-  border: 2px solid transparent;
-  border-top: 2px solid currentColor;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
 }
 </style>

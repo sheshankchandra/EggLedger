@@ -174,7 +174,10 @@
             @select="viewContainerDetails"
           />
 
-          <details v-if="!loadingContainers && historyContainers.length > 0" class="history-disclosure">
+          <details
+            v-if="!loadingContainers && historyContainers.length > 0"
+            class="history-disclosure"
+          >
             <summary>
               <span>History</span>
               <span class="history-count">{{ historyContainers.length }}</span>
@@ -187,17 +190,20 @@
               >
                 <span class="history-icon" aria-hidden="true">{{ resource.icon }}</span>
                 <div class="history-row-info">
-                  <strong>{{ container.containerName || `Untitled ${resource.inventorySingular}` }}</strong>
+                  <strong>{{
+                    container.containerName || `Untitled ${resource.inventorySingular}`
+                  }}</strong>
                   <small>
-                    {{ formatDate(container.purchaseDateTime) }} · {{ statusLabel(container.status) }}
+                    {{ formatDate(container.purchaseDateTime) }} · {{ statusLabel(container) }}
+                    <template v-if="container.deletedAt">
+                      on {{ formatDate(container.deletedAt) }}</template
+                    >
                   </small>
                 </div>
-                <span class="history-quantity">{{ container.totalQuantity }} {{ resource.plural }}</span>
-                <button
-                  type="button"
-                  class="link-button"
-                  @click="viewContainerDetails(container)"
+                <span class="history-quantity"
+                  >{{ container.totalQuantity }} {{ resource.plural }}</span
                 >
+                <button type="button" class="link-button" @click="viewContainerDetails(container)">
                   View
                 </button>
               </li>
@@ -407,18 +413,13 @@ const historyContainers = computed(() =>
     .sort((a, b) => new Date(b.purchaseDateTime) - new Date(a.purchaseDateTime)),
 )
 
-const statusLabel = (status) => {
-  switch (status) {
-    case CONTAINER_STATUS.AVAILABLE:
-    case CONTAINER_STATUS.DEPLETED:
-      return 'Consumed'
-    case CONTAINER_STATUS.ARCHIVED:
-      return 'Deleted'
-    case CONTAINER_STATUS.SUSPENDED:
-      return 'Suspended'
-    default:
-      return 'Unknown'
-  }
+// Consumption never actually flips Status to Depleted (only RemainingQuantity drops), so "fully
+// consumed" is derived from quantity rather than the Status field for anything not explicitly
+// Archived/Suspended by an admin action - matches ContainerDetailView's lifecycle logic.
+const statusLabel = (container) => {
+  if (container.status === CONTAINER_STATUS.ARCHIVED) return 'Archived'
+  if (container.status === CONTAINER_STATUS.SUSPENDED) return 'Suspended'
+  return 'Fully consumed'
 }
 
 const currentPasswordError = computed(() => {

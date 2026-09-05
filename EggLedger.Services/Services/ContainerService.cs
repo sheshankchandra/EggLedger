@@ -49,7 +49,8 @@ public class ContainerService : IContainerService
                     RoomName = c.Room.RoomName,
                     Status = c.Status,
                     Price = c.Price,
-                    CompletedDateTime = c.CompletedDateTime
+                    DeletedAt = c.DeletedAt,
+                    DeletionReason = c.DeletionReason
                 })
                 .ToListAsync(cancellationToken);
 
@@ -89,7 +90,8 @@ public class ContainerService : IContainerService
                 RoomName = container.Room.RoomName,
                 Status = container.Status,
                 Price = container.Price,
-                CompletedDateTime = container.CompletedDateTime
+                DeletedAt = container.DeletedAt,
+                DeletionReason = container.DeletionReason
             };
 
             _logger.LogInformation("Container {ContainerName} retrieved successfully.", summaryDto.ContainerName);
@@ -134,7 +136,8 @@ public class ContainerService : IContainerService
                 RoomName = container.Room.RoomName,
                 Status = container.Status,
                 Price = container.Price,
-                CompletedDateTime = container.CompletedDateTime
+                DeletedAt = container.DeletedAt,
+                DeletionReason = container.DeletionReason
             };
 
             _logger.LogInformation("Container {ContainerId} updated successfully.", container.ContainerId);
@@ -257,7 +260,8 @@ public class ContainerService : IContainerService
                     RoomName = container.Room.RoomName,
                     Status = container.Status,
                     Price = container.Price,
-                    CompletedDateTime = container.CompletedDateTime
+                    DeletedAt = container.DeletedAt,
+                    DeletionReason = container.DeletionReason
                 })
                 .ToListAsync(cancellationToken);
 
@@ -292,7 +296,8 @@ public class ContainerService : IContainerService
                     RoomName = container.Room.RoomName,
                     Status = container.Status,
                     Price = container.Price,
-                    CompletedDateTime = container.CompletedDateTime
+                    DeletedAt = container.DeletedAt,
+                    DeletionReason = container.DeletionReason
                 })
                 .ToListAsync(cancellationToken);
 
@@ -333,7 +338,8 @@ public class ContainerService : IContainerService
                     RoomName = container.Room.RoomName,
                     Status = container.Status,
                     Price = container.Price,
-                    CompletedDateTime = container.CompletedDateTime
+                    DeletedAt = container.DeletedAt,
+                    DeletionReason = container.DeletionReason
                 })
                 .ToListAsync(cancellationToken);
 
@@ -388,7 +394,8 @@ public class ContainerService : IContainerService
                 Status = container.Status,
                 Price = container.Price,
                 RoomName = room.RoomName,
-                CompletedDateTime = container.CompletedDateTime
+                DeletedAt = container.DeletedAt,
+                DeletionReason = container.DeletionReason
             };
 
             _logger.LogInformation("Created container {ContainerName} with ID {ContainerId} in room {RoomName}", container.ContainerName, container.ContainerId, room.RoomName);
