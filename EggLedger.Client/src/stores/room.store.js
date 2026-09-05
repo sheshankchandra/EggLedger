@@ -88,6 +88,12 @@ export const useRoomStore = defineStore('room', {
       return result
     },
 
+    async renameRoom(roomCode, newRoomName, signal) {
+      const result = await roomService.editRoomName(roomCode, newRoomName, signal)
+      await this.fetchUserRooms()
+      return result
+    },
+
     async deleteRoom(roomCode, signal) {
       await roomService.deleteRoom(roomCode, signal)
       this.clearSelectedRoom()

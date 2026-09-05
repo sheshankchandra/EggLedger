@@ -91,7 +91,7 @@
 
           <EmptyState
             v-if="statsStore.buckets.every((bucket) => bucket.eggsConsumed === 0)"
-            :icon="resource.icon"
+            :icon="Activity"
             title="No activity yet"
             :description="`Record a consume order to start tracking your ${resource.plural} habit.`"
           />
@@ -308,7 +308,7 @@
 <script setup>
 import { onMounted, computed, ref, reactive, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { Flame, House } from '@lucide/vue'
+import { Flame, House, Activity } from '@lucide/vue'
 import { useAuthStore } from '@/stores/auth.store'
 import { useRoomStore } from '@/stores/room.store'
 import { useInventoryStore } from '@/stores/inventory.store'

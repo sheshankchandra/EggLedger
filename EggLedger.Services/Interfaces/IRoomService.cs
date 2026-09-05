@@ -14,7 +14,7 @@ public interface IRoomService
     Task<Result<List<RoomDto>>> GetAllUserRoomsAsync(Guid userId, CancellationToken cancellationToken = default);
     Task<Result<RoomDto>> GetRoomByCodeAsync(int roomCode, CancellationToken cancellationToken = default);
     Task<Result<int>> DeleteRoomAsync(int roomCode, Guid userId, CancellationToken cancellationToken = default);
-    Task<Result<string>> EditRoomNameAsync(Guid userId, Guid roomId, string newRoomName, CancellationToken cancellationToken = default);
+    Task<Result<string>> EditRoomNameAsync(Guid userId, int roomCode, string newRoomName, CancellationToken cancellationToken = default);
     Task<Result<string>> RemoveRoomMemberAsync(Guid adminUserId, Guid roomId, Guid memberUserId, CancellationToken cancellationToken = default);
     Task<Result<string>> EditRoomStatusAsync(Guid userId, Guid roomId, RoomStatus newStatus, CancellationToken cancellationToken = default);
     Task<Result<List<PendingMemberDto>>> GetPendingMembersAsync(Guid adminUserId, int roomCode, CancellationToken cancellationToken = default);

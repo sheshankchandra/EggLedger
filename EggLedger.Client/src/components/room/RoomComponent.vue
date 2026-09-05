@@ -102,11 +102,13 @@
       :pending-loading="pendingLoading"
       :processing-member-id="processingMemberId"
       :updating-visibility="updatingVisibility"
+      :renaming-room="renamingRoom"
       @close="showSettingsModal = false"
       @approve-member="handleApproveMember"
       @reject-member="handleRejectMember"
       @archive-room="openArchiveConfirm"
       @update-visibility="handleUpdateVisibility"
+      @rename-room="handleRenameRoom"
     />
 
     <ConfirmModal
@@ -188,6 +190,7 @@ const pendingMembers = ref([])
 const pendingLoading = ref(false)
 const processingMemberId = ref(null)
 const updatingVisibility = ref(false)
+const renamingRoom = ref(false)
 
 const handleUpdateVisibility = async (isOpen) => {
   updatingVisibility.value = true
@@ -200,6 +203,19 @@ const handleUpdateVisibility = async (isOpen) => {
     showNotification(errorMessage(err, 'Could not update who can join.'), 'error')
   } finally {
     updatingVisibility.value = false
+  }
+}
+
+const handleRenameRoom = async (newRoomName) => {
+  renamingRoom.value = true
+  try {
+    await roomStore.renameRoom(props.room.roomCode, newRoomName)
+    showNotification('Room renamed.')
+  } catch (err) {
+    if (isCanceled(err)) return
+    showNotification(errorMessage(err, 'Could not rename the room.'), 'error')
+  } finally {
+    renamingRoom.value = false
   }
 }
 

@@ -69,6 +69,16 @@ export const roomService = {
     return response.data
   },
 
+  // Rename a room (admin only)
+  async editRoomName(roomCode, newRoomName, signal) {
+    const response = await apiClient.post(
+      `/egg-ledger-api/room/edit-name/${roomCode}`,
+      { newRoomName },
+      { signal },
+    )
+    return response.data
+  },
+
   // Delete a room (admin only)
   async deleteRoom(roomCode, signal) {
     const response = await apiClient.post(`/egg-ledger-api/room/delete/${roomCode}`, {}, { signal })

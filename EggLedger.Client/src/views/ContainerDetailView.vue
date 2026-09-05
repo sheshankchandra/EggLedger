@@ -86,7 +86,7 @@
           />
           <EmptyState
             v-else-if="orders.length === 0"
-            :icon="resource.icon"
+            :icon="ClipboardList"
             title="No orders yet"
             :description="`Stock or usage updates for this ${resource.inventorySingular} will show up here.`"
           />
@@ -142,7 +142,7 @@
 <script setup>
 import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { ArrowLeft } from '@lucide/vue'
+import { ArrowLeft, ClipboardList } from '@lucide/vue'
 import { useRoomStore } from '@/stores/room.store'
 import { resourceConfig as resource } from '@/config/resource.config'
 import NavigationHeader from '@/components/common/NavigationHeader.vue'

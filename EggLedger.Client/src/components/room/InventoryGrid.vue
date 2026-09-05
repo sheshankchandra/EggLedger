@@ -21,7 +21,7 @@
 
     <EmptyState
       v-else-if="containers.length === 0"
-      :icon="resource.icon"
+      :icon="PackageOpen"
       :title="emptyTitle"
       :description="emptyDescription"
     />
@@ -60,7 +60,7 @@
 <script setup>
 import LoadingSkeleton from '@/components/common/LoadingSkeleton.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
-import { ArrowRight } from '@lucide/vue'
+import { ArrowRight, PackageOpen } from '@lucide/vue'
 
 defineProps({
   containers: { type: Array, required: true },

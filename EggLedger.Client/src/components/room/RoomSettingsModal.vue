@@ -1,5 +1,57 @@
 <template>
   <BaseModal title="Room settings" content-class="room-settings-modal" @close="$emit('close')">
+    <section v-if="isRoomAdmin" class="settings-section">
+      <h3 class="settings-section-title">Room name</h3>
+      <div class="rename-row">
+        <input
+          v-if="editingName"
+          ref="nameInputRef"
+          v-model.trim="nameDraft"
+          type="text"
+          maxlength="80"
+          class="form-input"
+          :disabled="renamingRoom"
+          @keyup.enter="confirmEditName"
+          @keyup.escape="cancelEditName"
+        />
+        <strong v-else class="rename-current">{{ room.roomName }}</strong>
+        <div class="rename-actions">
+          <template v-if="editingName">
+            <button
+              type="button"
+              class="icon-action icon-action-approve"
+              :disabled="!nameDraft || renamingRoom"
+              aria-label="Save room name"
+              title="Save"
+              @click="confirmEditName"
+            >
+              <Check :size="16" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              class="icon-action icon-action-reject"
+              :disabled="renamingRoom"
+              aria-label="Cancel rename"
+              title="Cancel"
+              @click="cancelEditName"
+            >
+              <X :size="16" aria-hidden="true" />
+            </button>
+          </template>
+          <button
+            v-else
+            type="button"
+            class="icon-action"
+            aria-label="Rename room"
+            title="Rename room"
+            @click="startEditName"
+          >
+            <Pencil :size="16" aria-hidden="true" />
+          </button>
+        </div>
+      </div>
+    </section>
+
     <section class="settings-section">
       <h3 class="settings-section-title">Invite people</h3>
       <div class="invite-row">
@@ -87,8 +139,8 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { Copy, Check, UserCheck, UserX, Archive } from '@lucide/vue'
+import { ref, nextTick, watch } from 'vue'
+import { Copy, Check, UserCheck, UserX, Archive, Pencil, X } from '@lucide/vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import LoadingSkeleton from '@/components/common/LoadingSkeleton.vue'
 import VisibilityToggle from '@/components/common/VisibilityToggle.vue'
@@ -100,11 +152,52 @@ const props = defineProps({
   pendingLoading: { type: Boolean, default: false },
   processingMemberId: { type: [String, Number], default: null },
   updatingVisibility: { type: Boolean, default: false },
+  renamingRoom: { type: Boolean, default: false },
 })
 
-defineEmits(['close', 'approve-member', 'reject-member', 'archive-room', 'update-visibility'])
+const emit = defineEmits([
+  'close',
+  'approve-member',
+  'reject-member',
+  'archive-room',
+  'update-visibility',
+  'rename-room',
+])
 
 const copied = ref(false)
+const editingName = ref(false)
+const nameDraft = ref(props.room.roomName)
+const nameInputRef = ref(null)
+
+// Keep the draft in sync when the room is renamed elsewhere or the modal reopens.
+watch(
+  () => props.room.roomName,
+  (newName) => {
+    nameDraft.value = newName
+    editingName.value = false
+  },
+)
+
+const startEditName = async () => {
+  nameDraft.value = props.room.roomName
+  editingName.value = true
+  await nextTick()
+  nameInputRef.value?.focus()
+}
+
+const cancelEditName = () => {
+  nameDraft.value = props.room.roomName
+  editingName.value = false
+}
+
+const confirmEditName = () => {
+  const trimmed = nameDraft.value.trim()
+  if (!trimmed || trimmed === props.room.roomName) {
+    editingName.value = false
+    return
+  }
+  emit('rename-room', trimmed)
+}
 
 const copyInviteLink = async () => {
   const link = `${window.location.origin}/join?code=${props.room.roomCode}`
@@ -160,6 +253,27 @@ const formatDate = (dateString) => {
   margin: 0;
 }
 
+.rename-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+}
+
+.rename-current {
+  font-size: var(--font-size-lg);
+}
+
+.rename-row .form-input {
+  flex: 1;
+}
+
+.rename-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: var(--spacing-xs);
+}
+
 .invite-row {
   display: flex;
   align-items: center;
@@ -169,7 +283,6 @@ const formatDate = (dateString) => {
   border-radius: var(--radius-lg);
   background: var(--bg-tertiary);
 }
-
 .invite-code {
   display: flex;
   flex-direction: column;

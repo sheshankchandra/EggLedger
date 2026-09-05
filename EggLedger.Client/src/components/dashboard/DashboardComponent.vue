@@ -86,6 +86,7 @@
           :aria-selected="lobbyMode === 'create'"
           @click="lobbyMode = 'create'"
         >
+          <Plus :size="16" aria-hidden="true" />
           Create room
         </button>
         <button
@@ -95,6 +96,7 @@
           :aria-selected="lobbyMode === 'join'"
           @click="lobbyMode = 'join'"
         >
+          <KeyRound :size="16" aria-hidden="true" />
           Join room
         </button>
       </div>
@@ -120,10 +122,10 @@
           </small>
           <small v-else class="field-hint">Use a name your household will recognize.</small>
         </div>
-        <fieldset class="form-group">
-          <legend class="form-label">Who can join?</legend>
+        <div class="form-group">
+          <span class="form-label">Who can join?</span>
           <VisibilityToggle v-model="createForm.isPublic" />
-        </fieldset>
+        </div>
         <button type="submit" :disabled="loading" class="btn btn-primary submit-button">
           {{ loading ? 'Creating room…' : 'Create room' }}
         </button>
@@ -165,7 +167,7 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
-import { House, Plus } from '@lucide/vue'
+import { House, Plus, KeyRound } from '@lucide/vue'
 import { resourceConfig as resource } from '@/config/resource.config'
 import { useAuthStore } from '@/stores/auth.store'
 import { useRoomStore } from '@/stores/room.store'
@@ -415,6 +417,10 @@ const handleJoinRoom = async () => {
 }
 
 .lobby-tabs button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-xs);
   padding: var(--spacing-sm);
   border: 0;
   border-radius: var(--radius-sm);

@@ -351,24 +351,24 @@ public class RoomService : IRoomService
         }, "An error occurred while archiving the room");
     }
 
-    public async Task<Result<string>> EditRoomNameAsync(Guid userId, Guid roomId, string newRoomName, CancellationToken cancellationToken = default)
+    public async Task<Result<string>> EditRoomNameAsync(Guid userId, int roomCode, string newRoomName, CancellationToken cancellationToken = default)
     {
         return await _logger.ExecuteAsync(async () =>
         {
             var userRoom = await _context.UserRooms
                 .Include(ur => ur.Room)
-                .Where(ur => ur.RoomId == roomId && ur.UserId == userId && ur.Room.Status == RoomStatus.Active)
+                .Where(ur => ur.Room.RoomCode == roomCode && ur.UserId == userId && ur.Room.Status == RoomStatus.Active)
                 .FirstOrDefaultAsync(cancellationToken);
 
             if (userRoom == null)
             {
-                _logger.LogError("Active room '{RoomId}' not found or user '{UserId}' is not in that room", roomId, userId);
+                _logger.LogError("Active room '{RoomCode}' not found or user '{UserId}' is not in that room", roomCode, userId);
                 return Result.Fail(new NotFoundError("Room not found or user is not in that room"));
             }
 
             if (!userRoom.IsAdmin)
             {
-                _logger.LogWarning("User '{UserId}' is not admin of room '{RoomId}'", userId, roomId);
+                _logger.LogWarning("User '{UserId}' is not admin of room '{RoomCode}'", userId, roomCode);
                 return Result.Fail(new ForbiddenError("Only room admin can edit the room name"));
             }
 
@@ -376,7 +376,6 @@ public class RoomService : IRoomService
 
             if (string.Equals(room.RoomName, newRoomName, StringComparison.Ordinal))
             {
-                _logger.LogInformation("Room '{RoomId}' already has the name '{RoomName}'", roomId, newRoomName);
                 return Result.Ok("Room name is already set to the specified value");
             }
 
@@ -386,7 +385,7 @@ public class RoomService : IRoomService
 
             await _context.SaveChangesAsync(cancellationToken);
 
-            _logger.LogInformation("Room name updated for Room '{RoomId}' to '{RoomName}' by User '{UserId}'", roomId, newRoomName, userId);
+            _logger.LogInformation("Room name updated for Room '{RoomCode}' to '{RoomName}' by User '{UserId}'", roomCode, newRoomName, userId);
 
             return Result.Ok("Room name updated successfully");
         }, "Unexpected error occurred while editing the room name");
