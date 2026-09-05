@@ -6,7 +6,9 @@
         <h1>Recent activity</h1>
         <p>What's been happening with {{ resource.plural }} in {{ room.roomName }}.</p>
       </div>
-      <router-link to="/room" class="btn btn-secondary">← Back to room</router-link>
+      <router-link to="/room" class="btn btn-secondary">
+        <ArrowLeft :size="16" aria-hidden="true" /> Back to room
+      </router-link>
     </header>
 
     <LoadingSkeleton
@@ -20,7 +22,7 @@
     <template v-else>
       <EmptyState
         v-if="activityStore.events.length === 0"
-        icon="📋"
+        :icon="ClipboardList"
         title="No activity yet"
         description="Stock updates, consumption, settlements, and new members will show up here."
       />
@@ -32,7 +34,12 @@
               :class="`feed-icon-${eventClass(event.eventType)}`"
               aria-hidden="true"
             >
-              {{ eventIcon(event.eventType) }}
+              <component
+                :is="resource.icon"
+                v-if="event.eventType === EVENT_TYPE.CONSUME"
+                :size="18"
+              />
+              <component :is="eventIcon(event.eventType)" v-else :size="18" />
             </span>
             <div class="feed-body">
               <p class="feed-text">{{ describeEvent(event) }}</p>
@@ -57,6 +64,7 @@
 
 <script setup>
 import { onMounted, watch } from 'vue'
+import { ClipboardList, Package, HandCoins, UserPlus, Circle, ArrowLeft } from '@lucide/vue'
 import { useActivityStore } from '@/stores/activity.store'
 import { resourceConfig as resource } from '@/config/resource.config'
 import EmptyState from '@/components/common/EmptyState.vue'
@@ -74,15 +82,13 @@ const EVENT_TYPE = { STOCK: 1, CONSUME: 2, SETTLEMENT: 3, MEMBER_JOINED: 4 }
 const eventIcon = (eventType) => {
   switch (eventType) {
     case EVENT_TYPE.STOCK:
-      return '📦'
-    case EVENT_TYPE.CONSUME:
-      return resource.icon
+      return Package
     case EVENT_TYPE.SETTLEMENT:
-      return '💸'
+      return HandCoins
     case EVENT_TYPE.MEMBER_JOINED:
-      return '👋'
+      return UserPlus
     default:
-      return '•'
+      return Circle
   }
 }
 
@@ -105,7 +111,7 @@ const describeEvent = (event) => {
   const amount = event.amount != null ? `₹${Number(event.amount).toFixed(2)}` : null
   switch (event.eventType) {
     case EVENT_TYPE.STOCK: {
-      const container = event.containerName ? ` — ${event.containerName}` : ''
+      const container = event.containerName ? ` · ${event.containerName}` : ''
       return `${event.actorName} stocked ${event.quantity} ${resource.plural}${container}${amount ? ` (${amount})` : ''}`
     }
     case EVENT_TYPE.CONSUME:
@@ -204,7 +210,6 @@ watch(
   place-items: center;
   border-radius: var(--radius-lg);
   background: var(--bg-tertiary);
-  font-size: var(--font-size-lg);
 }
 
 .feed-icon-settlement {

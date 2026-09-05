@@ -8,8 +8,7 @@
 
         <div v-if="!code" class="alert alert-error">This invite link is missing a room code.</div>
         <div v-else-if="pending" class="alert alert-success">
-          Request submitted — waiting for the room admin to approve you. You'll be able to open the
-          room here once they do.
+          Request submitted. The room admin needs to approve you before you can open the room here.
         </div>
         <template v-else>
           <p class="join-hint">

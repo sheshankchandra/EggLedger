@@ -176,24 +176,30 @@ public class RoomController : ControllerBase
         }
     }
 
-    // POST: egg-ledger-api/update/
+    // POST: egg-ledger-api/room/{roomCode}/visibility
     [Authorize(Policy = "RoomAdmin")]
-    [HttpPost("update/IsPublic")]
-    public async Task<IActionResult> UpdateRoomIsPublicStatus([FromBody] UpdateRoomPublicStatusDto dto, CancellationToken cancellationToken)
+    [HttpPost("{roomCode:int}/visibility")]
+    public async Task<IActionResult> UpdateRoomVisibility([FromRoute] int roomCode, [FromBody] UpdateRoomVisibilityDto dto, CancellationToken cancellationToken)
     {
         try
         {
-            var result = await _roomService.UpdateRoomPublicStatusAsync(dto, cancellationToken);
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+            {
+                return Problem(detail: "Invalid user identity", statusCode: StatusCodes.Status401Unauthorized, title: "Unauthorized");
+            }
+
+            var result = await _roomService.UpdateRoomVisibilityAsync(roomCode, userId, dto.IsOpen, cancellationToken);
             return result.IsSuccess ? Ok(result.Value) : this.ToProblem(result);
         }
         catch (OperationCanceledException)
         {
-            _logger.LogInformation("Request was canceled by the client for UpdateRoomIsPublicStatus");
+            _logger.LogInformation("Request was canceled by the client for UpdateRoomVisibility");
             return Problem(detail: "Client closed request.", statusCode: 499, title: "Request canceled");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unhandled exception in UpdateRoomIsPublicStatus");
+            _logger.LogError(ex, "Unhandled exception in UpdateRoomVisibility");
             return Problem(detail: "An unexpected error occurred.", statusCode: StatusCodes.Status500InternalServerError, title: "Internal server error");
         }
     }
@@ -240,7 +246,7 @@ public class RoomController : ControllerBase
     // POST: egg-ledger-api/room/edit-name/{roomCode}
     [Authorize(Policy = "RoomAdmin")]
     [HttpPost("edit-name/{roomCode:int}")]
-    public async Task<IActionResult> EditRoomName([FromBody] EditRoomNameDto dto, CancellationToken cancellationToken)
+    public async Task<IActionResult> EditRoomName([FromRoute] int roomCode, [FromBody] EditRoomNameDto dto, CancellationToken cancellationToken)
     {
         try
         {
@@ -250,11 +256,11 @@ public class RoomController : ControllerBase
                 return Problem(detail: "Invalid user identity", statusCode: StatusCodes.Status401Unauthorized, title: "Unauthorized");
             }
 
-            var result = await _roomService.EditRoomNameAsync(userId, dto.RoomId, dto.NewRoomName, cancellationToken);
+            var result = await _roomService.EditRoomNameAsync(userId, roomCode, dto.NewRoomName, cancellationToken);
 
             if (result.IsSuccess)
             {
-                _logger.LogInformation("Room name updated for RoomId: {RoomId} by User: {UserId}", dto.RoomId, userId);
+                _logger.LogInformation("Room name updated for RoomCode: {RoomCode} by User: {UserId}", roomCode, userId);
                 return Ok(result.Value);
             }
 
@@ -263,12 +269,12 @@ public class RoomController : ControllerBase
         }
         catch (OperationCanceledException)
         {
-            _logger.LogInformation("Request was canceled by the client for EditRoomName, RoomId: {RoomId}", dto.RoomId);
+            _logger.LogInformation("Request was canceled by the client for EditRoomName, RoomCode: {RoomCode}", roomCode);
             return Problem(detail: "Client closed request.", statusCode: 499, title: "Request canceled");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unhandled exception in EditRoomName for RoomId: {RoomId}", dto.RoomId);
+            _logger.LogError(ex, "Unhandled exception in EditRoomName for RoomCode: {RoomCode}", roomCode);
             return Problem(detail: "An unexpected error occurred.", statusCode: StatusCodes.Status500InternalServerError, title: "Internal server error");
         }
     }

@@ -82,6 +82,18 @@ export const useRoomStore = defineStore('room', {
       await roomService.rejectMember(roomCode, memberUserId, signal)
     },
 
+    async updateRoomVisibility(roomCode, isOpen, signal) {
+      const result = await roomService.updateRoomVisibility(roomCode, isOpen, signal)
+      await this.fetchUserRooms()
+      return result
+    },
+
+    async renameRoom(roomCode, newRoomName, signal) {
+      const result = await roomService.editRoomName(roomCode, newRoomName, signal)
+      await this.fetchUserRooms()
+      return result
+    },
+
     async deleteRoom(roomCode, signal) {
       await roomService.deleteRoom(roomCode, signal)
       this.clearSelectedRoom()

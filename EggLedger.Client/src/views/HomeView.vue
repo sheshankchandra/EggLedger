@@ -13,7 +13,8 @@
             type="button"
             :aria-label="themeStore.isDark ? 'Switch to light theme' : 'Switch to dark theme'"
           >
-            <span aria-hidden="true">{{ themeStore.isDark ? '☀' : '☾' }}</span>
+            <Sun v-if="themeStore.isDark" :size="18" aria-hidden="true" />
+            <Moon v-else :size="18" aria-hidden="true" />
           </button>
           <router-link to="/accounts/login" class="btn btn-outline btn-outline-secondary btn-sm">
             Sign in
@@ -28,12 +29,12 @@
           <p class="eyebrow">For roommates & shared households</p>
           <h1>Track shared stock. Settle up instantly. Build the habit.</h1>
           <p class="hero-subtitle">
-            EggLedger is the shared source of truth for your household's stock — log purchases and
+            EggLedger is the shared source of truth for your household's stock: log purchases and
             usage, split the cost automatically, and stay motivated with streaks and stats.
           </p>
           <div class="hero-actions">
             <router-link to="/accounts/signup" class="btn btn-primary btn-lg">
-              Get started — it's free
+              Get started for free
             </router-link>
             <router-link to="/accounts/login" class="btn btn-outline btn-outline-secondary btn-lg">
               I already have an account
@@ -48,23 +49,25 @@
         <h2 id="features-heading">Everything a shared household needs, in one place</h2>
         <div class="feature-grid">
           <article class="feature-card">
-            <span class="feature-icon" aria-hidden="true">{{ resource.icon }}</span>
+            <span class="feature-icon" aria-hidden="true"
+              ><component :is="resource.icon" :size="28"
+            /></span>
             <h3>Shared inventory, always up to date</h3>
             <p>
-              See exactly what's in stock across your room in real time — down to how many
-              {{ resource.plural }} are left — with fair, first-in-first-out consumption tracking.
+              See exactly what's in stock across your room in real time, down to how many
+              {{ resource.plural }} are left, with fair, first-in-first-out consumption tracking.
             </p>
           </article>
           <article class="feature-card">
-            <span class="feature-icon" aria-hidden="true">💸</span>
+            <span class="feature-icon" aria-hidden="true"><HandCoins :size="28" /></span>
             <h3>Settle up instantly</h3>
             <p>
               A built-in ledger tracks who bought what and who owes whom, then simplifies it into
-              the fewest payments needed — mark payments as received with one tap.
+              the fewest payments needed, and lets you mark payments as received with one tap.
             </p>
           </article>
           <article class="feature-card">
-            <span class="feature-icon" aria-hidden="true">🔥</span>
+            <span class="feature-icon" aria-hidden="true"><Flame :size="28" /></span>
             <h3>Streaks that keep you consistent</h3>
             <p>
               Turn healthy habits into a game. Track your streak, protein, and calories over 1-week,
@@ -72,7 +75,7 @@
             </p>
           </article>
           <article class="feature-card">
-            <span class="feature-icon" aria-hidden="true">🔐</span>
+            <span class="feature-icon" aria-hidden="true"><Lock :size="28" /></span>
             <h3>Rooms you control</h3>
             <p>
               Create public or private rooms, share an invite link with roommates, and approve who
@@ -122,6 +125,7 @@
 
 <script setup>
 import { computed } from 'vue'
+import { HandCoins, Flame, Lock, Sun, Moon } from '@lucide/vue'
 import { useThemeStore } from '@/stores/theme.store'
 import { resourceConfig as resource } from '@/config/resource.config'
 
@@ -202,7 +206,11 @@ const currentYear = computed(() => new Date().getFullYear())
 
 .hero {
   padding: var(--spacing-3xl) var(--spacing-xl);
-  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--color-primary) 55%, black),
+    var(--color-primary)
+  );
   text-align: center;
 }
 
@@ -297,7 +305,7 @@ const currentYear = computed(() => new Date().getFullYear())
   place-items: center;
   border-radius: var(--radius-lg);
   background: var(--color-primary-light);
-  font-size: var(--font-size-2xl);
+  color: var(--color-primary);
 }
 
 .feature-card h3 {

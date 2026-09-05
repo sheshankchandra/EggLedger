@@ -21,7 +21,7 @@
 
     <EmptyState
       v-else-if="containers.length === 0"
-      :icon="resource.icon"
+      :icon="PackageOpen"
       :title="emptyTitle"
       :description="emptyDescription"
     />
@@ -35,7 +35,9 @@
         @click="$emit('select', container)"
       >
         <span class="inventory-card-top">
-          <span class="inventory-icon" aria-hidden="true">{{ resource.icon }}</span>
+          <span class="inventory-icon" aria-hidden="true"
+            ><component :is="resource.icon" :size="20"
+          /></span>
           <span class="stock-status">{{ stockPercentage(container) }}% remaining</span>
         </span>
         <strong>{{ container.containerName || `Untitled ${resource.inventorySingular}` }}</strong>
@@ -49,7 +51,9 @@
         <span class="inventory-owner">
           Purchased by {{ container.buyerId === currentUserId ? 'you' : container.buyerName }}
         </span>
-        <span class="inventory-details"> View details <span aria-hidden="true">→</span> </span>
+        <span class="inventory-details">
+          View details <ArrowRight :size="14" aria-hidden="true" />
+        </span>
       </button>
     </div>
   </section>
@@ -58,6 +62,7 @@
 <script setup>
 import LoadingSkeleton from '@/components/common/LoadingSkeleton.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
+import { ArrowRight, PackageOpen } from '@lucide/vue'
 
 defineProps({
   containers: { type: Array, required: true },

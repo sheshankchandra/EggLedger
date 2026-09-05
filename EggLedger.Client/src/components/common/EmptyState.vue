@@ -1,6 +1,8 @@
 <template>
   <div class="empty-state">
-    <div class="empty-icon" aria-hidden="true">{{ icon }}</div>
+    <div class="empty-icon" aria-hidden="true">
+      <component :is="icon" :size="28" />
+    </div>
     <h3>{{ title }}</h3>
     <p v-if="description">{{ description }}</p>
     <div v-if="$slots.actions" class="empty-actions">
@@ -11,7 +13,7 @@
 
 <script setup>
 defineProps({
-  icon: { type: String, default: '⌂' },
+  icon: { type: [Object, Function], required: true },
   title: { type: String, required: true },
   description: { type: String, default: '' },
 })
@@ -44,7 +46,6 @@ defineProps({
   border-radius: 50%;
   background: var(--color-primary-light);
   color: var(--color-primary);
-  font-size: var(--font-size-2xl);
 }
 
 .empty-actions {

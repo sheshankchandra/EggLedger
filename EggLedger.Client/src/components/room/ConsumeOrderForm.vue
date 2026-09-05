@@ -1,7 +1,7 @@
 <template>
   <form class="action-panel consume-panel" @submit.prevent="handleSubmit">
     <div class="action-panel-heading">
-      <span class="action-icon" aria-hidden="true">−</span>
+      <span class="action-icon" aria-hidden="true"><PackageMinus :size="20" /></span>
       <div>
         <h3>Record usage</h3>
         <p>Subtract {{ resource.plural }} using the oldest available stock first.</p>
@@ -37,6 +37,7 @@
 
 <script setup>
 import { computed, reactive, ref } from 'vue'
+import { PackageMinus } from '@lucide/vue'
 
 const props = defineProps({
   resource: { type: Object, required: true },

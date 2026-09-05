@@ -3,7 +3,9 @@
     <template #eyebrow>{{ resource.inventorySingular }} details</template>
 
     <div class="detail-stock">
-      <span class="inventory-icon" aria-hidden="true">{{ resource.icon }}</span>
+      <span class="inventory-icon" aria-hidden="true"
+        ><component :is="resource.icon" :size="20"
+      /></span>
       <div>
         <strong>{{ container.remainingQuantity }}</strong>
         <span>of {{ container.totalQuantity }} {{ resource.plural }} remaining</span>

@@ -6,7 +6,9 @@
         <h1>Balances</h1>
         <p>Who owes who for {{ resource.plural }} in {{ room.roomName }}.</p>
       </div>
-      <router-link to="/room" class="btn btn-secondary">← Back to room</router-link>
+      <router-link to="/room" class="btn btn-secondary">
+        <ArrowLeft :size="16" aria-hidden="true" /> Back to room
+      </router-link>
     </header>
 
     <LoadingSkeleton
@@ -24,7 +26,7 @@
         <small v-if="Math.abs(myBalance) > 0.01"
           >Settle up below, or mark a payment as received</small
         >
-        <small v-else>You're all settled up in this room 🎉</small>
+        <small v-else>You're all settled up in this room</small>
       </section>
 
       <section class="workspace-section" aria-labelledby="members-heading">
@@ -64,7 +66,7 @@
 
         <EmptyState
           v-if="activeList.length === 0"
-          icon="✅"
+          :icon="CircleCheck"
           title="Nothing to settle"
           description="All balances are already even in this room."
         />
@@ -103,7 +105,7 @@
         />
         <EmptyState
           v-else-if="ledgerStore.history.length === 0"
-          icon="🧾"
+          :icon="Receipt"
           title="No settlements yet"
           description="Recorded payments will show up here."
         />
@@ -181,6 +183,7 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { CircleCheck, Receipt, ArrowLeft } from '@lucide/vue'
 import { useAuthStore } from '@/stores/auth.store'
 import { useLedgerStore } from '@/stores/ledger.store'
 import { useNotification } from '@/composables/useNotification'

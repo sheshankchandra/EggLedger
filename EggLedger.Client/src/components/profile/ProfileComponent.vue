@@ -9,7 +9,18 @@
           <p class="profile-email">{{ user?.email }}</p>
         </div>
       </div>
-      <span v-if="user" class="role-badge">{{ getRoleName(user.role) }}</span>
+      <div class="profile-header-actions">
+        <span v-if="user" class="role-badge">{{ getRoleName(user.role) }}</span>
+        <button
+          type="button"
+          class="profile-settings-button"
+          aria-label="Profile settings"
+          title="Profile settings"
+          @click="showSettingsModal = true"
+        >
+          <Settings :size="18" aria-hidden="true" />
+        </button>
+      </div>
     </header>
 
     <LoadingSkeleton v-if="loading" :count="1" height="140px" aria-label="Loading profile" />
@@ -21,22 +32,18 @@
         <div class="summary-card summary-card-primary">
           <span>Rooms joined</span>
           <strong>{{ roomStore.userRooms.length }}</strong>
-          <small>Shared spaces you're part of</small>
         </div>
         <div class="summary-card">
           <span>Active {{ resource.inventoryPlural }}</span>
           <strong>{{ totalContainers }}</strong>
-          <small>Across every room</small>
         </div>
         <div class="summary-card">
           <span>{{ resource.displayName }} tracked</span>
           <strong>{{ totalEggs }}</strong>
-          <small>Total {{ resource.plural }} you've stocked</small>
         </div>
         <div class="summary-card">
           <span>Rooms you admin</span>
           <strong>{{ adminRooms }}</strong>
-          <small>Owner-level access</small>
         </div>
       </section>
 
@@ -63,7 +70,7 @@
         </div>
 
         <div class="streak-card">
-          <span class="streak-flame" aria-hidden="true">🔥</span>
+          <span class="streak-flame" aria-hidden="true"><Flame :size="28" /></span>
           <div>
             <strong>{{ statsStore.currentStreakDays }}-day streak</strong>
             <small>Longest streak: {{ statsStore.longestStreakDays }} days</small>
@@ -81,7 +88,6 @@
             <div class="summary-card summary-card-primary">
               <span>{{ resource.displayName }} eaten</span>
               <strong>{{ statsStore.totalEggsConsumed }}</strong>
-              <small>In this period</small>
             </div>
             <div class="summary-card">
               <span>Protein</span>
@@ -90,14 +96,13 @@
             </div>
             <div class="summary-card">
               <span>Calories</span>
-              <strong>{{ statsStore.totalCalories }}</strong>
-              <small>kcal in this period</small>
+              <strong>{{ statsStore.totalCalories }}<span class="stat-unit">kcal</span></strong>
             </div>
           </div>
 
           <EmptyState
             v-if="statsStore.buckets.every((bucket) => bucket.eggsConsumed === 0)"
-            :icon="resource.icon"
+            :icon="Activity"
             title="No activity yet"
             :description="`Record a consume order to start tracking your ${resource.plural} habit.`"
           />
@@ -116,19 +121,11 @@
             <p class="eyebrow">Memberships</p>
             <h2 id="rooms-heading">Your rooms</h2>
           </div>
-          <button
-            type="button"
-            class="btn btn-secondary btn-sm"
-            @click="refreshRooms"
-            :disabled="refreshing"
-          >
-            {{ refreshing ? 'Refreshing…' : 'Refresh' }}
-          </button>
         </div>
 
         <EmptyState
           v-if="roomStore.userRooms.length === 0"
-          icon="🏠"
+          :icon="House"
           title="No rooms yet"
           description="Join or create a room from the dashboard to start tracking shared inventory."
         >
@@ -168,7 +165,7 @@
             empty-title="Nothing active right now"
             :empty-description="
               historyContainers.length > 0
-                ? 'All caught up — check your history below for past purchases.'
+                ? 'All caught up. Check your history below for past purchases.'
                 : `Purchases you make in ${selectedRoom.roomName} will show up here.`
             "
             @select="viewContainerDetails"
@@ -188,7 +185,9 @@
                 :key="container.containerId"
                 class="history-row"
               >
-                <span class="history-icon" aria-hidden="true">{{ resource.icon }}</span>
+                <span class="history-icon" aria-hidden="true"
+                  ><component :is="resource.icon" :size="16"
+                /></span>
                 <div class="history-row-info">
                   <strong>{{
                     container.containerName || `Untitled ${resource.inventorySingular}`
@@ -213,28 +212,15 @@
       </section>
 
       <!-- Account Actions -->
-      <section class="profile-section" aria-labelledby="account-heading">
-        <div class="section-heading">
-          <div>
-            <p class="eyebrow">Account</p>
-            <h2 id="account-heading">Settings</h2>
-          </div>
-        </div>
-        <div class="actions-grid">
-          <button
-            type="button"
-            @click="refreshProfile"
-            :disabled="refreshing"
-            class="btn btn-secondary"
-          >
-            {{ refreshing ? 'Refreshing…' : 'Refresh profile' }}
-          </button>
-          <button type="button" @click="openChangePassword" class="btn btn-primary">
-            Change password
-          </button>
-        </div>
-      </section>
     </template>
+
+    <ProfileSettingsModal
+      v-if="showSettingsModal"
+      :refreshing="refreshing"
+      @close="showSettingsModal = false"
+      @refresh="refreshProfile"
+      @change-password="openSettingsChangePassword"
+    />
 
     <!-- Change Password Modal -->
     <Modal v-if="showChangePassword" title="Change password" @close="closeChangePassword">
@@ -322,6 +308,7 @@
 <script setup>
 import { onMounted, computed, ref, reactive, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { Flame, House, Activity, Settings } from '@lucide/vue'
 import { useAuthStore } from '@/stores/auth.store'
 import { useRoomStore } from '@/stores/room.store'
 import { useInventoryStore } from '@/stores/inventory.store'
@@ -336,6 +323,7 @@ import LoadingSkeleton from '@/components/common/LoadingSkeleton.vue'
 import RoomCard from '@/components/common/RoomCard.vue'
 import InventoryGrid from '@/components/room/InventoryGrid.vue'
 import StatsChart from '@/components/profile/StatsChart.vue'
+import ProfileSettingsModal from '@/components/profile/ProfileSettingsModal.vue'
 import { useStatsStore } from '@/stores/stats.store'
 
 const router = useRouter()
@@ -347,6 +335,7 @@ const { notification, showNotification } = useNotification()
 const loading = ref(false)
 const error = ref(null)
 const refreshing = ref(false)
+const showSettingsModal = ref(false)
 const showChangePassword = ref(false)
 const changingPassword = ref(false)
 const passwordFormError = ref(null)
@@ -468,24 +457,11 @@ const formatDate = (dateString) => {
 const refreshProfile = async () => {
   refreshing.value = true
   try {
-    await authStore.fetchProfile()
-    showNotification('Profile refreshed successfully!')
-  } catch (err) {
-    showNotification('Failed to refresh profile', 'error')
-    console.error(err)
-  } finally {
-    refreshing.value = false
-  }
-}
-
-const refreshRooms = async () => {
-  refreshing.value = true
-  try {
-    await roomStore.fetchUserRooms()
-    await fetchUserContainers()
+    await Promise.all([authStore.fetchProfile(), roomStore.fetchUserRooms(), fetchUserContainers()])
     showNotification('Refreshed successfully!')
-  } catch {
+  } catch (err) {
     showNotification('Failed to refresh', 'error')
+    console.error(err)
   } finally {
     refreshing.value = false
   }
@@ -505,6 +481,11 @@ const openChangePassword = () => {
   passwordTouched.confirm = false
   passwordFormError.value = null
   showChangePassword.value = true
+}
+
+const openSettingsChangePassword = () => {
+  showSettingsModal.value = false
+  openChangePassword()
 }
 
 const closeChangePassword = () => {
@@ -653,6 +634,34 @@ watch(selectedRoom, async (newRoom, oldRoom) => {
   font-weight: var(--font-weight-semibold);
 }
 
+.profile-header-actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.profile-settings-button {
+  display: grid;
+  flex-shrink: 0;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.profile-settings-button:hover {
+  background: var(--bg-tertiary);
+  color: var(--color-primary);
+}
+
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -678,6 +687,13 @@ watch(selectedRoom, async (newRoom, oldRoom) => {
   display: block;
   margin-block: var(--spacing-xs);
   font-size: var(--font-size-2xl);
+}
+
+.summary-card strong .stat-unit {
+  margin-left: var(--spacing-xs);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-muted);
 }
 
 .summary-card-primary {
@@ -757,8 +773,8 @@ watch(selectedRoom, async (newRoom, oldRoom) => {
 }
 
 .streak-flame {
-  font-size: var(--font-size-2xl);
-  line-height: 1;
+  display: inline-flex;
+  color: var(--color-warning);
 }
 
 .streak-card strong {
@@ -844,7 +860,7 @@ watch(selectedRoom, async (newRoom, oldRoom) => {
   place-items: center;
   border-radius: var(--radius-md);
   background: var(--bg-tertiary);
-  font-size: var(--font-size-base);
+  color: var(--text-secondary);
 }
 
 .history-row-info {
@@ -887,12 +903,6 @@ watch(selectedRoom, async (newRoom, oldRoom) => {
   text-decoration: underline;
 }
 
-.actions-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: var(--spacing-md);
-}
-
 .submit-button {
   width: 100%;
   margin-top: var(--spacing-sm);
@@ -904,7 +914,7 @@ watch(selectedRoom, async (newRoom, oldRoom) => {
     flex-direction: column;
   }
 
-  .role-badge {
+  .profile-header-actions {
     align-self: flex-start;
   }
 
@@ -920,13 +930,18 @@ watch(selectedRoom, async (newRoom, oldRoom) => {
   .range-tabs {
     align-self: flex-start;
   }
-
-  .actions-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 @media (max-width: 520px) {
+  .profile-workspace {
+    gap: var(--spacing-xl);
+  }
+
+  .profile-header,
+  .profile-section {
+    padding: var(--spacing-lg);
+  }
+
   .summary-grid {
     grid-template-columns: 1fr;
   }

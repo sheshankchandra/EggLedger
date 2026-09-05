@@ -1,7 +1,7 @@
 <template>
   <form class="action-panel" @submit.prevent="handleSubmit">
     <div class="action-panel-heading">
-      <span class="action-icon" aria-hidden="true">＋</span>
+      <span class="action-icon" aria-hidden="true"><PackagePlus :size="20" /></span>
       <div>
         <h3>Add a purchase</h3>
         <p>Record a new {{ resource.inventorySingular }} of {{ resource.plural }}.</p>
@@ -60,6 +60,7 @@
 
 <script setup>
 import { computed, reactive, ref } from 'vue'
+import { PackagePlus } from '@lucide/vue'
 
 const props = defineProps({
   resource: { type: Object, required: true },

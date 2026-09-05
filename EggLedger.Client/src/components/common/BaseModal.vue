@@ -21,7 +21,7 @@
           type="button"
           aria-label="Close"
         >
-          ×
+          <X :size="18" aria-hidden="true" />
         </button>
       </div>
       <div class="modal-body">
@@ -36,6 +36,7 @@
 
 <script setup>
 import { onMounted, ref, useId } from 'vue'
+import { X } from '@lucide/vue'
 
 const props = defineProps({
   title: { type: String, default: '' },
@@ -106,8 +107,6 @@ onMounted(() => {
   border-radius: var(--radius-md);
   background: transparent;
   color: var(--text-secondary);
-  font-size: var(--font-size-xl);
-  line-height: 1;
   cursor: pointer;
 }
 
