@@ -85,7 +85,7 @@
             </div>
             <div class="summary-card">
               <span>Calories</span>
-              <strong>{{ statsStore.totalCalories }} kcal</strong>
+              <strong>{{ statsStore.totalCalories }}<span class="stat-unit">kcal</span></strong>
             </div>
           </div>
 
@@ -652,6 +652,13 @@ watch(selectedRoom, async (newRoom, oldRoom) => {
   display: block;
   margin-block: var(--spacing-xs);
   font-size: var(--font-size-2xl);
+}
+
+.summary-card strong .stat-unit {
+  margin-left: var(--spacing-xs);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-muted);
 }
 
 .summary-card-primary {

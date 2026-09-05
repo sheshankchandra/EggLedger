@@ -176,24 +176,30 @@ public class RoomController : ControllerBase
         }
     }
 
-    // POST: egg-ledger-api/update/
+    // POST: egg-ledger-api/room/{roomCode}/visibility
     [Authorize(Policy = "RoomAdmin")]
-    [HttpPost("update/IsPublic")]
-    public async Task<IActionResult> UpdateRoomIsPublicStatus([FromBody] UpdateRoomPublicStatusDto dto, CancellationToken cancellationToken)
+    [HttpPost("{roomCode:int}/visibility")]
+    public async Task<IActionResult> UpdateRoomVisibility([FromRoute] int roomCode, [FromBody] UpdateRoomVisibilityDto dto, CancellationToken cancellationToken)
     {
         try
         {
-            var result = await _roomService.UpdateRoomPublicStatusAsync(dto, cancellationToken);
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+            {
+                return Problem(detail: "Invalid user identity", statusCode: StatusCodes.Status401Unauthorized, title: "Unauthorized");
+            }
+
+            var result = await _roomService.UpdateRoomVisibilityAsync(roomCode, userId, dto.IsOpen, cancellationToken);
             return result.IsSuccess ? Ok(result.Value) : this.ToProblem(result);
         }
         catch (OperationCanceledException)
         {
-            _logger.LogInformation("Request was canceled by the client for UpdateRoomIsPublicStatus");
+            _logger.LogInformation("Request was canceled by the client for UpdateRoomVisibility");
             return Problem(detail: "Client closed request.", statusCode: 499, title: "Request canceled");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unhandled exception in UpdateRoomIsPublicStatus");
+            _logger.LogError(ex, "Unhandled exception in UpdateRoomVisibility");
             return Problem(detail: "An unexpected error occurred.", statusCode: StatusCodes.Status500InternalServerError, title: "Internal server error");
         }
     }

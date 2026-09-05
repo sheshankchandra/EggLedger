@@ -59,11 +59,13 @@ export const roomService = {
     return response.data
   },
 
-  // Update room public status (admin only)
-  async updateRoomPublicStatus(updateData, signal) {
-    const response = await apiClient.post('/egg-ledger-api/room/update/IsPublic', updateData, {
-      signal,
-    })
+  // Update room visibility - private (approval required) or open (join instantly) - admin only
+  async updateRoomVisibility(roomCode, isOpen, signal) {
+    const response = await apiClient.post(
+      `/egg-ledger-api/room/${roomCode}/visibility`,
+      { isOpen },
+      { signal },
+    )
     return response.data
   },
 

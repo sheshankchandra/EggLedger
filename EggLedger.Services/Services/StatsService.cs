@@ -49,9 +49,7 @@ public class StatsService : IStatsService
 
             var buckets = range switch
             {
-                // Week has room for a day name; Month packs 30 labels in, so date-only avoids
-                // the labels overlapping each other on the chart.
-                StatsRange.Week => BuildDailyBuckets(todayUtc, 7, "ddd d MMM"),
+                StatsRange.Week => BuildDailyBuckets(todayUtc, 7, "d MMM"),
                 StatsRange.Month => BuildDailyBuckets(todayUtc, 30, "d MMM"),
                 StatsRange.Year => BuildMonthlyBuckets(todayUtc, 12),
                 _ => BuildMaxBuckets(todayUtc, consumeDates),

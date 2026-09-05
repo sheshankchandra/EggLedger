@@ -9,15 +9,6 @@
         </p>
         <p v-else>Pick a room below to manage shared stock.</p>
       </div>
-      <button
-        v-if="rooms.length > 0"
-        @click="openLobby('create')"
-        class="btn btn-secondary btn-sm"
-        type="button"
-      >
-        <Plus :size="16" aria-hidden="true" />
-        New room
-      </button>
     </header>
 
     <section aria-labelledby="rooms-heading">
@@ -26,9 +17,20 @@
           <h2 id="rooms-heading">Your rooms</h2>
           <p>{{ roomSummary }}</p>
         </div>
-        <button @click="openLobby('join')" class="text-button" type="button">
-          Join with a code
-        </button>
+        <div v-if="rooms.length > 0" class="room-actions">
+          <button @click="openLobby('join')" class="text-button" type="button">
+            Join with a code
+          </button>
+          <button
+            @click="openLobby('create')"
+            class="icon-button"
+            type="button"
+            aria-label="Create a new room"
+            title="Create a new room"
+          >
+            <Plus :size="18" aria-hidden="true" />
+          </button>
+        </div>
       </div>
 
       <LoadingSkeleton
@@ -120,16 +122,7 @@
         </div>
         <fieldset class="form-group">
           <legend class="form-label">Who can join?</legend>
-          <div class="visibility-options">
-            <label :class="{ selected: !createForm.isPublic }">
-              <input v-model="createForm.isPublic" type="radio" :value="false" />
-              <span><strong>Private</strong><small>Needs admin approval to join</small></span>
-            </label>
-            <label :class="{ selected: createForm.isPublic }">
-              <input v-model="createForm.isPublic" type="radio" :value="true" />
-              <span><strong>Open</strong><small>Joins instantly with the code</small></span>
-            </label>
-          </div>
+          <VisibilityToggle v-model="createForm.isPublic" />
         </fieldset>
         <button type="submit" :disabled="loading" class="btn btn-primary submit-button">
           {{ loading ? 'Creating room…' : 'Create room' }}
@@ -183,6 +176,7 @@ import LoadingSkeleton from '@/components/common/LoadingSkeleton.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import Toast from '@/components/common/ToastNotification.vue'
 import RoomCard from '@/components/common/RoomCard.vue'
+import VisibilityToggle from '@/components/common/VisibilityToggle.vue'
 
 const emit = defineEmits(['room-selected'])
 const authStore = useAuthStore()
@@ -352,12 +346,6 @@ const handleJoinRoom = async () => {
   color: #b8ead8;
 }
 
-.dashboard-hero .btn {
-  flex-shrink: 0;
-  background: var(--color-white);
-  color: var(--color-primary);
-}
-
 .section-heading {
   margin-bottom: var(--spacing-lg);
 }
@@ -370,12 +358,41 @@ const handleJoinRoom = async () => {
   margin: 0;
 }
 
+.room-actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
 .text-button {
   border: 0;
   background: transparent;
   color: var(--color-primary);
   font-weight: var(--font-weight-semibold);
   cursor: pointer;
+}
+
+.icon-button {
+  display: grid;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.icon-button:hover {
+  border-color: var(--color-primary);
+  background: var(--bg-tertiary);
+  color: var(--color-primary);
 }
 
 .rooms-grid {
@@ -419,39 +436,6 @@ const handleJoinRoom = async () => {
   color: var(--text-muted);
 }
 
-.visibility-options {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--spacing-sm);
-}
-
-.visibility-options label {
-  display: flex;
-  padding: var(--spacing-md);
-  border: 1px solid var(--border-medium);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-}
-
-.visibility-options label.selected {
-  border-color: var(--color-primary);
-  background: var(--color-primary-light);
-}
-
-.visibility-options input {
-  margin-right: var(--spacing-sm);
-}
-
-.visibility-options span,
-.visibility-options small {
-  display: block;
-}
-
-.visibility-options small {
-  margin-top: var(--spacing-xs);
-  color: var(--text-muted);
-}
-
 .room-code-input {
   text-align: center;
   font-family: var(--font-family-mono);
@@ -478,22 +462,12 @@ const handleJoinRoom = async () => {
     padding: var(--spacing-lg);
   }
 
-  .dashboard-hero .btn {
-    width: 100%;
-  }
-
   .section-heading {
     gap: var(--spacing-sm);
   }
 
-  .text-button {
+  .room-actions {
     align-self: flex-start;
-    padding: 0;
-  }
-
-  .visibility-options {
-    grid-template-columns: 1fr;
-    flex-direction: column;
   }
 }
 </style>

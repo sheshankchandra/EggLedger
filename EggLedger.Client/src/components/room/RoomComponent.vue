@@ -1,59 +1,34 @@
 <template>
   <div class="room-workspace">
-    <header class="room-header">
-      <div class="room-title">
-        <div>
-          <p class="eyebrow">Shared inventory</p>
-          <h1>{{ room.roomName }}</h1>
-          <p>Keep purchases and usage in sync for everyone in this room.</p>
-        </div>
-        <div class="room-title-actions">
-          <nav class="room-nav-links" aria-label="Room views">
-            <router-link to="/room/activity" class="room-nav-link">
-              <Clock :size="16" aria-hidden="true" /> Activity
-            </router-link>
-            <router-link to="/room/balances" class="room-nav-link">
-              <Scale :size="16" aria-hidden="true" /> Balances
-            </router-link>
-          </nav>
-          <button
-            v-if="isRoomAdmin"
-            @click="showSettingsModal = true"
-            class="room-icon-button"
-            type="button"
-            aria-label="Room settings"
-            title="Room settings"
-          >
-            <Settings :size="18" aria-hidden="true" />
-          </button>
-        </div>
+    <header class="room-title-bar">
+      <div>
+        <p class="eyebrow">Shared inventory</p>
+        <h1>{{ room.roomName }}</h1>
       </div>
-
-      <div class="summary-grid" aria-label="Room summary">
-        <div class="summary-card summary-card-primary">
-          <span>{{ resource.displayName }} available</span>
-          <strong>{{ room.totalEggs || 0 }}</strong>
-        </div>
-        <div class="summary-card">
-          <span>Active {{ resource.inventoryPlural }}</span>
-          <strong>{{ inventoryStore.loading ? '…' : inventoryStore.containers.length }}</strong>
-        </div>
-        <div class="summary-card">
-          <span>Room members</span>
-          <strong>{{ room.memberCount || 0 }}</strong>
-        </div>
+      <div class="room-title-actions">
+        <nav class="room-nav-links" aria-label="Room views">
+          <router-link to="/room/activity" class="room-nav-link">
+            <Clock :size="16" aria-hidden="true" /> Activity
+          </router-link>
+          <router-link to="/room/balances" class="room-nav-link">
+            <Scale :size="16" aria-hidden="true" /> Balances
+          </router-link>
+        </nav>
+        <button
+          v-if="isRoomAdmin"
+          @click="showSettingsModal = true"
+          class="room-icon-button"
+          type="button"
+          aria-label="Room settings"
+          title="Room settings"
+        >
+          <Settings :size="18" aria-hidden="true" />
+        </button>
       </div>
     </header>
 
-    <section class="quick-actions" aria-labelledby="quick-actions-heading">
-      <div class="section-heading">
-        <div>
-          <p class="eyebrow">Quick actions</p>
-          <h2 id="quick-actions-heading">Update inventory</h2>
-        </div>
-        <p>Every update is recorded in the room ledger.</p>
-      </div>
-
+    <section class="quick-actions" aria-label="Quick actions">
+      <p class="eyebrow">Quick actions</p>
       <div class="action-grid">
         <StockOrderForm
           ref="stockFormRef"
@@ -71,6 +46,21 @@
       </div>
       <div v-if="error" class="alert alert-error" role="alert">{{ error }}</div>
     </section>
+
+    <div class="summary-grid" aria-label="Room summary">
+      <div class="summary-card summary-card-primary">
+        <span>{{ resource.displayName }} available</span>
+        <strong>{{ room.totalEggs || 0 }}</strong>
+      </div>
+      <div class="summary-card">
+        <span>Active {{ resource.inventoryPlural }}</span>
+        <strong>{{ inventoryStore.loading ? '…' : inventoryStore.containers.length }}</strong>
+      </div>
+      <div class="summary-card">
+        <span>Room members</span>
+        <strong>{{ room.memberCount || 0 }}</strong>
+      </div>
+    </div>
 
     <InventoryGrid
       :containers="inventoryStore.containers"
@@ -111,10 +101,12 @@
       :pending-members="pendingMembers"
       :pending-loading="pendingLoading"
       :processing-member-id="processingMemberId"
+      :updating-visibility="updatingVisibility"
       @close="showSettingsModal = false"
       @approve-member="handleApproveMember"
       @reject-member="handleRejectMember"
       @archive-room="openArchiveConfirm"
+      @update-visibility="handleUpdateVisibility"
     />
 
     <ConfirmModal
@@ -195,6 +187,21 @@ const openArchiveConfirm = () => {
 const pendingMembers = ref([])
 const pendingLoading = ref(false)
 const processingMemberId = ref(null)
+const updatingVisibility = ref(false)
+
+const handleUpdateVisibility = async (isOpen) => {
+  updatingVisibility.value = true
+  try {
+    await roomStore.updateRoomVisibility(props.room.roomCode, isOpen)
+    showNotification(`Room is now ${isOpen ? 'open' : 'private'}.`)
+    await fetchPendingMembers()
+  } catch (err) {
+    if (isCanceled(err)) return
+    showNotification(errorMessage(err, 'Could not update who can join.'), 'error')
+  } finally {
+    updatingVisibility.value = false
+  }
+}
 
 const fetchPendingMembers = async () => {
   if (!isRoomAdmin.value || props.room.isOpen) return
@@ -367,33 +374,17 @@ onMounted(() => {
   margin-top: 0;
 }
 
-.room-header {
-  display: grid;
-  gap: var(--spacing-xl);
-  padding: var(--spacing-xl);
-  border-radius: var(--radius-2xl);
-  background: linear-gradient(145deg, var(--bg-primary), var(--bg-tertiary));
-  border: 1px solid var(--border-light);
-  box-shadow: var(--shadow-md);
-}
-
-.room-title,
-.section-heading {
+.room-title-bar {
   display: flex;
   align-items: end;
   justify-content: space-between;
   gap: var(--spacing-lg);
 }
 
-.room-title h1 {
-  margin-bottom: var(--spacing-sm);
+.room-title-bar h1 {
+  margin-bottom: 0;
   font-size: clamp(2rem, 5vw, 3rem);
   letter-spacing: -0.04em;
-}
-
-.room-title p:last-child,
-.section-heading p {
-  margin: 0;
 }
 
 .room-title-actions {
@@ -497,17 +488,6 @@ onMounted(() => {
   gap: var(--spacing-lg);
 }
 
-.section-heading h2 {
-  margin: 0;
-}
-
-.section-heading > p {
-  max-width: 360px;
-  color: var(--text-muted);
-  font-size: var(--font-size-sm);
-  text-align: right;
-}
-
 .action-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.75fr);
@@ -515,8 +495,7 @@ onMounted(() => {
 }
 
 @media (max-width: 768px) {
-  .room-title,
-  .section-heading {
+  .room-title-bar {
     align-items: stretch;
     flex-direction: column;
   }
@@ -532,17 +511,9 @@ onMounted(() => {
   .action-grid {
     grid-template-columns: 1fr;
   }
-
-  .section-heading > p {
-    text-align: left;
-  }
 }
 
 @media (max-width: 520px) {
-  .room-header {
-    padding: var(--spacing-lg);
-  }
-
   .summary-grid {
     grid-template-columns: 1fr;
   }

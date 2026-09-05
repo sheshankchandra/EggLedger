@@ -15,6 +15,15 @@
       </div>
     </section>
 
+    <section v-if="isRoomAdmin" class="settings-section">
+      <h3 class="settings-section-title">Who can join</h3>
+      <VisibilityToggle
+        :model-value="room.isOpen"
+        :disabled="updatingVisibility"
+        @update:model-value="$emit('update-visibility', $event)"
+      />
+    </section>
+
     <section v-if="isRoomAdmin && !room.isOpen" class="settings-section">
       <div class="settings-section-heading">
         <h3 class="settings-section-title">Pending join requests</h3>
@@ -82,6 +91,7 @@ import { ref } from 'vue'
 import { Copy, Check, UserCheck, UserX, Archive } from '@lucide/vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import LoadingSkeleton from '@/components/common/LoadingSkeleton.vue'
+import VisibilityToggle from '@/components/common/VisibilityToggle.vue'
 
 const props = defineProps({
   room: { type: Object, required: true },
@@ -89,9 +99,10 @@ const props = defineProps({
   pendingMembers: { type: Array, default: () => [] },
   pendingLoading: { type: Boolean, default: false },
   processingMemberId: { type: [String, Number], default: null },
+  updatingVisibility: { type: Boolean, default: false },
 })
 
-defineEmits(['close', 'approve-member', 'reject-member', 'archive-room'])
+defineEmits(['close', 'approve-member', 'reject-member', 'archive-room', 'update-visibility'])
 
 const copied = ref(false)
 
