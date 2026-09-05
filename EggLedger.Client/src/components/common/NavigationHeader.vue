@@ -7,15 +7,15 @@
       </router-link>
       <nav class="main-nav" aria-label="Primary navigation">
         <router-link to="/dashboard" class="nav-link" active-class="active">
-          <span aria-hidden="true">⌂</span>
+          <House :size="18" aria-hidden="true" />
           <span>Rooms</span>
         </router-link>
         <router-link to="/room" class="nav-btn" active-class="active" v-if="selectedRoom">
-          <span aria-hidden="true">▦</span>
+          <LayoutGrid :size="18" aria-hidden="true" />
           <span class="nav-room-name">{{ selectedRoom.roomName }}</span>
         </router-link>
         <router-link to="/profile" class="nav-link" active-class="active">
-          <span aria-hidden="true">○</span>
+          <UserRound :size="18" aria-hidden="true" />
           <span>Profile</span>
         </router-link>
         <button
@@ -24,10 +24,11 @@
           type="button"
           :aria-label="themeStore.isDark ? 'Switch to light theme' : 'Switch to dark theme'"
         >
-          <span aria-hidden="true">{{ themeStore.isDark ? '☀' : '☾' }}</span>
+          <Sun v-if="themeStore.isDark" :size="18" aria-hidden="true" />
+          <Moon v-else :size="18" aria-hidden="true" />
         </button>
         <button @click="handleLogout" class="logout-button" type="button" aria-label="Sign out">
-          <span aria-hidden="true">↪</span>
+          <LogOut :size="18" aria-hidden="true" />
           <span class="logout-label">Sign out</span>
         </button>
       </nav>
@@ -37,6 +38,7 @@
 
 <script setup>
 import { computed } from 'vue'
+import { House, LayoutGrid, UserRound, Sun, Moon, LogOut } from '@lucide/vue'
 import { useAuthStore } from '@/stores/auth.store'
 import { useRoomStore } from '@/stores/room.store'
 import { useThemeStore } from '@/stores/theme.store'
@@ -136,7 +138,6 @@ const handleLogout = () => {
   justify-content: center;
   cursor: pointer;
   background: transparent;
-  font-size: var(--font-size-lg);
 }
 
 .nav-link.active,

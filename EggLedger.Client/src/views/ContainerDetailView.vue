@@ -32,7 +32,9 @@
             >
           </p>
         </div>
-        <button type="button" @click="goBack" class="btn btn-secondary">← Back to profile</button>
+        <button type="button" @click="goBack" class="btn btn-secondary">
+          <ArrowLeft :size="16" aria-hidden="true" /> Back to profile
+        </button>
       </header>
 
       <LoadingSkeleton v-if="loading" :count="1" height="160px" aria-label="Loading container" />
@@ -140,6 +142,7 @@
 <script setup>
 import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { ArrowLeft } from '@lucide/vue'
 import { useRoomStore } from '@/stores/room.store'
 import { resourceConfig as resource } from '@/config/resource.config'
 import NavigationHeader from '@/components/common/NavigationHeader.vue'

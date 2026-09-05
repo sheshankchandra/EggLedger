@@ -49,7 +49,9 @@
         <span class="inventory-owner">
           Purchased by {{ container.buyerId === currentUserId ? 'you' : container.buyerName }}
         </span>
-        <span class="inventory-details"> View details <span aria-hidden="true">→</span> </span>
+        <span class="inventory-details">
+          View details <ArrowRight :size="14" aria-hidden="true" />
+        </span>
       </button>
     </div>
   </section>
@@ -58,6 +60,7 @@
 <script setup>
 import LoadingSkeleton from '@/components/common/LoadingSkeleton.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
+import { ArrowRight } from '@lucide/vue'
 
 defineProps({
   containers: { type: Array, required: true },

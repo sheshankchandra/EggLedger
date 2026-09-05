@@ -33,13 +33,14 @@
       </span>
     </span>
     <span v-if="effectiveClickable" class="open-room"
-      >{{ ctaLabel }} <span aria-hidden="true">→</span></span
-    >
+      >{{ ctaLabel }} <ArrowRight :size="16" aria-hidden="true"
+    /></span>
   </component>
 </template>
 
 <script setup>
 import { computed } from 'vue'
+import { ArrowRight } from '@lucide/vue'
 
 const props = defineProps({
   room: { type: Object, required: true },

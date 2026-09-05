@@ -21,22 +21,18 @@
         <div class="summary-card summary-card-primary">
           <span>Rooms joined</span>
           <strong>{{ roomStore.userRooms.length }}</strong>
-          <small>Shared spaces you're part of</small>
         </div>
         <div class="summary-card">
           <span>Active {{ resource.inventoryPlural }}</span>
           <strong>{{ totalContainers }}</strong>
-          <small>Across every room</small>
         </div>
         <div class="summary-card">
           <span>{{ resource.displayName }} tracked</span>
           <strong>{{ totalEggs }}</strong>
-          <small>Total {{ resource.plural }} you've stocked</small>
         </div>
         <div class="summary-card">
           <span>Rooms you admin</span>
           <strong>{{ adminRooms }}</strong>
-          <small>Owner-level access</small>
         </div>
       </section>
 
@@ -63,7 +59,7 @@
         </div>
 
         <div class="streak-card">
-          <span class="streak-flame" aria-hidden="true">🔥</span>
+          <span class="streak-flame" aria-hidden="true"><Flame :size="28" /></span>
           <div>
             <strong>{{ statsStore.currentStreakDays }}-day streak</strong>
             <small>Longest streak: {{ statsStore.longestStreakDays }} days</small>
@@ -81,7 +77,6 @@
             <div class="summary-card summary-card-primary">
               <span>{{ resource.displayName }} eaten</span>
               <strong>{{ statsStore.totalEggsConsumed }}</strong>
-              <small>In this period</small>
             </div>
             <div class="summary-card">
               <span>Protein</span>
@@ -90,8 +85,7 @@
             </div>
             <div class="summary-card">
               <span>Calories</span>
-              <strong>{{ statsStore.totalCalories }}</strong>
-              <small>kcal in this period</small>
+              <strong>{{ statsStore.totalCalories }} kcal</strong>
             </div>
           </div>
 
@@ -116,19 +110,11 @@
             <p class="eyebrow">Memberships</p>
             <h2 id="rooms-heading">Your rooms</h2>
           </div>
-          <button
-            type="button"
-            class="btn btn-secondary btn-sm"
-            @click="refreshRooms"
-            :disabled="refreshing"
-          >
-            {{ refreshing ? 'Refreshing…' : 'Refresh' }}
-          </button>
         </div>
 
         <EmptyState
           v-if="roomStore.userRooms.length === 0"
-          icon="🏠"
+          :icon="House"
           title="No rooms yet"
           description="Join or create a room from the dashboard to start tracking shared inventory."
         >
@@ -168,7 +154,7 @@
             empty-title="Nothing active right now"
             :empty-description="
               historyContainers.length > 0
-                ? 'All caught up — check your history below for past purchases.'
+                ? 'All caught up. Check your history below for past purchases.'
                 : `Purchases you make in ${selectedRoom.roomName} will show up here.`
             "
             @select="viewContainerDetails"
@@ -227,7 +213,7 @@
             :disabled="refreshing"
             class="btn btn-secondary"
           >
-            {{ refreshing ? 'Refreshing…' : 'Refresh profile' }}
+            {{ refreshing ? 'Refreshing…' : 'Refresh' }}
           </button>
           <button type="button" @click="openChangePassword" class="btn btn-primary">
             Change password
@@ -322,6 +308,7 @@
 <script setup>
 import { onMounted, computed, ref, reactive, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { Flame, House } from '@lucide/vue'
 import { useAuthStore } from '@/stores/auth.store'
 import { useRoomStore } from '@/stores/room.store'
 import { useInventoryStore } from '@/stores/inventory.store'
@@ -468,24 +455,11 @@ const formatDate = (dateString) => {
 const refreshProfile = async () => {
   refreshing.value = true
   try {
-    await authStore.fetchProfile()
-    showNotification('Profile refreshed successfully!')
-  } catch (err) {
-    showNotification('Failed to refresh profile', 'error')
-    console.error(err)
-  } finally {
-    refreshing.value = false
-  }
-}
-
-const refreshRooms = async () => {
-  refreshing.value = true
-  try {
-    await roomStore.fetchUserRooms()
-    await fetchUserContainers()
+    await Promise.all([authStore.fetchProfile(), roomStore.fetchUserRooms(), fetchUserContainers()])
     showNotification('Refreshed successfully!')
-  } catch {
+  } catch (err) {
     showNotification('Failed to refresh', 'error')
+    console.error(err)
   } finally {
     refreshing.value = false
   }
@@ -757,8 +731,8 @@ watch(selectedRoom, async (newRoom, oldRoom) => {
 }
 
 .streak-flame {
-  font-size: var(--font-size-2xl);
-  line-height: 1;
+  display: inline-flex;
+  color: var(--color-warning);
 }
 
 .streak-card strong {

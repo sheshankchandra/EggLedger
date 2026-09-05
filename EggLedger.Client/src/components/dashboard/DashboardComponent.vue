@@ -4,10 +4,18 @@
       <div>
         <p class="eyebrow">{{ isNewUser ? 'Welcome to EggLedger' : 'Good to see you again' }}</p>
         <h1>{{ greeting }}, {{ firstName }}</h1>
-        <p>Choose a room to manage shared stock, or create a new space for your household.</p>
+        <p v-if="rooms.length === 0">
+          Create your first shared room to start tracking stock with your household.
+        </p>
+        <p v-else>Pick a room below to manage shared stock.</p>
       </div>
-      <button @click="openLobby('create')" class="btn btn-primary" type="button">
-        <span aria-hidden="true">＋</span>
+      <button
+        v-if="rooms.length > 0"
+        @click="openLobby('create')"
+        class="btn btn-secondary btn-sm"
+        type="button"
+      >
+        <Plus :size="16" aria-hidden="true" />
         New room
       </button>
     </header>
@@ -32,7 +40,7 @@
 
       <EmptyState
         v-else-if="rooms.length === 0"
-        icon="⌂"
+        :icon="House"
         title="Create your first shared room"
         description="Invite your household, track purchases, and keep shared stock visible to everyone."
       >
@@ -115,11 +123,11 @@
           <div class="visibility-options">
             <label :class="{ selected: !createForm.isPublic }">
               <input v-model="createForm.isPublic" type="radio" :value="false" />
-              <span><strong>Private</strong><small>Only people with the code</small></span>
+              <span><strong>Private</strong><small>Needs admin approval to join</small></span>
             </label>
             <label :class="{ selected: createForm.isPublic }">
               <input v-model="createForm.isPublic" type="radio" :value="true" />
-              <span><strong>Open</strong><small>Discoverable to others</small></span>
+              <span><strong>Open</strong><small>Joins instantly with the code</small></span>
             </label>
           </div>
         </fieldset>
@@ -164,6 +172,7 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
+import { House, Plus } from '@lucide/vue'
 import { resourceConfig as resource } from '@/config/resource.config'
 import { useAuthStore } from '@/stores/auth.store'
 import { useRoomStore } from '@/stores/room.store'
@@ -281,7 +290,9 @@ const handleJoinRoom = async () => {
     roomCodeTouched.value = false
 
     if (response.value?.isPending) {
-      showNotification('Request submitted — waiting for the room admin to approve you.')
+      showNotification(
+        'Request submitted. The room admin needs to approve you before you can join.',
+      )
     } else {
       showNotification('You joined the room.')
       selectRoom(joinForm.roomCode)
