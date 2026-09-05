@@ -223,25 +223,6 @@ const formatDate = (dateString) => {
 </script>
 
 <style scoped>
-.settings-section {
-  padding-block: var(--spacing-lg);
-  border-top: 1px solid var(--border-light);
-}
-
-.settings-section:first-child {
-  padding-top: 0;
-  border-top: none;
-}
-
-.settings-section-title {
-  margin: 0 0 var(--spacing-md);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
 .settings-section-heading {
   display: flex;
   align-items: center;

@@ -49,7 +49,9 @@
         <h2 id="features-heading">Everything a shared household needs, in one place</h2>
         <div class="feature-grid">
           <article class="feature-card">
-            <span class="feature-icon" aria-hidden="true">{{ resource.icon }}</span>
+            <span class="feature-icon" aria-hidden="true"
+              ><component :is="resource.icon" :size="28"
+            /></span>
             <h3>Shared inventory, always up to date</h3>
             <p>
               See exactly what's in stock across your room in real time, down to how many
@@ -204,7 +206,11 @@ const currentYear = computed(() => new Date().getFullYear())
 
 .hero {
   padding: var(--spacing-3xl) var(--spacing-xl);
-  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--color-primary) 55%, black),
+    var(--color-primary)
+  );
   text-align: center;
 }
 

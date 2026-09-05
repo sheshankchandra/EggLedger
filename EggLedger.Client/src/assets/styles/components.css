@@ -6,10 +6,12 @@
   gap: var(--spacing-sm);
   padding: var(--btn-padding-md);
   min-height: 44px;
+  max-width: 100%;
   border: 1px solid transparent;
   border-radius: var(--radius-md);
   font-size: var(--font-size-base);
   font-weight: var(--font-weight-medium);
+  text-align: center;
   text-decoration: none;
   cursor: pointer;
   transition:
@@ -17,7 +19,6 @@
     border-color var(--transition-normal),
     box-shadow var(--transition-normal),
     transform var(--transition-normal);
-  white-space: nowrap;
   user-select: none;
 }
 
@@ -128,6 +129,26 @@
 .btn-outline-secondary:hover:not(:disabled) {
   background: var(--bg-tertiary);
   color: var(--text-primary);
+}
+
+/* Shared modal "settings" section pattern (room settings, profile settings) */
+.settings-section {
+  padding-block: var(--spacing-lg);
+  border-top: 1px solid var(--border-light);
+}
+
+.settings-section:first-child {
+  padding-top: 0;
+  border-top: none;
+}
+
+.settings-section-title {
+  margin: 0 0 var(--spacing-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 /* Form Components */

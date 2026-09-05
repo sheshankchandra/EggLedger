@@ -35,7 +35,9 @@
         @click="$emit('select', container)"
       >
         <span class="inventory-card-top">
-          <span class="inventory-icon" aria-hidden="true">{{ resource.icon }}</span>
+          <span class="inventory-icon" aria-hidden="true"
+            ><component :is="resource.icon" :size="20"
+          /></span>
           <span class="stock-status">{{ stockPercentage(container) }}% remaining</span>
         </span>
         <strong>{{ container.containerName || `Untitled ${resource.inventorySingular}` }}</strong>

@@ -34,7 +34,11 @@
               :class="`feed-icon-${eventClass(event.eventType)}`"
               aria-hidden="true"
             >
-              <span v-if="event.eventType === EVENT_TYPE.CONSUME">{{ resource.icon }}</span>
+              <component
+                :is="resource.icon"
+                v-if="event.eventType === EVENT_TYPE.CONSUME"
+                :size="18"
+              />
               <component :is="eventIcon(event.eventType)" v-else :size="18" />
             </span>
             <div class="feed-body">
@@ -206,7 +210,6 @@ watch(
   place-items: center;
   border-radius: var(--radius-lg);
   background: var(--bg-tertiary);
-  font-size: var(--font-size-lg);
 }
 
 .feed-icon-settlement {

@@ -1,17 +1,32 @@
 <template>
   <div class="accounts-container">
     <div class="accounts-card">
-      <div class="brand-header">
-        <h1 class="brand-title">EggLedger</h1>
-        <p class="brand-subtitle">Manage your orders and inventory</p>
-      </div>
+      <router-link to="/" class="brand-header">
+        <img src="/eggledger.png" alt="" class="brand-logo" />
+        <div>
+          <p class="brand-title">EggLedger</p>
+          <p class="brand-subtitle">Manage your orders and inventory</p>
+        </div>
+      </router-link>
 
       <!-- Mode Toggle Tabs -->
-      <div class="mode-toggle">
-        <button @click="switchToLogin" :class="['mode-tab', { active: currentMode === 'login' }]">
+      <div class="mode-toggle" role="tablist" aria-label="Sign in or sign up">
+        <button
+          @click="switchToLogin"
+          :class="['mode-tab', { active: currentMode === 'login' }]"
+          type="button"
+          role="tab"
+          :aria-selected="currentMode === 'login'"
+        >
           Sign In
         </button>
-        <button @click="switchToSignup" :class="['mode-tab', { active: currentMode === 'signup' }]">
+        <button
+          @click="switchToSignup"
+          :class="['mode-tab', { active: currentMode === 'signup' }]"
+          type="button"
+          role="tab"
+          :aria-selected="currentMode === 'signup'"
+        >
           Sign Up
         </button>
       </div>
@@ -23,9 +38,6 @@
         </Transition>
       </div>
     </div>
-
-    <!-- Background decoration -->
-    <div class="background-pattern"></div>
   </div>
 </template>
 
@@ -69,78 +81,75 @@ watchEffect(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1rem;
-  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
-  position: relative;
-  overflow: hidden;
-}
-
-.background-pattern {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-  z-index: 0;
+  padding: var(--spacing-lg);
+  background: var(--bg-secondary);
 }
 
 .accounts-card {
   background: var(--bg-primary);
-  border-radius: 1rem;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-2xl);
   box-shadow: var(--shadow-xl);
-  padding: 2.5rem;
+  padding: var(--spacing-2xl);
   width: 100%;
-  max-width: 480px;
-  position: relative;
-  z-index: 1;
+  max-width: 440px;
 }
 
 .brand-header {
-  text-align: center;
-  margin-bottom: 2rem;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-xl);
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.brand-logo {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  object-fit: contain;
 }
 
 .brand-title {
-  font-size: 2.5rem;
-  font-weight: 800;
-  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  margin-bottom: 0.5rem;
+  margin: 0;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: -0.02em;
 }
 
 .brand-subtitle {
-  font-size: 1rem;
+  margin: 2px 0 0;
+  font-size: var(--font-size-sm);
   color: var(--text-secondary);
-  font-weight: 400;
 }
 
 .mode-toggle {
-  display: flex;
-  background-color: var(--bg-tertiary);
-  border-radius: 0.5rem;
-  padding: 0.25rem;
-  margin-bottom: 2rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin-bottom: var(--spacing-xl);
+  padding: var(--spacing-xs);
+  border-radius: var(--radius-md);
+  background: var(--bg-tertiary);
 }
 
 .mode-tab {
-  flex: 1;
-  padding: 0.75rem 1rem;
-  border: none;
-  background: none;
-  border-radius: 0.375rem;
-  font-weight: 500;
+  padding: var(--spacing-sm);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
   color: var(--text-secondary);
+  font-weight: var(--font-weight-semibold);
   cursor: pointer;
-  transition: all 0.2s ease-in-out;
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast);
 }
 
 .mode-tab.active {
-  background-color: var(--bg-primary);
-  color: var(--color-primary);
+  background: var(--bg-primary);
   box-shadow: var(--shadow-sm);
+  color: var(--color-primary);
 }
 
 .mode-tab:hover:not(.active) {
@@ -170,22 +179,8 @@ watchEffect(() => {
 
 /* Responsive design */
 @media (max-width: 640px) {
-  .accounts-container {
-    padding: 0.5rem;
-  }
-
   .accounts-card {
-    padding: 1.5rem;
-    border-radius: 0.75rem;
-  }
-
-  .brand-title {
-    font-size: 2rem;
-  }
-
-  .mode-tab {
-    padding: 0.625rem 0.75rem;
-    font-size: 0.875rem;
+    padding: var(--spacing-lg);
   }
 }
 </style>
