@@ -12,11 +12,8 @@ namespace EggLedger.Services.Services;
 
 public class ActivityService : IActivityService
 {
-    // A room's activity feed merges three independent sources (orders, settlements, joins) that
-    // can't be paginated with a single SQL query. Household-room activity volume is small enough
-    // that fetching a bounded window from each source and sorting/paging the merged list in
-    // memory is simple and correct - unlike paginating each source separately, which would give
-    // wrong results the moment one source dominates a page.
+    // Merges 3 independent sources (orders, settlements, joins) that can't share one SQL
+    // query; fetch a bounded window from each and sort/page the merged list in memory.
     private const int SourceFetchCap = 200;
 
     private readonly ApplicationDbContext _context;

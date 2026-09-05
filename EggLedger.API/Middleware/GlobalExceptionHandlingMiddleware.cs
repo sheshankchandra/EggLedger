@@ -6,9 +6,7 @@ namespace EggLedger.API.Middleware;
 
 /// <summary>
 /// Last-resort handler for exceptions that escape every controller and service try/catch.
-/// Emits the same RFC 7807 ProblemDetails envelope as every other error response
-/// (see EggLedger.API.Extensions.ResultExtensions), via the framework's IProblemDetailsService
-/// so it also gets the traceId extension configured in Program.cs.
+/// Emits the same ProblemDetails envelope as <see cref="Extensions.ResultExtensions"/>.
 /// </summary>
 public class GlobalExceptionHandlingMiddleware
 {

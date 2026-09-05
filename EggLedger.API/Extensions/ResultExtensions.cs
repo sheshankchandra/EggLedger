@@ -6,17 +6,12 @@ using Microsoft.AspNetCore.Mvc;
 namespace EggLedger.API.Extensions;
 
 /// <summary>
-/// Single place that turns a failed <see cref="IResultBase"/> into an HTTP response. Every
-/// controller failure path goes through <see cref="ToProblem"/> so every error response -
-/// regardless of which service or entity it came from - is the same RFC 7807 ProblemDetails
-/// envelope, instead of each controller inventing its own status code and body shape.
+/// Maps a failed <see cref="IResultBase"/> to an RFC 7807 ProblemDetails response, so every
+/// controller's error responses share one shape instead of each inventing its own.
 /// </summary>
 public static class ResultExtensions
 {
-    /// <summary>
-    /// Maps a failed result's error type to a status code and returns a ProblemDetails result.
-    /// Only call this when <c>result.IsSuccess</c> is false.
-    /// </summary>
+    /// <summary>Only call this when <c>result.IsSuccess</c> is false.</summary>
     public static ActionResult ToProblem(this ControllerBase controller, IResultBase result)
     {
         var statusCode = result.Errors.Any(e => e is NotFoundError) ? StatusCodes.Status404NotFound

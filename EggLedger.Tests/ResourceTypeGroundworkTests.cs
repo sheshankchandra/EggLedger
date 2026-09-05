@@ -9,8 +9,8 @@ namespace EggLedger.Tests;
 
 /// <summary>
 /// Covers the multi-resource groundwork migration: a seeded ResourceType row that every
-/// container links to. This is currently invisible at the API surface (no DTO exposes it
-/// yet), so these tests assert directly against the database rather than an HTTP response.
+/// container links to. Invisible at the API surface today, so these assert against the
+/// database directly rather than an HTTP response.
 /// </summary>
 public class ResourceTypeGroundworkTests : IClassFixture<EggLedgerWebApplicationFactory>
 {

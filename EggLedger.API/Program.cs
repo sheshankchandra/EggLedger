@@ -20,7 +20,7 @@ builder.AddApplicationLogging()
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
-    options.KnownNetworks.Clear();
+    options.KnownIPNetworks.Clear();
     options.KnownProxies.Clear();
 });
 
@@ -38,9 +38,8 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddOpenApi("v2");
 
-// RFC 7807 ProblemDetails for every error response (controllers' Problem()/ValidationProblem()
-// calls, and the built-in [ApiController] auto-conversion of bodyless 4xx/5xx results). The
-// trace id lets a user-reported error be matched back to the exact log lines for that request.
+// RFC 7807 ProblemDetails for every error response. traceId lets a user-reported error be
+// matched back to the exact log lines for that request.
 builder.Services.AddProblemDetails(options =>
 {
     options.CustomizeProblemDetails = context =>

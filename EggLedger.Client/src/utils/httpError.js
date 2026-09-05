@@ -1,7 +1,6 @@
 /**
- * Extracts a user-facing message from an Axios error. The API standardizes error responses on
- * RFC 7807 ProblemDetails ({ detail, title, status, ... }), so `detail` is checked first; the
- * other shapes (plain string, array of messages, legacy { message }) are kept for safety.
+ * Extracts a user-facing message from an Axios error. The API returns RFC 7807 ProblemDetails
+ * ({ detail, title, status }), so `detail` is checked first; other shapes are kept for safety.
  */
 export function errorMessage(error, fallback) {
   const data = error?.response?.data

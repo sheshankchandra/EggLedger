@@ -8,9 +8,7 @@ namespace EggLedger.Services.Extensions;
 /// <summary>
 /// Wraps a service operation with the try/catch/log/Result pattern every service method in this
 /// layer previously repeated by hand: cancellation becomes a logged Info + a "canceled" failure,
-/// any other exception becomes a logged Error + the caller-supplied user-facing failure message.
-/// <paramref name="operationName"/> is captured automatically from the calling method, even though
-/// the call itself is textually inside a lambda.
+/// any other exception becomes a logged Error + the caller-supplied failure message.
 /// </summary>
 public static class ServiceResultExtensions
 {

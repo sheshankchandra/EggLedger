@@ -17,10 +17,7 @@ public class Container : AuditableEntity
     public required decimal Amount { get; set; }
     public required Guid RoomId { get; set; }
 
-    /// <summary>
-    /// The resource type this container holds. Every container has exactly one; today this is
-    /// always <see cref="ResourceType.EggsId"/> since the app is still single-resource.
-    /// </summary>
+    /// <summary>Resource this container holds. Always <see cref="ResourceType.EggsId"/> today.</summary>
     public required Guid ResourceTypeId { get; set; }
 
     /// <summary>

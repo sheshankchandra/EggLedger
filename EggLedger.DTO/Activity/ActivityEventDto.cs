@@ -4,8 +4,7 @@ namespace EggLedger.DTO.Activity;
 
 /// <summary>
 /// One event in a room's activity feed. Deliberately structured rather than a pre-rendered
-/// sentence: resource nouns ("eggs", "batches") are a presentation concern owned by the
-/// frontend's resource.config.js, not something the backend should bake into English text.
+/// sentence, since resource nouns ("eggs", "batches") are a frontend presentation concern.
 /// </summary>
 public class ActivityEventDto
 {
