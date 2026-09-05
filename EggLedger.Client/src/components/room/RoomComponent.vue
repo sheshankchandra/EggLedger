@@ -8,6 +8,7 @@
           <p>Keep purchases and usage in sync for everyone in this room.</p>
         </div>
         <div class="room-title-actions">
+          <router-link to="/room/activity" class="btn btn-secondary btn-sm"> Activity </router-link>
           <router-link to="/room/balances" class="btn btn-secondary btn-sm">
             View balances
           </router-link>
