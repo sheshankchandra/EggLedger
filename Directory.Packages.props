@@ -15,8 +15,8 @@
   <ItemGroup>
     <!-- Aspire (dev-only orchestration). AddNpmApp moved into core Aspire.Hosting,
          so the standalone Aspire.Hosting.NodeJS package is no longer needed. -->
-    <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.4.6" />
-    <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.4.6" />
+    <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.5.3" />
+    <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.5.3" />
     <PackageVersion Include="Aspire.Npgsql.EntityFrameworkCore.PostgreSQL" Version="13.4.6" />
     <!-- AddViteApp / AddJavaScriptApp / WithNpm for the Vue dev server (first-party). -->
     <PackageVersion Include="Aspire.Hosting.JavaScript" Version="13.4.6" />
@@ -41,7 +41,7 @@
     <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.22.0" />
 
     <!-- API docs: built-in Microsoft.AspNetCore.OpenApi + Scalar UI (Swashbuckle removed). -->
-    <PackageVersion Include="Scalar.AspNetCore" Version="2.16.18" />
+    <PackageVersion Include="Scalar.AspNetCore" Version="2.17.2" />
 
     <!-- Resilience / service discovery -->
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.9.0" />
