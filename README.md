@@ -1,183 +1,190 @@
 # EggLedger
 
-A full-stack app for shared households: create a room, track shared groceries and supplies as
-"containers", and record stock/consumption "orders" that keep everyone's balance up to date.
+[![CI](https://github.com/sheshankchandra/EggLedger/actions/workflows/ci.yml/badge.svg)](https://github.com/sheshankchandra/EggLedger/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet&logoColor=white)
+![Vue.js](https://img.shields.io/badge/Vue.js-3.x-4FC08D?logo=vuedotjs&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-4169E1?logo=postgresql&logoColor=white)
+![Aspire](https://img.shields.io/badge/.NET_Aspire-13-512BD4?logo=dotnet&logoColor=white)
 
-Built as a hands-on learning project, then taken all the way to a hardened production deployment
-on Azure.
+EggLedger is a modern full-stack web application designed for shared households and roommates to effortlessly track communal groceries, manage supplies, split expenses, and settle debts with complete clarity.
 
-**Live:** [eggledger.sshnk.com](https://eggledger.sshnk.com) · API at
-[api.sshnk.com](https://api.sshnk.com)
+**Live Application:** [eggledger.sshnk.com](https://eggledger.sshnk.com) · **API:** [api.sshnk.com](https://api.sshnk.com)
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![.NET](https://img.shields.io/badge/.NET-10.0-purple.svg)
-![Vue.js](https://img.shields.io/badge/Vue.js-3.x-green.svg)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-blue.svg)
+---
 
-## Features
+## Key Features
 
-- **Rooms** with unique join codes, and admin/member roles
-- **Containers** for shared items, with stock and consumption tracking
-- **Orders** (stock / consume) that update balances automatically
-- **Auth** with JWT access tokens and Google OAuth 2.0 (server-side code flow)
-- **Secure session model**: in-memory access token + HttpOnly refresh cookie, silent refresh,
-  anti-CSRF header
-- **OpenAPI** docs via Scalar in development
+- 🏠 **Room Workspaces**: Create multi-member household rooms, invite roommates via codes or shareable invite links, and manage member approvals.
+- 📦 **Container Inventory**: Track shared supplies (eggs, milk, household essentials) with live stock levels, unit metrics, and container lifecycle controls.
+- ⚖️ **Expense & Debt Settlement**: Automated "who-owes-whom" balance matrix calculation with one-click debt settlement logs.
+- 📈 **Activity Stream & Streaks**: Real-time room activity feed, order histories, and gamified member consumption streaks.
+- 🔐 **Hardened Security Architecture**:
+  - Access tokens stored strictly **in memory**; refresh tokens stored in **HttpOnly, Secure, SameSite** cookies.
+  - Silent token rotation with custom anti-CSRF protection (`X-EggLedger-CSRF`).
+  - Google OAuth 2.0 via a confidential server-side authorization-code flow.
+  - Configurable IP rate limiting across global and auth-sensitive endpoints.
+- 🌗 **Adaptive UI**: Responsive interface optimized for desktop and mobile, with full Dark and Light theme support.
+- 🔍 **Interactive API Documentation**: Embedded OpenAPI documentation via Scalar in development.
 
-## Tech stack
+---
 
-| Area | Choice |
+## Tech Stack
+
+| Domain | Technology |
 | --- | --- |
-| Backend | ASP.NET Core (.NET 10), EF Core, FluentResults |
-| Frontend | Vue 3 (Composition API), Vite, Pinia, Vue Router |
-| Database | PostgreSQL 15 |
-| Dev orchestration | .NET Aspire 13 (Postgres + API + Vite + pgWeb) |
-| Auth | JWT, Google OAuth 2.0 |
-| Tests | xUnit + Testcontainers (`WebApplicationFactory`) |
-| Observability | OpenTelemetry → Application Insights (prod) / Aspire dashboard (dev) |
-| Hosting | Azure Container Apps (API) + Static Web Apps (SPA) + Postgres Flexible Server |
+| **Backend API** | ASP.NET Core (.NET 10), Entity Framework Core, FluentResults |
+| **Frontend SPA** | Vue 3 (Composition API), Vite, Pinia, Vue Router, Axios |
+| **Database** | PostgreSQL 15+ |
+| **Dev Orchestration** | .NET Aspire (PostgreSQL container + API + Vite SPA + pgWeb) |
+| **Authentication** | JWT (access tokens) + HttpOnly cookies (refresh) + Google OAuth 2.0 |
+| **Testing** | xUnit, Testcontainers, WebApplicationFactory |
+| **Observability** | OpenTelemetry → Azure Monitor / Application Insights (prod) & Aspire dashboard (dev) |
+| **Production Hosting** | Azure Container Apps (API) + Azure Static Web Apps (SPA) + PostgreSQL Flexible Server |
+
+---
 
 ## Architecture
 
-The backend is layered; each layer has a clear responsibility:
+The backend adheres to a strict, layered separation of concerns:
 
-```
+```text
 EggLedger/
-├── EggLedger.API/              # Controllers (thin), middleware, DI/config, Program.cs
-├── EggLedger.Services/         # Business logic (returns FluentResults)
-├── EggLedger.Data/             # DbContext, EF Core config, migrations
-├── EggLedger.Models/           # Domain entities (DB-mapped)
-├── EggLedger.DTO/              # Request/response shapes (never return entities)
-├── EggLedger.ServiceDefaults/  # Aspire defaults: health checks, OpenTelemetry
-├── EggLedger.AppHost/          # .NET Aspire orchestration (development only)
-├── EggLedger.Client/           # Vue 3 SPA
-└── EggLedger.Tests/            # xUnit integration tests (Testcontainers)
+├── EggLedger.API/              # Controllers (thin, no business logic), middleware, DI/config wiring
+├── EggLedger.Services/         # Domain & business logic (returns Result<T> via FluentResults)
+├── EggLedger.Data/             # DbContext, EF Core mappings, and database migrations
+├── EggLedger.Models/           # Database-mapped domain entities
+├── EggLedger.DTO/              # Strongly-typed API request/response contracts
+├── EggLedger.ServiceDefaults/  # Cross-cutting Aspire defaults: health checks, OpenTelemetry
+├── EggLedger.AppHost/          # .NET Aspire orchestration for local development
+├── EggLedger.Client/           # Vue 3 Single Page Application
+└── EggLedger.Tests/            # xUnit integration test suite using Testcontainers
 ```
 
-API routes are prefixed with `/egg-ledger-api/`. Controllers validate input and delegate; all
-business logic lives in the Services layer.
+API endpoints are organized under the `/egg-ledger-api/` route prefix. Controllers validate inputs and delegate immediately to domain services; entities are never exposed directly to consumers.
 
-## Quick start (recommended: .NET Aspire)
+---
 
-.NET Aspire orchestrates the whole stack — it starts PostgreSQL in a container, runs the API,
-launches the Vite dev server, and adds pgWeb for database browsing, all behind one dashboard.
+## Quick Start
 
 ### Prerequisites
 
 - [.NET 10 SDK](https://dotnet.microsoft.com/download)
-- [Node.js 20.19+ or 22.12+](https://nodejs.org/) (required by Vite 8)
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (for the Postgres container)
+- [Node.js](https://nodejs.org/) `^20.19.0` or `>=22.12.0`
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (for local database containers)
 
-### Run
+### Option 1: .NET Aspire (Recommended)
+
+.NET Aspire spins up the entire development environment — including PostgreSQL, pgWeb database manager, the backend API, and the Vite frontend dev server — with a unified observability dashboard:
 
 ```bash
 git clone https://github.com/sheshankchandra/EggLedger.git
 cd EggLedger
 
-# Frontend deps (Aspire also runs `npm ci` on start, but this warms the cache)
+# Install frontend dependencies
 cd EggLedger.Client && npm install && cd ..
 
-# Start everything
+# Start the full stack
 dotnet run --project EggLedger.AppHost
 ```
 
-Then open the **Aspire dashboard** at `https://localhost:17071`. From there you can open the Vue
-client (Aspire assigns it a port), inspect logs/traces/metrics, and open **pgWeb** to browse the
-database. The AppHost injects `VITE_API_BASE_URL` so the SPA and the OAuth start URL target the
-API automatically.
+Open the **Aspire Dashboard** at the URL printed in the terminal (typically `https://localhost:17071`) to launch the frontend, inspect API traces and logs, and browse the database via pgWeb.
 
-> Running the client on its own with `npm run dev` works only if you also provide
-> `VITE_API_BASE_URL` yourself — otherwise Google login has no API URL to redirect to. The Aspire
-> flow is the intended dev loop.
+### Option 2: Docker Compose
 
-## Configuration
+To launch PostgreSQL, pgAdmin, the API, and the Client as standalone containers:
 
-Local secrets are read from **.NET User Secrets** in development (never committed).
-`EggLedger.API/appsettings-example.json` shows the shape of the non-secret settings. The keys the
-app expects:
+```bash
+docker-compose up -d
+```
+
+- **Client**: `http://localhost:5173`
+- **API**: `http://localhost:8080`
+- **pgAdmin**: `http://localhost:5050` (`admin@eggledger.com` / `eggledger123`)
+
+---
+
+## Configuration & Secrets
+
+Local development uses [.NET User Secrets](https://learn.microsoft.com/en-us/aspnet/core/security/app-secrets) to keep credentials out of version control. The committed configuration templates (`appsettings.json`, `appsettings-example.json`) contain only non-sensitive defaults.
+
+Key application configuration entries:
 
 ```jsonc
 {
   "Jwt": {
-    "SecretKey": "<long random key>",
+    "SecretKey": "<secure-random-key-at-least-32-chars>",
     "Issuer": "EggLedgerAPI",
     "Audience": "EggLedgerAudience",
     "ExpiryInMinutes": 15
   },
-  "ConnectionStrings": { "DefaultConnection": "Host=...;Database=eggledgerDB;..." },
-  "Authentication": { "Google": { "ClientId": "...", "ClientSecret": "..." } },
-  "Cors": { "AllowedOrigins": ["http://localhost:5173"], "PolicyName": "_myAllowSpecificOrigins" },
-  "Ef_Migrate": "true"   // dev only; false in production (migrations run deliberately)
+  "ConnectionStrings": {
+    "DefaultConnection": "Host=localhost;Database=eggledgerDB;Username=...;Password=..."
+  },
+  "Authentication": {
+    "Google": {
+      "ClientId": "<google-client-id>",
+      "ClientSecret": "<google-client-secret>"
+    }
+  },
+  "Cors": {
+    "AllowedOrigins": ["http://localhost:5173"]
+  },
+  "Ef_Migrate": "true" // Automatically runs EF migrations on startup in development
 }
 ```
 
-See [`docs/SECRETS.md`](docs/SECRETS.md) for the User Secrets workflow and
-[`docs/MIGRATIONS.md`](docs/MIGRATIONS.md) for how migrations are gated.
+Detailed guides:
+- [Secrets & Configuration Guide](docs/SECRETS.md) — User Secrets setup, environment variable mapping, and Key Vault integration.
+- [Database Migrations Guide](docs/MIGRATIONS.md) — EF Core migration workflows and production deployment procedures.
 
-## API overview
+---
 
-Base path: `/egg-ledger-api`. A few representative endpoints:
+## API Overview
 
-- **Auth** — `POST /auth/login`, `POST /auth/register`, `POST /auth/refresh`,
-  `POST /auth/logout`, `GET /auth/google-login`
-- **Rooms** — `POST /room/create`, `POST /room/join`, `GET /room/user/all`
-- **Containers** — `GET /room/{roomCode}/container/all`, `POST /room/{roomCode}/container/create`
-- **Orders** — `POST /{roomCode}/orders/stock`, `POST /{roomCode}/orders/consume`
+Interactive Scalar API documentation is available at `/scalar/v2` when running in development mode.
 
-Full interactive docs (Scalar) at `http://localhost:8080/scalar/v2` when the API runs in
-development.
+Primary API route groups:
+- **Authentication**: `POST /auth/register`, `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`, `GET /auth/google-login`
+- **Rooms**: `POST /room/create`, `POST /room/join`, `GET /room/user/all`, `GET /room/{roomCode}`
+- **Containers**: `GET /room/{roomCode}/container/all`, `POST /room/{roomCode}/container/create`, `PATCH /room/{roomCode}/container/{id}`
+- **Orders & Inventory**: `POST /{roomCode}/orders/stock`, `POST /{roomCode}/orders/consume`
+- **Settlement & Ledgers**: `GET /room/{roomCode}/balances`, `POST /room/{roomCode}/settle`
+- **Activity**: `GET /room/{roomCode}/activity`
 
-## Security model
-
-- Access tokens are held **in memory** on the client; the **refresh token is an HttpOnly cookie**
-  (`Secure` + `SameSite=None` in prod). Tokens never touch `localStorage` or URLs.
-- Cookie-authenticated endpoints require a custom **anti-CSRF header** (`X-EggLedger-CSRF`), which
-  forces a CORS preflight a cross-site page can't forge.
-- **CORS** is restricted to configured origins (no `AllowAnyOrigin`).
-- **Rate limiting**: a global per-IP budget plus a stricter budget on auth endpoints (429 on
-  breach), both tunable via `RateLimiting:*` config.
-- **HSTS** in production; forwarded headers honored behind the Container Apps ingress.
-- Google login uses the **authorization-code flow with a confidential client** — the API holds the
-  secret and does the token exchange; the browser only ever gets the cookie.
+---
 
 ## Testing
 
+EggLedger includes an integration test suite powered by **xUnit**, **ASP.NET Core WebApplicationFactory**, and **Testcontainers**:
+
 ```bash
+# Ensure Docker is running, then execute:
 dotnet test
 ```
 
-`EggLedger.Tests` boots the real API in-process via `WebApplicationFactory<Program>` against a
-throwaway PostgreSQL container (Testcontainers), so **Docker must be running**. It covers the auth
-flow: register, login, refresh rotation, CSRF, and rate limiting. CI runs `dotnet test` on every
-PR.
+The test harness spins up an ephemeral PostgreSQL container to validate authentication lifecycles, refresh cookie rotation, anti-CSRF enforcement, and rate-limiting rules end-to-end.
 
-## Deployment
+---
 
-The app runs on Azure: the SPA on **Static Web Apps**, the API on **Container Apps**
-(scale-to-zero) pulling its image from **Container Registry** via **managed identity**, backed by
-**PostgreSQL Flexible Server**, with secrets in **Key Vault** and telemetry in **Application
-Insights**. Custom domains (`eggledger.sshnk.com`, `api.sshnk.com`) use free managed TLS.
+## Production Deployment
 
-The full runbook — every `az` command, DNS record, and the gotchas learned along the way — is in
-[`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
+EggLedger is designed for modern cloud hosting on Microsoft Azure:
+- **Frontend SPA**: Hosted on [Azure Static Web Apps](https://azure.microsoft.com/services/app-service/static/) with automated CI/CD via GitHub Actions.
+- **Backend API**: Deployed to [Azure Container Apps](https://azure.microsoft.com/services/container-apps/) (scale-to-zero serverless container hosting).
+- **Database**: [Azure Database for PostgreSQL](https://azure.microsoft.com/services/postgresql/) Flexible Server.
+- **Security**: Managed Identity with [Azure Key Vault](https://azure.microsoft.com/services/key-vault/) for zero-secret manifests.
 
-## Building for production
+For complete provisioning commands and network topology, consult the [Production Deployment Guide](docs/DEPLOYMENT.md).
 
-```bash
-# API container image (SDK container tooling, no Dockerfile)
-dotnet publish EggLedger.API/EggLedger.API.csproj -c Release -t:PublishContainer
-
-# Frontend
-cd EggLedger.Client && npm run build
-```
+---
 
 ## Contributing
 
-1. Create a feature branch
-2. Make your changes, matching the existing layering and conventions
-3. Add or adjust tests for behavior you change
-4. Open a pull request (CI runs build, tests, and lint)
+Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on code style, architectural conventions, and the pull request process.
+
+---
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.

@@ -1,471 +1,370 @@
-# Azure Deployment Runbook
+# Production Deployment Guide (Azure)
 
-Manual deployment of EggLedger to Azure using the `az` CLI. Target architecture:
+This guide provides end-to-end instructions for deploying EggLedger to Microsoft Azure using the Azure CLI (`az`).
 
-| Component | Azure service |
-| --- | --- |
-| Vue SPA | Static Web Apps (`eggledger.sshnk.com`) |
-| .NET API | Container Apps, scale-to-zero (`api.sshnk.com`) |
-| Database | PostgreSQL Flexible Server (Burstable B1ms) |
-| API image | Container Registry (managed-identity pull) |
-| Secrets | Key Vault (referenced by managed identity) |
-| Observability | Application Insights (OpenTelemetry) |
+---
 
-**Live:** frontend at <https://eggledger.sshnk.com>, API at <https://api.sshnk.com>.
+## Architecture Overview
 
-Secrets (JWT key, DB connection, Google OAuth, App Insights) live in Key Vault and are pulled
-by the Container App's managed identity — never committed. See `docs/SECRETS.md`.
+EggLedger is architected for low cost, high availability, and strong security:
 
-> Status: complete. Sections 1–8 cover the initial deploy; sections 9–13 cover the
-> Phase 4 hardening (observability, managed identity, Key Vault, custom domain, and
-> the Google OAuth topology).
+```text
+  Internet
+     │
+     ├──► eggledger.sshnk.com ──► Azure Static Web Apps (Vue 3 SPA)
+     │                                    │
+     │                                (Axios API)
+     │                                    ▼
+     └──► api.sshnk.com       ──► Azure Container Apps (ASP.NET Core API)
+                                          │
+                  ┌───────────────────────┼───────────────────────┐
+                  ▼                       ▼                       ▼
+          PostgreSQL Server        Azure Key Vault        Application Insights
+       (Flexible Server B1ms)     (Managed Identity)        (OpenTelemetry)
+```
+
+| Component | Azure Service | Configuration / SKU |
+| --- | --- | --- |
+| **Frontend SPA** | Azure Static Web Apps | Free Tier, custom domain with managed TLS |
+| **Backend API** | Azure Container Apps | Serverless consumption (scale-to-zero), port 8080 |
+| **Database** | Azure Database for PostgreSQL | Flexible Server (Burstable B1ms), PG 16 |
+| **Container Registry**| Azure Container Registry (ACR) | Basic SKU, pulled via Managed Identity (`AcrPull`) |
+| **Secrets Management**| Azure Key Vault | RBAC data-plane references |
+| **Observability** | Azure Application Insights | OpenTelemetry telemetry via Log Analytics |
+
+---
 
 ## Prerequisites
 
-```powershell
-winget install Microsoft.AzureCLI            # Azure CLI
-az login --tenant <tenant-id>                # sign in to the tenant that holds the subscription
-az account show -o table                     # confirm the active subscription
+- [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli) (`az`)
+- [.NET 10 SDK](https://dotnet.microsoft.com/download)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (for container builds and tests)
+- An active Azure subscription
+
+Register the required resource providers:
+
+```bash
+az provider register --namespace Microsoft.App --wait
+az provider register --namespace Microsoft.OperationalInsights --wait
 ```
 
-Docker Desktop and the .NET 10 runtime are also required locally.
+---
 
-## 1. Resource group
+## Deployment Configuration Variables
 
-A single resource group holds everything, so cleanup is one command
-(`az group delete --name rg-eggledger-prod`).
+Set these shell variables before running the commands below:
 
-```powershell
-az group create --name rg-eggledger-prod --location centralindia -o table
+```bash
+RESOURCE_GROUP="rg-eggledger-prod"
+LOCATION="centralindia"
+PG_SERVER="eggledger-pg"
+DB_NAME="eggledgerdb"
+DB_ADMIN="eggledgeradmin"
+ACR_NAME="eggledgeracr"
+ACA_ENV="eggledger-env"
+API_APP_NAME="eggledger-api"
+SWA_APP_NAME="eggledger-web"
+KEY_VAULT_NAME="eggledger-kv"
+APP_INSIGHTS_NAME="eggledger-ai"
+CUSTOM_WEB_DOMAIN="eggledger.sshnk.com"
+CUSTOM_API_DOMAIN="api.sshnk.com"
 ```
+
+---
+
+## 1. Resource Group
+
+Create a unified resource group for all project services:
+
+```bash
+az group create --name "$RESOURCE_GROUP" --location "$LOCATION" -o table
+```
+
+---
 
 ## 2. PostgreSQL Flexible Server
 
-Burstable B1ms is the cheapest tier. Public endpoint locked to a firewall
-allow-list (your IP for migrations + Azure services for the app).
+Provision a PostgreSQL Flexible Server and create the application database:
 
-```powershell
-# Strong password (alphanumeric is safe for connection strings). Save it in a
-# password manager; it becomes a Container Apps secret later, never committed.
-$pgPass = -join ((48..57)+(65..90)+(97..122) | Get-Random -Count 20 | % {[char]$_})
+```bash
+# Provision server (replace <DB_PASSWORD> with a strong alphanumeric password)
+az postgres flexible-server create \
+  --resource-group "$RESOURCE_GROUP" \
+  --name "$PG_SERVER" \
+  --location "$LOCATION" \
+  --tier Burstable --sku-name Standard_B1ms \
+  --storage-size 32 --version 16 \
+  --admin-user "$DB_ADMIN" --admin-password "<DB_PASSWORD>" \
+  --public-access None -o table
 
-# Create the server. --public-access <ip> turns the public endpoint ON and adds a
-# firewall rule for that IP in one step. (--public-access None would disable the
-# endpoint entirely, which blocks firewall rules.) Server name is globally unique.
-$myIp = (Invoke-RestMethod https://api.ipify.org)
-az postgres flexible-server create `
-  --resource-group rg-eggledger-prod --name eggledger-pg-prod1 `
-  --location centralindia `
-  --tier Burstable --sku-name Standard_B1ms `
-  --storage-size 32 --version 16 `
-  --admin-user eggledgeradmin --admin-password "$pgPass" `
-  --public-access $myIp -o table
-
-# Application database (note: db create uses --name, not --database-name)
-az postgres flexible-server db create `
-  --resource-group rg-eggledger-prod --server-name eggledger-pg-prod1 --name eggledgerdb -o table
-
-# Allow other Azure services (Container Apps). Note the flags: firewall-rule uses
-# --server-name for the server and --name for the rule.
-az postgres flexible-server firewall-rule create `
-  --resource-group rg-eggledger-prod --server-name eggledger-pg-prod1 `
+# Allow traffic from Azure Container Apps
+az postgres flexible-server firewall-rule create \
+  --resource-group "$RESOURCE_GROUP" --server-name "$PG_SERVER" \
   --name AllowAzureServices --start-ip-address 0.0.0.0 --end-ip-address 0.0.0.0 -o table
 
-# Server hostname for the connection string
-az postgres flexible-server show `
-  --resource-group rg-eggledger-prod --name eggledger-pg-prod1 --query "fullyQualifiedDomainName" -o tsv
+# Temporarily allow deployer IP for schema migration
+MY_IP=$(curl -s https://api.ipify.org)
+az postgres flexible-server firewall-rule create \
+  --resource-group "$RESOURCE_GROUP" --server-name "$PG_SERVER" \
+  --name AllowDeployerIP --start-ip-address "$MY_IP" --end-ip-address "$MY_IP" -o table
+
+# Create the application database
+az postgres flexible-server db create \
+  --resource-group "$RESOURCE_GROUP" --server-name "$PG_SERVER" \
+  --name "$DB_NAME" -o table
 ```
 
-**CLI flag gotchas** (they differ per sub-command): `flexible-server show`/`create`
-use `--name` for the server; `db create` and `firewall-rule create` use
-`--server-name` for the server and `--name` for the resource.
+---
 
-## 3. Apply EF migrations to Azure Postgres
+## 3. Database Migrations
 
-Azure Postgres requires SSL, so the connection string needs
-`SSL Mode=Require;Trust Server Certificate=true`. `--connection` overrides the
-DbContext's configured string for this operation only.
+Apply pending EF Core migrations to the production database:
 
-```powershell
-dotnet ef database update `
-  --project EggLedger.Data --startup-project EggLedger.API `
-  --connection "Host=eggledger-pg-prod1.postgres.database.azure.com;Port=5432;Database=eggledgerdb;Username=eggledgeradmin;Password=<password>;SSL Mode=Require;Trust Server Certificate=true"
+```bash
+DB_CONN="Host=${PG_SERVER}.postgres.database.azure.com;Port=5432;Database=${DB_NAME};Username=${DB_ADMIN};Password=<DB_PASSWORD>;SSL Mode=Require;Trust Server Certificate=true"
+
+dotnet ef database update \
+  --project EggLedger.Data \
+  --startup-project EggLedger.API \
+  --connection "$DB_CONN"
 ```
 
-> `dotnet ef` runs the app's startup, which also triggers the in-app `Ef_Migrate`
-> migrator against the *configured* (dev) connection. To force Azure and avoid a
-> double-migrate, override the connection via env var and disable the in-app one:
->
-> ```powershell
-> $env:ConnectionStrings__DefaultConnection = "<azure connection string>"
-> $env:Ef_Migrate = "false"
-> dotnet ef database update --project EggLedger.Data --startup-project EggLedger.API
-> Remove-Item Env:ConnectionStrings__DefaultConnection, Env:Ef_Migrate
-> ```
+> [!TIP]
+> For zero-downtime continuous deployment, generate an idempotent SQL script instead and execute it via `psql`. See [`docs/MIGRATIONS.md`](MIGRATIONS.md).
 
-## 4. Container Registry + API image
+---
 
-Container settings (repository, base image, amd64 RID, port 8080) live in
-`EggLedger.API.csproj`, so the publish command only supplies the registry and tag.
+## 4. Container Registry (ACR) & Image Publish
 
-```powershell
-az acr create --resource-group rg-eggledger-prod --name eggledgeracr1 --sku Basic -o table
-az acr login --name eggledgeracr1
+The API uses the built-in .NET SDK container tooling (`PublishContainer`), avoiding external Dockerfile maintenance.
 
-# Build the image with the .NET SDK container tooling (no Dockerfile) and push it
-dotnet publish EggLedger.API/EggLedger.API.csproj -c Release `
-  -t:PublishContainer `
-  -p:ContainerRegistry=eggledgeracr1.azurecr.io `
-  -p:ContainerImageTag=v1
+```bash
+# Create Azure Container Registry
+az acr create --resource-group "$RESOURCE_GROUP" --name "$ACR_NAME" --sku Basic -o table
+az acr login --name "$ACR_NAME"
 
-az acr repository show-tags --name eggledgeracr1 --repository eggledger-api -o table
+# Build and push API container image
+dotnet publish EggLedger.API/EggLedger.API.csproj -c Release \
+  -t:PublishContainer \
+  -p:ContainerRegistry="${ACR_NAME}.azurecr.io" \
+  -p:ContainerImageTag="v1"
 ```
 
-## 5. Container Apps (API)
+---
 
-```powershell
-az extension add --name containerapp --upgrade
-az provider register --namespace Microsoft.App --wait
-az provider register --namespace Microsoft.OperationalInsights --wait
+## 5. Observability (Application Insights)
 
-# Shared environment (owns logging + networking for the app)
-az containerapp env create `
-  --resource-group rg-eggledger-prod --name eggledger-env --location centralindia -o table
+Create an Application Insights resource connected to Log Analytics:
 
-# Registry pull credentials
-az acr update --name eggledgeracr1 --admin-enabled true
-$acrPass = az acr credential show --name eggledgeracr1 --query "passwords[0].value" -o tsv
+```bash
+# Create shared Container Apps environment
+az containerapp env create \
+  --resource-group "$RESOURCE_GROUP" --name "$ACA_ENV" --location "$LOCATION" -o table
 
-# Secret values (assembled in-shell; never committed)
-$dbConn = "Host=eggledger-pg-prod1.postgres.database.azure.com;Port=5432;Database=eggledgerdb;Username=eggledgeradmin;Password=<password>;SSL Mode=Require;Trust Server Certificate=true"
-$jwtProd = -join ((48..57)+(65..90)+(97..122) | Get-Random -Count 48 | %{[char]$_})   # new prod key
-$googleId = "<google-client-id>"; $googleSecret = "<google-client-secret>"
+# Get default Log Analytics Workspace ID created by the environment
+WORKSPACE_ID=$(az monitor log-analytics workspace list \
+  --resource-group "$RESOURCE_GROUP" --query "[0].id" -o tsv)
 
-# Create the app: image + secrets + env vars + external ingress on 8080, scale-to-zero.
-# ASPNETCORE_ENVIRONMENT=Production makes the app load appsettings.Production.json and
-# flip the refresh cookie to Secure=true; SameSite=None. Env vars use secretref: to point
-# at the encrypted secrets rather than embedding values.
-az containerapp create `
-  --resource-group rg-eggledger-prod --name eggledger-api --environment eggledger-env `
-  --image eggledgeracr1.azurecr.io/eggledger-api:v1 `
-  --registry-server eggledgeracr1.azurecr.io `
-  --registry-username eggledgeracr1 --registry-password $acrPass `
-  --target-port 8080 --ingress external --min-replicas 0 --max-replicas 2 `
-  --secrets "db-conn=$dbConn" "jwt-key=$jwtProd" "google-id=$googleId" "google-secret=$googleSecret" `
-  --env-vars "ASPNETCORE_ENVIRONMENT=Production" "ConnectionStrings__DefaultConnection=secretref:db-conn" "Jwt__SecretKey=secretref:jwt-key" "Authentication__Google__ClientId=secretref:google-id" "Authentication__Google__ClientSecret=secretref:google-secret" `
-  -o table
+# Create Application Insights component
+az monitor app-insights component create \
+  --resource-group "$RESOURCE_GROUP" --app "$APP_INSIGHTS_NAME" --location "$LOCATION" \
+  --workspace "$WORKSPACE_ID" --application-type web -o table
 
-# API URL + health check
-$apiUrl = "https://" + (az containerapp show -g rg-eggledger-prod -n eggledger-api --query "properties.configuration.ingress.fqdn" -o tsv)
-curl.exe "$apiUrl/health"   # expect: Healthy
+# Retrieve connection string
+AI_CONN=$(az monitor app-insights component show \
+  --resource-group "$RESOURCE_GROUP" --app "$APP_INSIGHTS_NAME" \
+  --query connectionString -o tsv)
 ```
 
-## 6. Static Web Apps (Vue)
+---
 
-Build + deploy run in GitHub Actions (`.github/workflows/azure-static-web-apps.yml`)
-so no `swa` CLI is needed locally (managed devices can't install it from the npm feed).
+## 6. Secrets & Key Vault Integration
 
-```powershell
-az staticwebapp create --name eggledger-web --resource-group rg-eggledger-prod --location eastasia -o table
+Store application secrets in Azure Key Vault and access them securely using the Container App's Managed Identity.
 
-# Deployment token -> GitHub repo SECRET  AZURE_STATIC_WEB_APPS_API_TOKEN
-az staticwebapp secrets list -n eggledger-web -g rg-eggledger-prod --query "properties.apiKey" -o tsv
-
-# Site URL
-az staticwebapp show -n eggledger-web -g rg-eggledger-prod --query "defaultHostname" -o tsv
-```
-
-Then configure the repo (Settings > Secrets and variables > Actions):
-
-- **Secret** `AZURE_STATIC_WEB_APPS_API_TOKEN` = the deployment token above.
-- **Variable** `VITE_API_BASE_URL` = the **full API URL including `https://`**
-  (e.g. `https://eggledger-api.<hash>.centralindia.azurecontainerapps.io`).
-
-Run the "Deploy client to Azure Static Web Apps" workflow. `VITE_API_BASE_URL` is a
-**Variable**, not a Secret, because the workflow reads it via `${{ vars.* }}`.
-
-> **Two gotchas that cost real time here — both are missing schemes:**
-> 1. `VITE_API_BASE_URL` must include `https://`. Without it, axios treats it as a
->    relative path and calls the site's own origin (405s on the static host).
-> 2. It must be the **API** (Container Apps) URL, not the site's own Static Web Apps URL.
->
-> A changed JS bundle hash after a deploy confirms a fresh build actually shipped.
-
-## 7. Production CORS (and Google OAuth callback)
-
-The API only sends `Access-Control-Allow-Origin` for an **exact** origin match, so the
-value must include `https://` and no trailing slash — the same scheme gotcha as above.
-
-```powershell
-az containerapp update -g rg-eggledger-prod -n eggledger-api `
-  --set-env-vars "Cors__AllowedOrigins__0=https://<your-swa-hostname>" -o table
-```
-
-Google OAuth requires two things behind the Container Apps ingress:
-
-1. **Forwarded headers** must be enabled (see `Program.cs` / `MiddlewareExtensions`),
-   or the app builds an `http://` redirect URI that Google rejects.
-2. Register the correct redirect URI: it is the ASP.NET Core Google handler's
-   **`CallbackPath` (default `/signin-google`)**, NOT the app's own
-   `/egg-ledger-api/auth/google-callback` controller route. The handler processes
-   `/signin-google` internally, then forwards to the controller (via the auth
-   properties `RedirectUri`) to issue the JWT and set the cookie.
-
-In the Google Cloud console, on the OAuth 2.0 Client ID:
-- Authorized redirect URI: `https://<api-hostname>/signin-google` — **required**.
-- Authorized JavaScript origins: **not used by this flow** (see section 13). Login is a
-  server-side authorization-code flow, so Google only ever talks to the API. Values here
-  are inert; they only matter if you add a browser-side Google SDK (One Tap / GIS).
-
-The post-login redirect target is `allowedOrigins[0]` (the first `Cors__AllowedOrigins__*`
-entry): the Google callback carries no `Origin` header, so `AuthController` falls back to
-the first configured origin when building `{origin}/auth/callback`. Put the primary
-frontend origin at index 0.
-
-## 8. Production smoke test
-
-- Open the Static Web Apps URL; `POST /auth/refresh` returns 401 on first load (healthy:
-  reached the API, no session yet) rather than a 405/CORS error.
-- Register a new account (email/password) and sign in with Google. Both should land on
-  the dashboard signed in, with the refresh cookie set (HttpOnly + Secure + SameSite=None)
-  and no tokens in localStorage.
-- Hard reload keeps the session; logout clears the cookie.
-
-## 8b. Redeploying the API (new image)
-
-To ship backend changes, build a new image and point the Container App at it. Bump the
-tag every time (`v1` → `v2` → …) so the platform pulls the exact new image and a bad deploy
-can be rolled back by pointing back at the previous tag.
-
-```powershell
-# 1. Build from the MERGED code. Deploy from master, not a feature branch, or you will
-#    ship stale code that silently lacks the fix you just merged.
-cd C:\Dev\EggLedger
-git checkout master
-git pull origin master
-
-# 2. Log in (your Azure AD identity; the ACR admin user is disabled). Token lasts ~3h.
-az acr login -n eggledgeracr1
-
-# 3. Build + push the new image (bump the tag)
-dotnet publish EggLedger.API/EggLedger.API.csproj -c Release -t:PublishContainer `
-  -p:ContainerRegistry=eggledgeracr1.azurecr.io -p:ContainerImageTag=v6
-
-# 4. Point the Container App at the new tag
-az containerapp update -g rg-eggledger-prod -n eggledger-api `
-  --image eggledgeracr1.azurecr.io/eggledger-api:v6 -o table
-
-# 5. Verify
-curl.exe -i https://api.sshnk.com/health   # expect 200 Healthy on the new revision
-```
-
-> If a symptom persists after a deploy, confirm what is actually running before re-debugging:
-> `az containerapp show -g rg-eggledger-prod -n eggledger-api --query "properties.template.containers[0].image" -o tsv`.
-> A mismatch (or an App Insights stack trace matching pre-fix code) usually means the image
-> was built from a stale branch — rebuild from `master` with a fresh tag.
-
-## 9. Observability — Application Insights
-
-The app already emits OpenTelemetry (traces/metrics/logs). `ServiceDefaults` enables the
-Azure Monitor exporter when `APPLICATIONINSIGHTS_CONNECTION_STRING` is set, so it activates
-in prod and stays inert in dev. App Insights is workspace-based, so it reuses the Log
-Analytics workspace the Container Apps environment already created.
-
-```powershell
-az extension add -n application-insights 2>$null
-
-# Reuse the workspace the ACA env created
-$laId = az monitor log-analytics workspace show `
-  -g rg-eggledger-prod -n <workspace-name> --query id -o tsv
-
-az monitor app-insights component create `
-  -g rg-eggledger-prod -a eggledger-ai -l centralindia `
-  --workspace $laId --application-type web -o table
-
-$aiConn = az monitor app-insights component show `
-  -g rg-eggledger-prod -a eggledger-ai --query connectionString -o tsv
-
-# Store as a secret, reference as the env var the code reads
-az containerapp secret set -g rg-eggledger-prod -n eggledger-api --secrets appinsights-conn="$aiConn"
-az containerapp update -g rg-eggledger-prod -n eggledger-api `
-  --set-env-vars "APPLICATIONINSIGHTS_CONNECTION_STRING=secretref:appinsights-conn" -o table
-```
-
-> Telemetry only flows once an image containing the exporter code is deployed (the env var
-> alone does nothing on an older image). Redeploy the API after enabling it.
-
-The client stamps its build (`VITE_APP_VERSION` = commit SHA) and sends it as
-`X-Client-Version`; the API tags each request span with `client.version`. Correlate in KQL:
-
-```kusto
-requests | summarize count() by tostring(customDimensions['client.version'])
-```
-
-## 10. Managed identity — ACR pull (drop admin credentials)
-
-Replace the registry admin username/password with the Container App's system-assigned
-identity + the `AcrPull` role.
-
-```powershell
-az containerapp identity assign -g rg-eggledger-prod -n eggledger-api --system-assigned -o table
-$miPrincipal = az containerapp identity show -g rg-eggledger-prod -n eggledger-api --query principalId -o tsv
-$acrId       = az acr show -n eggledgeracr1 --query id -o tsv
-az role assignment create --assignee $miPrincipal --role AcrPull --scope $acrId -o table
-az containerapp registry set -g rg-eggledger-prod -n eggledger-api `
-  --server eggledgeracr1.azurecr.io --identity system -o table
-```
-
-> Verify before removing the fallback: restart the active revision (forces a fresh pull via
-> the identity) and confirm `/health` is 200. Only then disable admin:
-> `az acr update -n eggledgeracr1 --admin-enabled false`. Also remove the now-orphaned
-> `eggledgeracr1azurecrio-eggledgeracr1` secret. Role propagation can take ~1 min.
-
-## 11. Key Vault — secret references
-
-Move the inline ACA secrets into Key Vault; the app config then holds only references, and
-the same managed identity reads them. RBAC has two planes: Owner can manage the vault but
-cannot read/write secret values — that needs a data-plane role.
-
-```powershell
-az keyvault create -g rg-eggledger-prod -n eggledger-kv-prod1 -l centralindia `
+```bash
+# Create Key Vault with Azure RBAC enabled
+az keyvault create \
+  --resource-group "$RESOURCE_GROUP" --name "$KEY_VAULT_NAME" --location "$LOCATION" \
   --enable-rbac-authorization true -o table
 
-$kvId        = az keyvault show -n eggledger-kv-prod1 --query id -o tsv
-$me          = az ad signed-in-user show --query id -o tsv
-$miPrincipal = az containerapp identity show -g rg-eggledger-prod -n eggledger-api --query principalId -o tsv
-az role assignment create --assignee $me --role "Key Vault Secrets Officer" --scope $kvId -o table
-az role assignment create --assignee $miPrincipal --role "Key Vault Secrets User" --scope $kvId -o table
+KV_ID=$(az keyvault show --name "$KEY_VAULT_NAME" --query id -o tsv)
+CURRENT_USER_ID=$(az ad signed-in-user show --query id -o tsv)
 
-# Copy each existing ACA secret value into Key Vault (values never printed)
-foreach ($s in 'google-id','google-secret','jwt-key','db-conn','appinsights-conn') {
-  $v = az containerapp secret show -g rg-eggledger-prod -n eggledger-api --secret-name $s --query value -o tsv
-  az keyvault secret set --vault-name eggledger-kv-prod1 --name $s --value "$v" -o none
-}
+# Grant deployment user permission to write secrets
+az role assignment create \
+  --assignee "$CURRENT_USER_ID" --role "Key Vault Secrets Officer" --scope "$KV_ID" -o table
 
-# Flip each ACA secret to a Key Vault reference resolved by the identity
-$kvUri = "https://eggledger-kv-prod1.vault.azure.net/secrets"
-az containerapp secret set -g rg-eggledger-prod -n eggledger-api --secrets `
-  "google-id=keyvaultref:$kvUri/google-id,identityref:system" `
-  "google-secret=keyvaultref:$kvUri/google-secret,identityref:system" `
-  "jwt-key=keyvaultref:$kvUri/jwt-key,identityref:system" `
-  "db-conn=keyvaultref:$kvUri/db-conn,identityref:system" `
-  "appinsights-conn=keyvaultref:$kvUri/appinsights-conn,identityref:system" -o table
+# Set secrets
+az keyvault secret set --vault-name "$KEY_VAULT_NAME" --name "db-conn" --value "$DB_CONN" -o none
+az keyvault secret set --vault-name "$KEY_VAULT_NAME" --name "jwt-key" --value "<SECURE_32_CHAR_JWT_KEY>" -o none
+az keyvault secret set --vault-name "$KEY_VAULT_NAME" --name "google-id" --value "<GOOGLE_CLIENT_ID>" -o none
+az keyvault secret set --vault-name "$KEY_VAULT_NAME" --name "google-secret" --value "<GOOGLE_CLIENT_SECRET>" -o none
+az keyvault secret set --vault-name "$KEY_VAULT_NAME" --name "appinsights-conn" --value "$AI_CONN" -o none
 ```
 
-> Restart the revision and confirm `/health` 200 + a working login (exercises JWT/Google/DB
-> secrets) to prove the identity reads Key Vault before trusting the migration.
+---
 
-## 12. Custom domain + TLS (Static Web Apps)
+## 7. Azure Container Apps (API)
 
-TLS certificates are free and auto-managed; the only cost is domain registration. A
-subdomain needs one CNAME. With Cloudflare DNS, set the record to **DNS only (grey cloud)** —
-proxying (orange cloud) resolves the CNAME to Cloudflare and blocks Azure's validation +
-managed cert.
+Create the Container App with System-Assigned Managed Identity, linking ACR and Key Vault:
 
-```
-# Cloudflare DNS record
-Type=CNAME  Name=eggledger  Target=<swa-default-hostname>  Proxy=DNS only
-```
+```bash
+# 1. Create Container App
+az containerapp create \
+  --resource-group "$RESOURCE_GROUP" --name "$API_APP_NAME" --environment "$ACA_ENV" \
+  --image "${ACR_NAME}.azurecr.io/eggledger-api:v1" \
+  --target-port 8080 --ingress external --min-replicas 0 --max-replicas 2 \
+  -o table
 
-```powershell
-az staticwebapp hostname set -g rg-eggledger-prod -n eggledger-web `
-  --hostname eggledger.sshnk.com -o table
-az staticwebapp hostname list -g rg-eggledger-prod -n eggledger-web -o table   # wait for Ready
-```
+# 2. Enable System-Assigned Managed Identity
+az containerapp identity assign \
+  --resource-group "$RESOURCE_GROUP" --name "$API_APP_NAME" --system-assigned -o table
 
-Changing the **frontend** origin only requires updating the API's CORS list (which also sets
-the OAuth redirect target — see section 7). Make the custom domain index 0:
+PRINCIPAL_ID=$(az containerapp identity show \
+  --resource-group "$RESOURCE_GROUP" --name "$API_APP_NAME" --query principalId -o tsv)
 
-```powershell
-az containerapp update -g rg-eggledger-prod -n eggledger-api --set-env-vars `
-  "Cors__AllowedOrigins__0=https://eggledger.sshnk.com" `
-  "Cors__AllowedOrigins__1=https://<swa-default-hostname>" -o table
-```
+# 3. Grant AcrPull to Managed Identity
+ACR_ID=$(az acr show --name "$ACR_NAME" --query id -o tsv)
+az role assignment create --assignee "$PRINCIPAL_ID" --role AcrPull --scope "$ACR_ID" -o table
 
-No frontend rebuild, no CSP change, and no Google console change are needed — the API domain
-(and thus the OAuth redirect URI) is unchanged. A custom domain on the **API** would be
-different: it ripples into `VITE_API_BASE_URL`, CORS, the CSP `connect-src`, and Google's
-Authorized redirect URIs — see the next section.
+az containerapp registry set \
+  --resource-group "$RESOURCE_GROUP" --name "$API_APP_NAME" \
+  --server "${ACR_NAME}.azurecr.io" --identity system -o table
 
-## 12b. Custom domain + TLS (API / Container Apps)
+# 4. Grant Key Vault Secrets User to Managed Identity
+az role assignment create --assignee "$PRINCIPAL_ID" --role "Key Vault Secrets User" --scope "$KV_ID" -o table
 
-Container Apps needs **two** DNS records (unlike SWA's single CNAME): a **CNAME** for routing
-and a **TXT `asuid.<sub>`** record to prove ownership. TLS stays free and managed. Both records
-are **DNS only (grey cloud)** in Cloudflare.
+# 5. Configure Key Vault secret references in Container Apps
+KV_URI="https://${KEY_VAULT_NAME}.vault.azure.net/secrets"
+az containerapp secret set --resource-group "$RESOURCE_GROUP" --name "$API_APP_NAME" --secrets \
+  "db-conn=keyvaultref:${KV_URI}/db-conn,identityref:system" \
+  "jwt-key=keyvaultref:${KV_URI}/jwt-key,identityref:system" \
+  "google-id=keyvaultref:${KV_URI}/google-id,identityref:system" \
+  "google-secret=keyvaultref:${KV_URI}/google-secret,identityref:system" \
+  "appinsights-conn=keyvaultref:${KV_URI}/appinsights-conn,identityref:system" -o table
 
-```powershell
-# 1. Ownership token for the TXT record + the CNAME target (current app FQDN)
-$verifyId = az containerapp show -g rg-eggledger-prod -n eggledger-api `
-  --query "properties.customDomainVerificationId" -o tsv
-az containerapp show -g rg-eggledger-prod -n eggledger-api `
-  --query "properties.configuration.ingress.fqdn" -o tsv
-```
-
-```
-# Cloudflare DNS records (both DNS only)
-Type=CNAME  Name=api        Target=<app-fqdn>.azurecontainerapps.io
-Type=TXT    Name=asuid.api  Value=<verifyId>
+# 6. Map secret references to application environment variables
+az containerapp update --resource-group "$RESOURCE_GROUP" --name "$API_APP_NAME" --set-env-vars \
+  "ASPNETCORE_ENVIRONMENT=Production" \
+  "ConnectionStrings__DefaultConnection=secretref:db-conn" \
+  "Jwt__SecretKey=secretref:jwt-key" \
+  "Authentication__Google__ClientId=secretref:google-id" \
+  "Authentication__Google__ClientSecret=secretref:google-secret" \
+  "APPLICATIONINSIGHTS_CONNECTION_STRING=secretref:appinsights-conn" \
+  "Cors__AllowedOrigins__0=https://${CUSTOM_WEB_DOMAIN}" -o table
 ```
 
-```powershell
-# 2. After DNS resolves, add the hostname and bind a managed cert
-az containerapp hostname add -g rg-eggledger-prod -n eggledger-api --hostname api.sshnk.com -o table
-az containerapp hostname bind -g rg-eggledger-prod -n eggledger-api `
-  --hostname api.sshnk.com --environment eggledger-env --validation-method CNAME -o table
-curl.exe -i https://api.sshnk.com/health   # expect 200 Healthy with a valid cert
+Verify deployment health:
+
+```bash
+API_FQDN=$(az containerapp show --resource-group "$RESOURCE_GROUP" --name "$API_APP_NAME" --query "properties.configuration.ingress.fqdn" -o tsv)
+curl -i "https://${API_FQDN}/health"
 ```
 
-Moving the **API** to a custom domain is the four-place ripple:
+---
 
-1. **`VITE_API_BASE_URL`** GitHub Actions Variable → `https://api.sshnk.com` (triggers a client rebuild).
-2. **CSP `connect-src`** in `staticwebapp.config.json` → add `https://api.sshnk.com` (keep the old
-   ACA host during the cutover, then drop it).
-3. **Google Authorized redirect URI** → add `https://api.sshnk.com/signin-google` (keep the old
-   one during the cutover).
-4. **CORS does not change** — it lists the *frontend* origin (`eggledger.sshnk.com`), which is
-   unchanged.
+## 8. Azure Static Web Apps (Frontend)
 
-> Bonus: with `eggledger.sshnk.com` and `api.sshnk.com` both under `sshnk.com`, frontend and API
-> are now **same-site**, so the refresh cookie could be tightened from `SameSite=None` to `Lax`.
+Deploy the Vue 3 Single Page Application to Azure Static Web Apps:
 
-## 13. Google OAuth topology (why the custom frontend domain "just worked")
+```bash
+az staticwebapp create \
+  --resource-group "$RESOURCE_GROUP" --name "$SWA_APP_NAME" --location "eastasia" -o table
 
-This app uses the **authorization-code flow with a confidential client**: the API — not the
-browser — is the OAuth client. It holds the client secret and does the code↔token exchange
-server-to-server; the browser only ever receives an HttpOnly cookie (no tokens in the URL).
+# Retrieve deployment API token for GitHub Actions
+SWA_TOKEN=$(az staticwebapp secrets list \
+  --resource-group "$RESOURCE_GROUP" --name "$SWA_APP_NAME" --query "properties.apiKey" -o tsv)
+```
 
-Flow:
+Configure GitHub repository settings (**Settings > Secrets and variables > Actions**):
+- **Secret**: `AZURE_STATIC_WEB_APPS_API_TOKEN` = `$SWA_TOKEN`
+- **Variable**: `VITE_API_BASE_URL` = `https://${CUSTOM_API_DOMAIN}` (must include `https://`)
 
-1. Browser navigates to `<API>/egg-ledger-api/auth/google-login` (a full-page redirect).
-2. API 302s to Google with `redirect_uri=<API>/signin-google`.
-3. Google validates that against **Authorized redirect URIs**, shows consent.
-4. Google redirects to `<API>/signin-google?code=...`.
-5. API exchanges the code, signs in, sets the refresh cookie.
-6. API redirects to `{allowedOrigins[0]}/auth/callback` — the only step that touches the
-   frontend domain, and it is driven by the API's own CORS config, not by Google.
+The build and deployment process is fully automated via `.github/workflows/azure-static-web-apps.yml`.
 
-Consequences:
+---
 
-- **Authorized redirect URIs** point at the **API** and are what make login work. Changing
-  the frontend domain needs no Google change; changing the **API** domain does (add
-  `https://<new-api>/signin-google`).
-- **Authorized JavaScript origins** are an origin allowlist for browser-side Google SDK calls
-  (One Tap / GIS `initTokenClient`). This flow never calls Google from JS, so the field is
-  unused here — login from `eggledger.sshnk.com` succeeds even though it is not listed.
+## 9. Custom Domains & TLS Configuration
 
-### Consent-screen branding
+Both Azure Static Web Apps and Azure Container Apps provide free, auto-renewing managed TLS certificates.
 
-The "to continue to …" text and the small domain shown on Google's account chooser come from
-the **OAuth consent screen** (APIs & Services → Branding), not from the redirect URI. Set:
+### Frontend Custom Domain (Static Web Apps)
 
-- **App name** = `EggLedger` (this replaces a raw host in the "continue to" text)
-- **User support email**, and an **App logo** (optional)
-- **Application home page** = `https://eggledger.sshnk.com`
-- **Authorized domain** = `sshnk.com`
+1. Add a **CNAME** record in your DNS provider (e.g., Cloudflare with **DNS-only / Grey Cloud**):
+   ```text
+   Type: CNAME | Name: eggledger | Target: <your-swa-default-hostname>.azurestaticapps.net
+   ```
+2. Bind the custom hostname:
+   ```bash
+   az staticwebapp hostname set \
+     --resource-group "$RESOURCE_GROUP" --name "$SWA_APP_NAME" \
+     --hostname "$CUSTOM_WEB_DOMAIN" -o table
+   ```
 
-To fully brand the host shown mid-flow (so no `azurecontainerapps.io` appears at all), give
-the **API** a custom domain (e.g. `api.sshnk.com`) and re-register its `/signin-google`
-redirect URI — see the API-domain ripple note in section 12. Removing the "Google hasn't
-verified this app" warning for external users requires OAuth verification (domain ownership
-in Search Console + review); for a small user base you can stay in Testing with test users.
+### Backend Custom Domain (Container Apps)
 
+1. Obtain the verification ID:
+   ```bash
+   VERIFY_ID=$(az containerapp show \
+     --resource-group "$RESOURCE_GROUP" --name "$API_APP_NAME" \
+     --query "properties.customDomainVerificationId" -o tsv)
+   ```
+2. Add the required DNS records (**DNS-only / Grey Cloud**):
+   ```text
+   Type: CNAME | Name: api        | Target: <your-api-fqdn>.azurecontainerapps.io
+   Type: TXT   | Name: asuid.api  | Value:  <VERIFY_ID>
+   ```
+3. Bind the hostname and issue a managed certificate:
+   ```bash
+   az containerapp hostname add \
+     --resource-group "$RESOURCE_GROUP" --name "$API_APP_NAME" \
+     --hostname "$CUSTOM_API_DOMAIN" -o table
+
+   az containerapp hostname bind \
+     --resource-group "$RESOURCE_GROUP" --name "$API_APP_NAME" \
+     --hostname "$CUSTOM_API_DOMAIN" --environment "$ACA_ENV" --validation-method CNAME -o table
+   ```
+
+---
+
+## 10. Google OAuth 2.0 Topology
+
+EggLedger implements the **confidential authorization-code flow**:
+
+1. User clicks **Login with Google** in the SPA.
+2. The browser initiates `GET /egg-ledger-api/auth/google-login` on the API.
+3. The API issues a redirect to Google Accounts with `redirect_uri=https://<API_DOMAIN>/signin-google`.
+4. After consent, Google redirects the browser back to `https://<API_DOMAIN>/signin-google` with an authorization code.
+5. The API exchanges the code with Google server-to-server, establishes a user session, sets the `Secure; HttpOnly; SameSite=None` refresh cookie, and redirects the browser back to `{Cors__AllowedOrigins__0}/auth/callback`.
+
+### Google Cloud Console Configuration
+
+In the [Google Cloud Console](https://console.cloud.google.com/) under **APIs & Services > Credentials**:
+- **Authorized Redirect URIs**: `https://<API_DOMAIN>/signin-google` (e.g., `https://api.sshnk.com/signin-google`).
+- **Authorized JavaScript Origins**: Not required for this confidential server-side code flow.
+
+> [!IMPORTANT]
+> The API relies on `ForwardedHeadersMiddleware` (`X-Forwarded-Proto` and `X-Forwarded-Host`) to ensure the ASP.NET Core Google authentication handler generates HTTPS callback URLs when running behind the Container Apps ingress.
+
+---
+
+## 11. Redeploying the API
+
+To publish updates to the backend API:
+
+```bash
+# 1. Build and push new container tag
+dotnet publish EggLedger.API/EggLedger.API.csproj -c Release \
+  -t:PublishContainer \
+  -p:ContainerRegistry="${ACR_NAME}.azurecr.io" \
+  -p:ContainerImageTag="v2"
+
+# 2. Update Container App to point to the new tag
+az containerapp update \
+  --resource-group "$RESOURCE_GROUP" --name "$API_APP_NAME" \
+  --image "${ACR_NAME}.azurecr.io/eggledger-api:v2" -o table
+
+# 3. Verify health probe
+curl -i "https://${CUSTOM_API_DOMAIN}/health"
+```

@@ -1,59 +1,87 @@
-# Database Migrations
+# Database Migrations Guide
 
-EggLedger uses EF Core migrations. The key rule:
+EggLedger uses Entity Framework Core (EF Core) migrations to manage its PostgreSQL database schema.
 
-> **Development auto-applies migrations for convenience. Production does NOT.**
-> In production, migrations are a deliberate, reviewed step run out-of-band.
+> [!IMPORTANT]
+> **Development auto-applies migrations for convenience; Production does not.**
+> In production environments, migrations are reviewed and applied out-of-band as part of the deployment pipeline.
 
-## Why production does not auto-migrate
+---
 
-The API can auto-run migrations on startup when `Ef_Migrate=true`
-(`MiddlewareExtensions.HandleDatabaseMigrationAsync`). This is enabled in
-development but **disabled in `appsettings.Production.json`** (`Ef_Migrate=false`)
-because auto-migrating a production database on startup is risky:
+## Strategy: Dev vs. Production
 
-- **Races** — multiple Container Apps replicas starting together migrate the same DB concurrently.
-- **No safety net** — a bad migration runs automatically before review or backup.
-- **Privilege creep** — the runtime identity would need permanent DDL rights instead of least-privilege CRUD.
-- **Startup coupling** — a long migration blocks health checks and the platform kills the app mid-migration.
+The API includes an optional startup migration runner (`MiddlewareExtensions.HandleDatabaseMigrationAsync`) controlled by the `Ef_Migrate` configuration setting:
 
-## Everyday development
+- **Development (`Ef_Migrate=true`)**: Automatically applies any pending migrations when the API boots, enabling fast local iteration.
+- **Production (`Ef_Migrate=false`)**: Automatic migration on startup is strictly disabled.
 
-Auto-migrate is on in development, so migrations apply when the API starts.
-To work with migrations manually:
+### Why Production Avoids In-App Migrations
 
-```powershell
-# Add a migration after changing the model
-dotnet ef migrations add <Name> --project EggLedger.Data --startup-project EggLedger.API
+1. **Race Conditions**: When multiple container replicas start up simultaneously, concurrent migration runs can conflict and corrupt migration history.
+2. **Safety & Auditability**: Production schema updates should be generated as reviewable SQL scripts, inspected, and backed up before execution.
+3. **Principle of Least Privilege**: The production application runtime needs only Data Manipulation (CRUD) permissions, not Data Definition (DDL) privileges.
+4. **Startup Timeouts & Coupling**: Large migrations can block container startup, causing platform health check timeouts and restart loops.
 
-# Apply pending migrations to the local dev database
+---
+
+## Development Workflow
+
+### Creating a Migration
+
+When modifying entity models in `EggLedger.Models`:
+
+```bash
+# Add a new migration
+dotnet ef migrations add <MigrationName> --project EggLedger.Data --startup-project EggLedger.API
+```
+
+### Applying Migrations Locally
+
+When running locally without Aspire or when applying updates manually:
+
+```bash
+# Apply pending migrations to the local database
 dotnet ef database update --project EggLedger.Data --startup-project EggLedger.API
 ```
 
-## Production — deliberate, reviewed apply
+### Rolling Back Locally
 
-Generate an **idempotent** SQL script (safe to run repeatedly; each migration is
-guarded by a check), review it, then apply it out-of-band at deploy time:
+To revert the most recent migration on your local database:
 
-```powershell
-dotnet ef migrations script --idempotent `
-  --project EggLedger.Data --startup-project EggLedger.API `
+```bash
+# Roll back database to a previous migration
+dotnet ef database update <PreviousMigrationName> --project EggLedger.Data --startup-project EggLedger.API
+
+# Remove the scaffolded migration files
+dotnet ef migrations remove --project EggLedger.Data --startup-project EggLedger.API
+```
+
+---
+
+## Production Workflow
+
+### 1. Generate Idempotent SQL Script
+
+Generate a migration script that checks the `__EFMigrationsHistory` table before executing each migration step. This makes the script safe to run repeatedly:
+
+```bash
+dotnet ef migrations script --idempotent \
+  --project EggLedger.Data --startup-project EggLedger.API \
   -o migrate.sql
 ```
 
-Apply the reviewed script against the production database with a **DDL-capable**
-admin credential (separate from the runtime app's least-privilege connection):
+### 2. Review and Apply
 
-```powershell
-psql "<admin connection string>" -f migrate.sql
+Review the generated SQL script, then apply it against the target production database using a DDL-privileged connection string:
+
+```bash
+psql "<production-connection-string>" -f migrate.sql
 ```
 
-This will be wired into the Phase 3 deployment as an explicit step that runs
-*before* the new API revision goes live — never inside app startup.
+This step runs out-of-band before activating new application revisions, ensuring zero downtime and preventing startup failures.
 
-## If you ever must auto-migrate with multiple replicas
+---
 
-Don't, if avoidable. If unavoidable, serialize with a PostgreSQL advisory lock
-(`pg_advisory_lock`) so only one instance migrates while the others wait, then
-re-check for pending migrations. The out-of-band script approach above avoids
-this problem entirely.
+## Concurrency Note
+
+If an automated multi-replica migration strategy is ever required, serialize execution using PostgreSQL advisory locks (`pg_advisory_lock`) to ensure only one instance executes migrations while others wait. The recommended out-of-band script workflow avoids this complexity entirely.

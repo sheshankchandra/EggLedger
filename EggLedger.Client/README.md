@@ -1,56 +1,108 @@
-# EggLedger.Client
+# EggLedger Client
 
-This template should help get you started developing with Vue 3 in Vite.
+The modern frontend client for EggLedger, built as a Vue 3 Single Page Application (SPA) with Vite.
 
-## Authentication Routes
 
-The application now features a unified authentication system with the following routes:
+## Tech Stack
 
-- `/eggledger/accounts/login` - Login page
-- `/eggledger/accounts/signup` - Signup page
+- **Framework**: [Vue 3](https://vuejs.org/) (Composition API with `<script setup>`)
+- **Build Tool**: [Vite](https://vite.dev/)
+- **State Management**: [Pinia](https://pinia.vuejs.org/)
+- **Routing**: [Vue Router](https://router.vuejs.org/)
+- **HTTP Client**: [Axios](https://axios-http.com/) (configured with CSRF headers, interceptors, and silent token refresh)
+- **Styling**: Modern CSS design system with CSS custom properties and full Dark/Light theme support
+- **Code Quality**: ESLint, Prettier
 
-Both routes use the same `AccountsView.vue` component with toggle functionality between login and signup forms.
 
-### Components Structure
+## Project Structure
 
-- `src/views/AccountsView.vue` - Main authentication view with tab switching
-- `src/components/auth/LoginForm.vue` - Login form component
-- `src/components/auth/SignupForm.vue` - Signup form component
+```text
+EggLedger.Client/
+├── src/
+│   ├── assets/          # Global styles, variables, theme tokens, and static media
+│   ├── components/      # Modular UI components (auth, rooms, containers, ledger)
+│   ├── composables/     # Shared Vue composables (theme, toast, responsive hooks)
+│   ├── config/          # Client runtime configuration
+│   ├── router/          # Client-side route definitions & navigation guards
+│   ├── services/        # Axios HTTP clients and API service modules
+│   ├── stores/          # Pinia state stores (auth, room, user)
+│   ├── utils/           # Helper functions, formatters, and HTTP error normalizers
+│   ├── views/           # Page-level components
+│   ├── App.vue          # Root Vue component
+│   └── main.js          # App entry point & plugin registration
+├── public/              # Static assets served at root
+├── index.html           # SPA entry HTML
+├── vite.config.js       # Vite configuration
+└── package.json         # Dependencies and scripts
+```
 
-The components communicate via events to switch between login and signup modes, providing a seamless user experience.
 
-## Recommended IDE Setup
+## Key Features
 
-[VSCode](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+- **Room Workspaces**: Create, join via code or invite link, manage approval queues, and view member roles.
+- **Inventory & Containers**: Track shared items, log restocks and consumptions, and inspect item order history.
+- **Settlement Ledger**: Real-time "who-owes-whom" balance calculation matrix and debt settlement flows.
+- **Activity & Streaks**: Live household activity timeline and gamified consumption statistics.
+- **Secure Authentication**: Silent token refresh with HttpOnly cookies, in-memory access token storage, and Google OAuth 2.0.
+- **Adaptive UI**: Responsive layout optimized for desktop and mobile, with theme switching.
 
-## Customize configuration
 
-See [Vite Configuration Reference](https://vite.dev/config/).
+## Getting Started
 
-## Project Setup
+### Prerequisites
 
-```sh
+- [Node.js](https://nodejs.org/) `^20.19.0` or `>=22.12.0` (required by Vite)
+- [npm](https://www.npmjs.com/)
+
+### Installation
+
+```bash
+# Install dependencies
 npm install
 ```
 
-### Compile and Hot-Reload for Development
+### Environment Configuration
 
-```sh
+The client requires the API base URL to communicate with the backend. Create a `.env.local` file in `EggLedger.Client/`:
+
+```env
+VITE_API_BASE_URL=http://localhost:8080
+```
+
+> [!NOTE]
+> When running the stack via `.NET Aspire` (`dotnet run --project EggLedger.AppHost`), `VITE_API_BASE_URL` is injected automatically.
+
+### Development Server
+
+Start the local Vite development server with hot-module replacement (HMR):
+
+```bash
 npm run dev
 ```
 
-### Compile and Minify for Production
+### Build for Production
 
-```sh
+Compile and bundle minified assets for production:
+
+```bash
 npm run build
 ```
 
-### Lint with [ESLint](https://eslint.org/)
+The output artifacts are written to `EggLedger.Client/dist/`.
 
-```sh
+### Linting & Formatting
+
+```bash
+# Run ESLint check
 npm run lint
+
+# Format codebase with Prettier
+npm run format
 ```
 
-## Acknowledgements
 
-- Favicon and icon assets by [Freepik](https://www.freepik.com) from [Flaticon](https://www.flaticon.com/free-icons/egg)
+## Security Architecture
+
+- **Token Storage**: JWT access tokens are stored strictly **in memory** (never written to `localStorage` or `sessionStorage`).
+- **Refresh Token**: Stored in a secure `HttpOnly; SameSite=None` (production) cookie managed exclusively by the browser and API.
+- **CSRF Protection**: All mutating and cookie-authenticated API requests automatically attach the custom `X-EggLedger-CSRF` header via Axios interceptors.
